@@ -20,44 +20,63 @@
 
             {{-- Navigation icons --}}
             <nav class="flex flex-col items-center w-full flex-1">
-                {{-- 1. Truck / Delivery --}}
-                <a href="{{ route('main') }}"
+                {{-- 1. Projects --}}
+                <a href="{{ route('projects') }}"
                    class="relative flex items-center justify-center w-full h-[65px] transition-colors
-                          {{ request()->is('main') ? 'bg-[#1a5a72] border-l-2 border-l-teal-300' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
-                    <x-nav-icon name="truck" />
-                    {{-- TODO: replace with real count --}}
-                    <span class="absolute top-2 right-4 bg-red-600 text-white text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center">2</span>
+                          {{ request()->is('projects') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                    @if(request()->is('projects'))
+                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
+                    @endif
+                    <x-nav-icon name="projects" />
                 </a>
 
-                {{-- 2. Clipboard / Checklist --}}
-                <a href="#"
-                   class="relative flex items-center justify-center w-full h-[65px] text-white/60 hover:text-white hover:bg-[#1a5a72]/50 transition-colors">
-                    <x-nav-icon name="clipboard" />
-                    {{-- TODO: replace with real count --}}
-                    <span class="absolute top-2 right-4 bg-red-600 text-white text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center">3</span>
-                    {{-- placeholder route --}}
+                {{-- 2. Pricing --}}
+                <a href="{{ route('pricing') }}"
+                   class="relative flex items-center justify-center w-full h-[65px] transition-colors
+                          {{ request()->is('pricing') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                    @if(request()->is('pricing'))
+                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
+                    @endif
+                    <x-nav-icon name="pricing" />
                 </a>
 
-                {{-- 3. Document / Invoice --}}
-                <a href="#"
-                   class="relative flex items-center justify-center w-full h-[65px] text-white/60 hover:text-white hover:bg-[#1a5a72]/50 transition-colors">
-                    <x-nav-icon name="invoice" />
-                    {{-- TODO: replace with real count --}}
-                    <span class="absolute top-2 right-4 bg-red-600 text-white text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center">2</span>
-                    {{-- placeholder route --}}
+                {{-- 3. Quotation --}}
+                <a href="{{ route('quotation') }}"
+                   class="relative flex items-center justify-center w-full h-[65px] transition-colors
+                          {{ request()->is('quotation') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                    @if(request()->is('quotation'))
+                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
+                    @endif
+                    <x-nav-icon name="quotation" />
                 </a>
 
-                {{-- 4. Grid / Apps --}}
-                <a href="#"
-                   class="relative flex items-center justify-center w-full h-[65px] text-white/60 hover:text-white hover:bg-[#1a5a72]/50 transition-colors">
-                    <x-nav-icon name="grid" />
-                    {{-- placeholder route --}}
+                {{-- 4. Entities --}}
+                <a href="{{ route('entities') }}"
+                   class="relative flex items-center justify-center w-full h-[65px] transition-colors
+                          {{ request()->is('entities') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                    @if(request()->is('entities'))
+                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
+                    @endif
+                    <x-nav-icon name="entities" />
                 </a>
 
-                {{-- 5. Gear / Settings --}}
+                {{-- 5. Users --}}
+                <a href="{{ route('users') }}"
+                   class="relative flex items-center justify-center w-full h-[65px] transition-colors
+                          {{ request()->is('users') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                    @if(request()->is('users'))
+                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
+                    @endif
+                    <x-nav-icon name="users" />
+                </a>
+
+                {{-- 6. Settings --}}
                 <a href="{{ route('settings') }}"
                    class="relative flex items-center justify-center w-full h-[65px] transition-colors
-                          {{ request()->is('settings') ? 'bg-[#1a5a72] border-l-2 border-l-teal-300' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                          {{ request()->is('settings') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                    @if(request()->is('settings'))
+                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
+                    @endif
                     <x-nav-icon name="settings" />
                 </a>
             </nav>

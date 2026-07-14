@@ -15,7 +15,7 @@ class AuthController extends Controller
     {
         $request->session()->put('logged_in', true);
 
-        return redirect('/main');
+        return redirect('/projects');
     }
 
     public function logout(Request $request)
