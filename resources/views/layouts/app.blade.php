@@ -11,10 +11,10 @@
     <div class="flex h-screen overflow-hidden">
 
         {{-- Sidebar --}}
-        <aside class="fixed left-0 top-0 h-screen w-[80px] bg-[#0e3a4c] flex flex-col items-center py-4 z-50">
+        <aside class="fixed left-0 top-0 h-screen w-[80px] bg-[#0e3a4c] flex flex-col items-center pt-0 z-50">
 
             {{-- Hamburger menu icon --}}
-            <div class="mb-6 text-white/80 hover:text-white transition-colors">
+            <div class="h-[80px] flex items-center justify-center text-white/80 hover:text-white transition-colors">
                 <x-nav-icon name="hamburger" />
             </div>
 
@@ -23,7 +23,7 @@
                 {{-- 1. Projects --}}
                 <a href="{{ route('projects') }}"
                    class="relative flex items-center justify-center w-full h-[65px] transition-colors
-                          {{ request()->is('projects') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                          {{ request()->is('projects') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
                     @if(request()->is('projects'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
@@ -33,7 +33,7 @@
                 {{-- 2. Pricing --}}
                 <a href="{{ route('pricing') }}"
                    class="relative flex items-center justify-center w-full h-[65px] transition-colors
-                          {{ request()->is('pricing') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                          {{ request()->is('pricing') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
                     @if(request()->is('pricing'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
@@ -43,7 +43,7 @@
                 {{-- 3. Quotation --}}
                 <a href="{{ route('quotation') }}"
                    class="relative flex items-center justify-center w-full h-[65px] transition-colors
-                          {{ request()->is('quotation') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                          {{ request()->is('quotation') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
                     @if(request()->is('quotation'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
@@ -53,7 +53,7 @@
                 {{-- 4. Entities --}}
                 <a href="{{ route('entities') }}"
                    class="relative flex items-center justify-center w-full h-[65px] transition-colors
-                          {{ request()->is('entities') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                          {{ request()->is('entities') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
                     @if(request()->is('entities'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
@@ -63,7 +63,7 @@
                 {{-- 5. Users --}}
                 <a href="{{ route('users') }}"
                    class="relative flex items-center justify-center w-full h-[65px] transition-colors
-                          {{ request()->is('users') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                          {{ request()->is('users') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
                     @if(request()->is('users'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
@@ -73,7 +73,7 @@
                 {{-- 6. Settings --}}
                 <a href="{{ route('settings') }}"
                    class="relative flex items-center justify-center w-full h-[65px] transition-colors
-                          {{ request()->is('settings') ? 'bg-[#1a5a72]' : 'text-white/60 hover:text-white hover:bg-[#1a5a72]/50' }}">
+                          {{ request()->is('settings') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
                     @if(request()->is('settings'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
