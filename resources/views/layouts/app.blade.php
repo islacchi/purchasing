@@ -65,7 +65,7 @@
                 </a>
 
                 {{-- PrepList --}}
-                <a href="#"
+                <a href="{{ route('preplist') }}"
                    class="relative flex items-center w-full h-[65px] transition-colors text-white/60 hover:text-white hover:bg-[#2a7a94]/50">
                     <div class="sidebar-icon flex items-center gap-3">
                         <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +76,7 @@
                 </a>
 
                 {{-- Request for Quotation --}}
-                <a href="#"
+                <a href="{{ route('quotation') }}"
                    class="relative flex items-center w-full h-[65px] transition-colors text-white/60 hover:text-white hover:bg-[#2a7a94]/50">
                     <div class="sidebar-icon flex items-center gap-3">
                         <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,8 +86,8 @@
                     </div>
                 </a>
 
-                {{-- Users --}}
-                <a href="{{ route('users') }}"
+                {{-- Entities --}}
+                <a href="{{ route('entities') }}"
                    class="relative flex items-center w-full h-[65px] transition-colors
                           {{ request()->is('users') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
                     @if(request()->is('users'))
@@ -97,12 +97,12 @@
                         <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                         </svg>
-                        <span class="label whitespace-nowrap">Users</span>
+                        <span class="label whitespace-nowrap">Entities</span>
                     </div>
                 </a>
 
                 {{-- Pricing/Price Index --}}
-                <a href="{{ route('pricing') }}"
+                <a href="{{ route('priceindex') }}"
                    class="relative flex items-center w-full h-[65px] transition-colors
                           {{ request()->is('pricing') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
                     @if(request()->is('pricing'))
