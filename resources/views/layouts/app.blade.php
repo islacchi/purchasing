@@ -154,15 +154,39 @@
                 <div class="flex items-center gap-4">
                     @yield('header-actions')
 
-                    {{-- Notification bell --}}
-                    <div class="relative">
-                        <button class="text-white/80 hover:text-white transition-colors cursor-pointer">
-                            <x-nav-icon name="bell" />
-                        </button>
-                        {{-- TODO: replace with real count --}}
-                        <span class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center">2</span>
+                    
+                   {{-- Notification bell --}}
+            <div class="relative">
+                <button id="notifBell" type="button" class="text-white/80 hover:text-white transition-colors cursor-pointer">
+                    <x-nav-icon name="bell" />
+                </button>
+                {{-- TODO: replace with real count, driven by the same query below --}}
+                <span class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full w-[18px] h-[18px] flex items-center justify-center">2</span>
+
+                {{--
+                    Notification dropdown — hardcoded for now.
+                    TODO: once projects table exists, replace this list with something like:
+                    Project::where('closing_date', '<=', now()->addDays(3))->where('status', '!=', 'completed')->get()
+                    and loop over the results instead of the two static <div> rows below.
+                --}}
+                <div id="notifPanel" class="hidden absolute right-0 top-[calc(100%+10px)] w-72 bg-white rounded-lg shadow-xl overflow-hidden z-50">
+                    <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Delivery deadlines approaching</p>
+                    </div>
+                    <div class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                        <div class="px-4 py-3 hover:bg-gray-50">
+                            <p class="text-sm font-medium text-gray-800">Pharma supplies Q3</p>
+                            <p class="text-xs text-gray-500">DOH Region VII</p>
+                            <p class="text-xs text-red-600 font-medium mt-1">Delivery due in 2 days</p>
+                        </div>
+                        <div class="px-4 py-3 hover:bg-gray-50">
+                            <p class="text-sm font-medium text-gray-800">Laboratory reagents</p>
+                            <p class="text-xs text-gray-500">PGH Manila</p>
+                            <p class="text-xs text-amber-600 font-medium mt-1">Delivery due in 5 days</p>
+                        </div>
                     </div>
                 </div>
+            </div>
             </header>
 
             {{-- Content --}}
@@ -187,6 +211,20 @@
         const isExpanded = document.documentElement.classList.toggle('sidebar-expanded');
         localStorage.setItem('sidebarExpanded', isExpanded ? '1' : '0');
         syncIcon();
+    });
+
+    const notifBell = document.getElementById('notifBell');
+    const notifPanel = document.getElementById('notifPanel');
+
+    notifBell.addEventListener('click', function (e) {
+        e.stopPropagation();
+        notifPanel.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!notifPanel.contains(e.target) && !notifBell.contains(e.target)) {
+            notifPanel.classList.add('hidden');
+        }
     });
 </script>
 </body>
