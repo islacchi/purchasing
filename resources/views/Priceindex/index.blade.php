@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('page-title', 'ENTITIES')
-@section('title', 'Entities - Purchasing')
+@section('page-title', 'Price Index')
+@section('title', 'Price Index - Purchasing')
 
 @section('content')
     <div></div>

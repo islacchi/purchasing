@@ -7,7 +7,6 @@
      When database is integrated:
      - Route::get('/projects/create', ...) passes no $project
      - Route::get('/projects/{project}/edit', ...) passes $project = Project::with('items')->findOrFail($id)
-     - Swap the hardcoded $project / $items arrays below for the real model + relation
      - Heading, submit label, and form action should switch based on isset($project)
 --}}
 
@@ -31,7 +30,7 @@
 
         $items = [
             ['description' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
-            ['description' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
+           
         ];
     @endphp
 
@@ -43,66 +42,76 @@
 
         {{-- Project fields --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
-            <div>
-                <label class="block text-sm font-medium text-gray-800 mb-1.5">Title</label>
-                <input type="text" name="title" value="{{ $project['title'] }}"
-                       class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-800 mb-1.5">Entity</label>
-                {{-- @TODO: replace with a select populated from App\Models\Entity once Entities module is wired up --}}
-                <input type="text" name="entity" value="{{ $project['entity'] }}"
-                       class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-800 mb-1.5">Reference no.</label>
-                <input type="text" name="reference_no" value="{{ $project['reference_no'] }}"
-                       class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-800 mb-1.5">Notes</label>
-                <textarea name="notes" rows="4"
-                          class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ $project['notes'] }}</textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-5">
                 <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Amount awarded</label>
-                    <input type="number" step="0.01" name="amount_awarded" value="{{ $project['amount_awarded'] }}"
+                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Title</label>
+                    <input type="text" name="title" value="{{ $project['title'] }}"
                            class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
                 </div>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Delivery period</label>
-                    <select name="delivery_period"
-                            class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                        <option value="">Select...</option>
-                        <option value="7">7 days</option>
-                        <option value="15">15 days</option>
-                        <option value="30">30 days</option>
-                        <option value="45">45 days</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Reference no.</label>
+                    <input type="text" name="reference_no" value="{{ $project['reference_no'] }}"
+                           class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-800 mb-1.5">Amount awarded</label>
+                        <input type="number" step="0.01" name="amount_awarded" value="{{ $project['amount_awarded'] }}"
+                               class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-800 mb-1.5">Delivery period</label>
+                        <select name="delivery_period"
+                                class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            <option value="">Select...</option>
+                            <option value="7">7 days</option>
+                            <option value="15">15 days</option>
+                            <option value="30">30 days</option>
+                            <option value="45">45 days</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-800 mb-1.5">Date awarded</label>
+                        <div class="relative">
+                            <input type="date" name="date_awarded" value="{{ $project['date_awarded'] }}"
+                                   class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-800 mb-1.5">Mode of procurement</label>
+                        <select name="mode_of_procurement"
+                                class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            <option value="">Select...</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="small_value">Small value</option>
+                            <option value="competitive_bidding">Competitive bidding</option>
+                            <option value="direct_contracting">Direct contracting</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-5">
                 <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Date awarded</label>
-                    <input type="date" name="date_awarded" value="{{ $project['date_awarded'] }}"
+                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Entity</label>
+                    <input type="text" name="entity" value="{{ $project['entity'] }}"
                            class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
                 </div>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Mode of procurement</label>
-                    <select name="mode_of_procurement"
-                            class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                        <option value="">Select...</option>
-                        <option value="shopping">Shopping</option>
-                        <option value="small_value">Small value</option>
-                        <option value="competitive_bidding">Competitive bidding</option>
-                        <option value="direct_contracting">Direct contracting</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Notes</label>
+                    <textarea name="notes" rows="10"
+                              class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ $project['notes'] }}</textarea>
                 </div>
             </div>
         </div>
@@ -111,31 +120,34 @@
         <div>
             <label class="block text-sm font-medium text-gray-800 mb-2">Items</label>
 
-            <div id="itemRows" class="bg-gray-100 rounded-lg p-4 space-y-3">
+                <div id="itemRows" class="border border-gray-300 rounded-lg overflow-hidden">
+                <div class="grid grid-cols-[2fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
+                    <div class="text-xs font-semibold text-gray-700">Description</div>
+                    <div class="text-xs font-semibold text-gray-700">Unit</div>
+                    <div class="text-xs font-semibold text-gray-700">Quantity</div>
+                    <div class="text-xs font-semibold text-gray-700">Unit cost</div>
+                    <div class="text-xs font-semibold text-gray-700">Quoted price</div>
+                    <div></div>
+                </div>
                 @foreach ($items as $i => $item)
-                    <div class="item-row grid grid-cols-[2fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 items-end">
+                    <div class="item-row grid grid-cols-[2fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2">
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
                             <input type="text" name="items[{{ $i }}][description]" value="{{ $item['description'] }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Unit</label>
                             <input type="text" name="items[{{ $i }}][unit]" value="{{ $item['unit'] }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Quantity</label>
                             <input type="number" name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Unit cost</label>
                             <input type="number" step="0.01" name="items[{{ $i }}][unit_cost]" value="{{ $item['unit_cost'] }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Quoted price</label>
                             <input type="number" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
