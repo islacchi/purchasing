@@ -17,6 +17,9 @@ Route::middleware('fake.auth')->group(function () {
     Route::get('/projects/create', function () {
         return view('Projects.form');
     })->name('projects.create');
+    Route::get('/projects/{id}', function ($id) {
+        return view('Projects.show'); // show.blade.php currently ignores $id — hardcoded data only
+    })->name('projects.show');
 
     // @TODO: once Project model + migrations exist, swap the closure for a real
     // controller method and pass the actual project in:

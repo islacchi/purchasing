@@ -69,8 +69,8 @@
     @endphp
 
     <div class="space-y-4">
-        @foreach($projects as $project)
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+        @foreach($projects as $index => $project)
+            <a href="{{ route('projects.show', ['id' => $index + 1]) }}" class="block bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
                 <div class="flex items-start gap-4">
                     <div class="flex-shrink-0 w-12 h-12 bg-[#0e5266] rounded-lg flex items-center justify-center">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,7 +112,7 @@
                         <div class="bg-[#2a7a94] h-2 rounded-full" style="width: {{ ($project['progress'] / $project['total']) * 100 }}%"></div>
                     </div>
                 </div>
-            </div>
+            </a>
         @endforeach
     </div>
 @endsection
