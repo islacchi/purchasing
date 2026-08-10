@@ -15,26 +15,66 @@
 
 @section('content')
 
-    {{-- Hard-coded data for frontend development --}}
     @php
-        $project = [
-            'title' => '',
-            'entity' => '',
-            'reference_no' => '',
-            'notes' => '',
-            'amount_awarded' => '',
-            'delivery_period' => '',
-            'date_awarded' => '',
-            'mode_of_procurement' => '',
-        ];
+        // Determine if we're in edit mode based on the route parameter
+        $isEdit = isset($id) && $id !== null;
 
-        $items = [
-            ['description' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
-           
-        ];
+        if ($isEdit) {
+            // Pre-filled dummy data for edit mode
+            $project = [
+                'title' => 'Purchase of pharma supplies',
+                'entity' => 'DOH Region VII',
+                'reference_no' => 'DOH Region VII - RF-2026-0042',
+                'notes' => 'Quarterly procurement of pharmaceutical supplies for regional health facilities.',
+                'amount_awarded' => 482000.00,
+                'delivery_period' => '30',
+                'date_awarded' => '2026-07-03',
+                'mode_of_procurement' => 'small_value',
+            ];
+
+            $items = [
+                [
+                    'description' => 'Mefenamic Capsule - 500mg',
+                    'unit' => 'Box',
+                    'quantity' => 50,
+                    'unit_cost' => 320.00,
+                    'quoted_price' => 305.00,
+                ],
+                [
+                    'description' => 'Amoxicillin 250mg suspension',
+                    'unit' => 'Box',
+                    'quantity' => 50,
+                    'unit_cost' => 320.00,
+                    'quoted_price' => 305.00,
+                ],
+                [
+                    'description' => 'Paracetamol 500mg tablet',
+                    'unit' => 'Box',
+                    'quantity' => 100,
+                    'unit_cost' => 150.00,
+                    'quoted_price' => 140.00,
+                ],
+            ];
+        } else {
+            // Empty data for create mode
+            $project = [
+                'title' => '',
+                'entity' => '',
+                'reference_no' => '',
+                'notes' => '',
+                'amount_awarded' => '',
+                'delivery_period' => '',
+                'date_awarded' => '',
+                'mode_of_procurement' => '',
+            ];
+
+            $items = [
+                ['description' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
+            ];
+        }
     @endphp
 
-    <h2 class="text-xl font-semibold text-gray-900 mb-6">Add project</h2>
+    <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
 
     {{-- @TODO: wire this up to a real form once routes/controller exist --}}
     <form action="#" method="POST" class="space-y-8">
@@ -65,11 +105,11 @@
                         <label class="block text-sm font-medium text-gray-800 mb-1.5">Delivery period</label>
                         <select name="delivery_period"
                                 class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                            <option value="">Select...</option>
-                            <option value="7">7 days</option>
-                            <option value="15">15 days</option>
-                            <option value="30">30 days</option>
-                            <option value="45">45 days</option>
+                            <option value="" {{ $project['delivery_period'] === '' ? 'selected' : '' }}>Select...</option>
+                            <option value="7" {{ $project['delivery_period'] === '7' ? 'selected' : '' }}>7 days</option>
+                            <option value="15" {{ $project['delivery_period'] === '15' ? 'selected' : '' }}>15 days</option>
+                            <option value="30" {{ $project['delivery_period'] === '30' ? 'selected' : '' }}>30 days</option>
+                            <option value="45" {{ $project['delivery_period'] === '45' ? 'selected' : '' }}>45 days</option>
                         </select>
                     </div>
                 </div>
@@ -91,11 +131,11 @@
                         <label class="block text-sm font-medium text-gray-800 mb-1.5">Mode of procurement</label>
                         <select name="mode_of_procurement"
                                 class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                            <option value="">Select...</option>
-                            <option value="shopping">Shopping</option>
-                            <option value="small_value">Small value</option>
-                            <option value="competitive_bidding">Competitive bidding</option>
-                            <option value="direct_contracting">Direct contracting</option>
+                            <option value="" {{ $project['mode_of_procurement'] === '' ? 'selected' : '' }}>Select...</option>
+                            <option value="shopping" {{ $project['mode_of_procurement'] === 'shopping' ? 'selected' : '' }}>Shopping</option>
+                            <option value="small_value" {{ $project['mode_of_procurement'] === 'small_value' ? 'selected' : '' }}>Small value</option>
+                            <option value="competitive_bidding" {{ $project['mode_of_procurement'] === 'competitive_bidding' ? 'selected' : '' }}>Competitive bidding</option>
+                            <option value="direct_contracting" {{ $project['mode_of_procurement'] === 'direct_contracting' ? 'selected' : '' }}>Direct contracting</option>
                         </select>
                     </div>
                 </div>
@@ -190,7 +230,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0V3h6v4m-6 0h6"/>
                 </svg>
-                Save project
+                {{ $isEdit ? 'Update project' : 'Save project' }}
             </button>
         </div>
     </form>

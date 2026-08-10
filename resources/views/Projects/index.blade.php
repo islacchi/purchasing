@@ -70,24 +70,26 @@
 
     <div class="space-y-4">
         @foreach($projects as $index => $project)
-            <a href="{{ route('projects.show', ['id' => $index + 1]) }}" class="block bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
                 <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-12 h-12 bg-[#0e5266] rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                        </svg>
-                    </div>
+                    <a href="{{ route('projects.show', ['id' => $index + 1]) }}" class="flex items-start gap-4 flex-1 min-w-0">
+                        <div class="flex-shrink-0 w-12 h-12 bg-[#0e5266] rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </div>
 
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-lg font-semibold text-gray-900 truncate">
-                            {{ $project['name'] }}
-                        </h3>
-                        <p class="text-sm text-gray-500 mt-1">
-                            {{ $project['code'] }}
-                        </p>
-                    </div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-lg font-semibold text-gray-900 truncate">
+                                {{ $project['name'] }}
+                            </h3>
+                            <p class="text-sm text-gray-500 mt-1">
+                                {{ $project['code'] }}
+                            </p>
+                        </div>
+                    </a>
 
-                    <div class="flex-shrink-0">
+                    <div class="flex-shrink-0 flex items-center gap-2">
                         @if($project['status_color'] === 'gray')
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                                 {{ $project['status'] }}
@@ -101,6 +103,14 @@
                                 {{ $project['status'] }}
                             </span>
                         @endif
+
+                        <a href="{{ route('projects.edit', ['id' => $index + 1]) }}"
+                           class="p-2 text-gray-400 hover:text-[#2a7a94] hover:bg-gray-100 rounded-lg transition-colors"
+                           title="Edit project">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
                     </div>
                 </div>
 
@@ -112,7 +122,7 @@
                         <div class="bg-[#2a7a94] h-2 rounded-full" style="width: {{ ($project['progress'] / $project['total']) * 100 }}%"></div>
                     </div>
                 </div>
-            </a>
+            </div>
         @endforeach
     </div>
 @endsection

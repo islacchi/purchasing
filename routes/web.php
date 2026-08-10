@@ -25,7 +25,7 @@ Route::middleware('fake.auth')->group(function () {
     // controller method and pass the actual project in:
     // Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
     Route::get('/projects/{id}/edit', function ($id) {
-        return view('Projects.form'); // form.blade.php currently ignores $id — hardcoded data only
+        return view('Projects.form', compact('id')); // pass $id so form can switch to edit mode
     })->name('projects.edit');
 
     Route::get('/preplist', [PageController::class, 'show'])->defaults('page', 'Preplist.index')->name('preplist');
