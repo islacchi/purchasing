@@ -31,6 +31,7 @@
     @php
         $preplists = [
             [
+                'id'          => 1,
                 'name'        => 'Q3 Medical Supplies',
                 'created_by'  => 'Juan Dela Cruz',
                 'date_created'=> '2026-07-15',
@@ -38,6 +39,7 @@
                 'items'       => 24,
             ],
             [
+                'id'          => 2,
                 'name'        => 'Laboratory Reagents Batch 1',
                 'created_by'  => 'Maria Santos',
                 'date_created'=> '2026-07-12',
@@ -45,6 +47,7 @@
                 'items'       => 58,
             ],
             [
+                'id'          => 3,
                 'name'        => 'Office Equipment FY2026',
                 'created_by'  => 'Carlos Reyes',
                 'date_created'=> '2026-07-08',
@@ -52,6 +55,7 @@
                 'items'       => 12,
             ],
             [
+                'id'          => 4,
                 'name'        => 'Pharma Supplies Q4',
                 'created_by'  => 'Juan Dela Cruz',
                 'date_created'=> '2026-07-03',
@@ -59,6 +63,7 @@
                 'items'       => 40,
             ],
             [
+                'id'          => 5,
                 'name'        => 'IT Hardware Refresh',
                 'created_by'  => 'Ana Cruz',
                 'date_created'=> '2026-06-28',
@@ -83,7 +88,8 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
                     @foreach($preplists as $preplist)
-                        <tr class="hover:bg-gray-50 transition-colors">
+                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                                        data-href="{{ route('preplist.show', ['id' => $preplist['id']]) }}">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                 {{ $preplist['name'] }}
                             </td>
@@ -172,6 +178,17 @@
         document.querySelectorAll('.dropdown-menu').forEach(function (menu) {
             menu.addEventListener('click', function (e) {
                 e.stopPropagation();
+            });
+        });
+
+        // Make each table row navigate to its prep list detail page on click,
+        // unless the click landed on the action (three-dots) dropdown.
+        document.querySelectorAll('tr[data-href]').forEach(function (row) {
+            row.addEventListener('click', function (e) {
+                if (e.target.closest('.dropdown-trigger') || e.target.closest('.dropdown-menu')) {
+                    return; // let the dropdown handle its own interaction
+                }
+                window.location.href = row.dataset.href;
             });
         });
     </script>

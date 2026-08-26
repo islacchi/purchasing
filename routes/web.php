@@ -29,6 +29,13 @@ Route::middleware('fake.auth')->group(function () {
     })->name('projects.edit');
 
     Route::get('/preplist', [PageController::class, 'show'])->defaults('page', 'Preplist.index')->name('preplist');
+
+    // @TODO: once the Preplist model + migrations exist, swap the closure for a real
+    // controller method and pass the actual preplist in:
+    // Route::get('/preplist/{id}', [PreplistController::class, 'show']);
+    Route::get('/preplist/{id}', function ($id) {
+        return view('Preplist.show'); // show.blade.php currently ignores $id — hardcoded data only
+    })->name('preplist.show');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');

@@ -67,9 +67,9 @@
                             {{-- PrepList --}}
                 <a href="{{ route('preplist') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
-                        {{ request()->is('preplist') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                        {{ request()->is('preplist') || request()->is('preplist/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
 
-                    @if(request()->is('preplist'))
+                    @if(request()->is('preplist') || request()->is('preplist/*'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
 
