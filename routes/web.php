@@ -36,6 +36,13 @@ Route::middleware('fake.auth')->group(function () {
     Route::get('/preplist/{id}', function ($id) {
         return view('Preplist.show'); // show.blade.php currently ignores $id — hardcoded data only
     })->name('preplist.show');
+
+    // Edit (reuses Preplist/form.blade.php, which also serves Add later).
+    // @TODO: once models + migrations exist, pass the actual $prepList in:
+    // Route::get('/preplist/{id}/edit', [PreplistController::class, 'edit'])->name('preplist.edit');
+    Route::get('/preplist/{id}/edit', function ($id) {
+        return view('Preplist.form'); // form.blade.php currently uses hardcoded data
+    })->name('preplist.edit');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');

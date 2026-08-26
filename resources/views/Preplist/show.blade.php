@@ -14,6 +14,7 @@
         // e.g. $preplist = Preplist::with(['projects', 'items.sources'])->find($id);
 
         $preplist = [
+            'id'              => 1,
             'name'            => 'July Region VII batch',
             'reference_no'    => '#2026-0090',
             'created_by'      => 'J. Santos',
@@ -22,10 +23,10 @@
             'total_items'     => 2,
         ];
 
-        // TODO: Replace with Preplist::find($id)->projects->pluck('name', 'reference_no')
+        // TODO: Replace with Preplist::find($id)->projects->pluck('id', 'name', 'reference_no')
         $sourceProjects = [
-            ['name' => 'Pharma supplies Q3',  'reference' => 'RFQ-2026-0042'],
-            ['name' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038'],
+            ['id' => 1, 'name' => 'Pharma supplies Q3',  'reference' => 'RFQ-2026-0042'],
+            ['id' => 2, 'name' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038'],
         ];
 
         // TODO: Replace with Preplist::find($id)->items and group their line items per source project.
@@ -54,12 +55,13 @@
             <h2 class="text-2xl font-bold text-gray-900">{{ $preplist['name'] }}</h2>
             <p class="text-sm text-gray-500 mt-1">{{ $preplist['reference_no'] }}</p>
         </div>
-        <button class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+        <a href="{{ route('preplist.edit', ['id' => $preplist['id']]) }}"
+           class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
             Edit prep list
-        </button>
+        </a>
     </div>
 
     {{-- Main two-column layout --}}
@@ -101,10 +103,11 @@
                 <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Source Projects</p>
                 <div class="space-y-3">
                     @foreach($sourceProjects as $project)
-                        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+                        <a href="{{ route('projects.show', ['id' => $project['id']]) }}"
+                           class="block bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-[#2a7a94] hover:shadow-md transition-all cursor-pointer">
                             <p class="text-sm font-bold text-gray-900">{{ $project['name'] }}</p>
                             <p class="text-xs text-gray-400 mt-1">{{ $project['reference'] }}</p>
-                        </div>
+                        </a>
                     @endforeach
                 </div>
             </div>
