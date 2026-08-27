@@ -10,56 +10,115 @@
 
     @php
         // ------------------------------------------------------------------
-        // This single view will serve both Add and Edit.
+        // This single view serves both Edit and Add (compile) modes.
         //
-        // @TODO: Edit/Add mode switch. Once models + migrations exist:
+        //   - Edit:  $prepList is set   → heading "Edit prep list", per-item
+        //            reduce/waive controls, Save changes.
+        //   - Add:   $prepList is NOT set → heading "Add prep list", plain
+        //            quantities (no reduce/waive), Compile prep list button.
+        //
+        // @TODO: once models + migrations exist, replace the hardcoded arrays
+        // below with real Eloquent queries and only keep the branch on mode:
         //   - Edit:  $prepList = Preplist::with(['projects', 'items'])->findOrFail($id)
-        //   - Add:   no $prepList passed (heading shows "Add prep list").
-        // For now we only build the EDIT state — add-mode layout comes later.
-        //
-        // @TODO: replace the hardcoded arrays below with real Eloquent queries.
-        $prepList = [
-            'id'   => 1,
-            'name' => 'PURCHASE OF PHARMA SUPPLIES',
-        ];
+        //   - Add:   pull available source projects with their items.
+        $isEdit = isset($prepList) && $prepList !== null;
 
-        $projects = [
-            [
-                'id'   => 1,
-                'name' => 'Pharma supplies Q3',
-                'reference' => 'RFQ 2026-0042',
-                'items' => [
-                    ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true,  'original' => 50, 'reduced' => 40, 'unit' => 'box', 'waived' => false],
-                    ['name' => 'Amoxicillin 500mg, box of 100',       'checked' => true,  'original' => 30, 'reduced' => 25, 'unit' => 'box', 'waived' => false],
+        if ($isEdit) {
+            // ------------------------------------------------------------------
+            // EDIT MODE — dummy data (reduced/waived states are meaningful here).
+            // ------------------------------------------------------------------
+            $projects = [
+                [
+                    'id'   => 1,
+                    'name' => 'Pharma supplies Q3',
+                    'reference' => 'RFQ 2026-0042',
+                    'checked' => true,
+                    'items' => [
+                        ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true,  'original' => 50, 'reduced' => 40, 'unit' => 'box', 'waived' => false],
+                        ['name' => 'Amoxicillin 500mg, box of 100',       'checked' => true,  'original' => 30, 'reduced' => 25, 'unit' => 'box', 'waived' => false],
+                    ],
                 ],
-            ],
-            [
-                'id'   => 2,
-                'name' => 'Laboratory reagents',
-                'reference' => 'RFQ 2026-0038',
-                'items' => [
-                    ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true,  'original' => 40, 'reduced' => 30, 'unit' => 'box', 'waived' => false],
-                    ['name' => 'Surgical gloves, box of 50 pairs',    'checked' => false, 'original' => 40, 'reduced' => 40, 'unit' => 'box', 'waived' => true],
+                [
+                    'id'   => 2,
+                    'name' => 'Laboratory reagents',
+                    'reference' => 'RFQ 2026-0038',
+                    'checked' => true,
+                    'items' => [
+                        ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true,  'original' => 40, 'reduced' => 30, 'unit' => 'box', 'waived' => false],
+                        ['name' => 'Surgical gloves, box of 50 pairs',    'checked' => false, 'original' => 40, 'reduced' => 40, 'unit' => 'box', 'waived' => true],
+                    ],
                 ],
-            ],
-        ];
+            ];
 
-        // Summary counts derived from dummy data above.
-        // @TODO: recompute from DB once Eloquent is wired up.
-        $selectedCount = 0;
-        $waivedCount   = 0;
-        foreach ($projects as $project) {
-            foreach ($project['items'] as $item) {
-                if ($item['waived']) {
-                    $waivedCount++;
-                }
-                if ($item['checked'] || $item['waived']) {
-                    // A waived item is still part of the selected prep list, so it counts here.
-                    $selectedCount++;
+            // Summary counts derived from the dummy data above.
+            // @TODO: recompute from DB once Eloquent is wired up.
+            $selectedCount = 0;
+            $waivedCount   = 0;
+            foreach ($projects as $project) {
+                foreach ($project['items'] as $item) {
+                    if ($item['waived']) {
+                        $waivedCount++;
+                    }
+                    if ($item['checked'] || $item['waived']) {
+                        $selectedCount++;
+                    }
                 }
             }
+            $projectCount = count($projects);
+        } else {
+            // ------------------------------------------------------------------
+            // ADD (compile) MODE — dummy data. No reduce/waive: just checked
+            // projects + items with plain quantities.
+            // ------------------------------------------------------------------
+            $projects = [
+                [
+                    'id'   => 1,
+                    'name' => 'Pharma supplies Q3',
+                    'reference' => 'RFQ 2026-0042',
+                    'checked' => true,
+                    'items' => [
+                        ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true,  'qty' => 40, 'unit' => 'box'],
+                        ['name' => 'Amoxicillin 500mg, box of 100',       'checked' => true,  'qty' => 40, 'unit' => 'box'],
+                    ],
+                ],
+                [
+                    'id'   => 2,
+                    'name' => 'Laboratory reagents',
+                    'reference' => 'RFQ 2026-0038',
+                    'checked' => true,
+                    'items' => [
+                        ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true,  'qty' => 40, 'unit' => 'box'],
+                        ['name' => 'Acetaminophen 500mg, box of 100',     'checked' => false, 'qty' => 40, 'unit' => 'box'],
+                    ],
+                ],
+                [
+                    'id'   => 3,
+                    'name' => 'PPE bulk order',
+                    'reference' => 'RFQ 2026-0038',
+                    'checked' => false, // project entirely unselected
+                    'items' => [
+                        ['name' => 'Disposable masks, box of 50', 'checked' => false, 'qty' => 40, 'unit' => 'box'],
+                    ],
+                ],
+            ];
+
+            // Add-mode summary: no waiver text — count checked projects and
+            // their checked items. "Waived" concept does not exist here.
+            // @TODO: recompute from DB once Eloquent is wired up.
+            $selectedCount = 0;
+            $projectCount  = 0;
+            foreach ($projects as $project) {
+                if ($project['checked']) {
+                    $projectCount++;
+                    foreach ($project['items'] as $item) {
+                        if ($item['checked']) {
+                            $selectedCount++;
+                        }
+                    }
+                }
+            }
+            $waivedCount = 0;
         }
-        $projectCount = count($projects);
     @endphp
 
     {{-- Page heading --}}
@@ -74,7 +133,8 @@
             <label for="prepListName" class="block text-sm font-medium text-gray-800 mb-1.5">Prep list name</label>
             <input id="prepListName" type="text" name="name"
                    value="{{ $prepList['name'] ?? '' }}"
-                   class="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                   placeholder="{{ $isEdit ? '' : 'PURCHASE OF PHARMA SUPPLIES' }}"
+                   class="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
         </div>
 
         {{-- Project groups --}}
@@ -83,86 +143,104 @@
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                     {{-- Card header: checkbox + project name + RFQ reference --}}
                     <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300">
+                        {{-- Clicking the project name behaves like the checkbox: selects/deselects all items in this card --}}
+                        <label class="flex items-center gap-3 cursor-pointer select-none">
+                            <input type="checkbox" class="project-check w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
+                                   title="Select all items in this project"
+                                   {{ $project['checked'] ? 'checked' : '' }}>
                             <span class="font-bold text-gray-900">{{ $project['name'] }}</span>
-                        </div>
+                        </label>
                         <span class="text-sm text-gray-400 font-medium">{{ $project['reference'] }}</span>
                     </div>
 
                     {{-- Item rows --}}
                     <div class="divide-y divide-gray-100">
                         @foreach($project['items'] as $item)
-                            @php
-                                $isReduced = !$item['waived'] && $item['reduced'] < $item['original'];
-                            @endphp
-                            <div class="item-row flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-gray-50"
-                                 data-original="{{ $item['original'] }}"
-                                 data-reduced="{{ $isReduced ? $item['reduced'] : $item['original'] }}"
-                                 data-unit="{{ $item['unit'] }}"
-                                 data-waived="{{ $item['waived'] ? 'true' : 'false' }}">
-                            <div class="flex items-center gap-3">
-                                <input type="checkbox"
-                                       class="item-check w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
-                                       {{ $item['checked'] ? 'checked' : '' }}>
-                                <span class="text-sm text-gray-700">{{ $item['name'] }}</span>
-                            </div>
+                            @if($isEdit)
+                                @php
+                                    $isReduced = !$item['waived'] && $item['reduced'] < $item['original'];
+                                @endphp
+                                <div class="item-row flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-gray-50"
+                                     data-original="{{ $item['original'] }}"
+                                     data-reduced="{{ $isReduced ? $item['reduced'] : $item['original'] }}"
+                                     data-unit="{{ $item['unit'] }}"
+                                     data-waived="{{ $item['waived'] ? 'true' : 'false' }}">
+                                    <div class="flex items-center gap-3">
+                                        <input type="checkbox"
+                                               class="item-check w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
+                                               {{ $item['checked'] ? 'checked' : '' }}>
+                                        <span class="text-sm text-gray-700">{{ $item['name'] }}</span>
+                                    </div>
 
-                            <div class="flex items-center gap-6">
-                                {{-- Quantity display --}}
-                                <div class="flex items-center justify-end gap-2 min-w-[140px]">
-                                    <span class="qty-display text-sm {{ $item['waived'] ? 'hidden' : '' }}">
-                                        @if($isReduced)
-                                            <span class="old-qty text-gray-400 line-through mr-1">{{ $item['original'] }}</span>
-                                            <span class="new-qty font-medium text-gray-900">{{ $item['reduced'] }}</span>
-                                        @else
-                                            <span class="old-qty text-gray-400 line-through mr-1 hidden"></span>
-                                            <span class="new-qty font-medium text-gray-900">{{ $item['original'] }}</span>
-                                        @endif
-                                        <span class="ml-1 text-gray-400">{{ $item['unit'] }}</span>
-                                    </span>
-                                    <span class="waived-pill {{ $item['waived'] ? '' : 'hidden' }} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
-                                        Waived
-                                    </span>
+                                    <div class="flex items-center gap-6">
+                                        {{-- Quantity display --}}
+                                        <div class="flex items-center justify-end gap-2 min-w-[140px]">
+                                            <span class="qty-display text-sm {{ $item['waived'] ? 'hidden' : '' }}">
+                                                @if($isReduced)
+                                                    <span class="old-qty text-gray-400 line-through mr-1">{{ $item['original'] }}</span>
+                                                    <span class="new-qty font-medium text-gray-900">{{ $item['reduced'] }}</span>
+                                                @else
+                                                    <span class="old-qty text-gray-400 line-through mr-1 hidden"></span>
+                                                    <span class="new-qty font-medium text-gray-900">{{ $item['original'] }}</span>
+                                                @endif
+                                                <span class="ml-1 text-gray-400">{{ $item['unit'] }}</span>
+                                            </span>
+                                            <span class="waived-pill {{ $item['waived'] ? '' : 'hidden' }} inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                                                Waived
+                                            </span>
 
-                                    {{-- Editable quantity input (shown during Reduce) --}}
-                                    <div class="qty-edit hidden items-center gap-1">
-                                        <input type="number" min="1" step="1"
-                                               class="qty-input w-16 px-2 py-1 rounded-md border border-gray-300 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                            {{-- Editable quantity input (shown during Reduce) --}}
+                                            <div class="qty-edit hidden items-center gap-1">
+                                                <input type="number" min="1" step="1"
+                                                       class="qty-input w-16 px-2 py-1 rounded-md border border-gray-300 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                            </div>
+                                        </div>
+
+                                        {{-- Row actions (Edit mode only) --}}
+                                        <div class="flex items-center gap-2">
+                                            <button type="button"
+                                                    class="reduce-btn {{ $item['waived'] ? 'hidden' : '' }} flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                                    title="Reduce quantity">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                                </svg>
+                                                Reduce
+                                            </button>
+
+                                            <button type="button"
+                                                    class="waive-btn {{ $item['waived'] ? 'hidden' : '' }} flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                                    title="Waive item">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 110 12.728m0-12.728a9 9 0 00-12.728 12.728"/>
+                                                </svg>
+                                                Waive
+                                            </button>
+                                            <button type="button"
+                                                    class="undo-btn {{ $item['waived'] ? '' : 'hidden' }} flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-amber-300 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors"
+                                                    title="Undo waiver">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v6h6M21 17a9 9 0 01-15 3.7L3 13m0 0v6h6"/>
+                                                </svg>
+                                                Undo
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            @else
+                                <div class="item-row flex items-center justify-between gap-4 px-5 py-3 transition-colors"
+                                     data-original="0" data-reduced="0" data-unit="{{ $item['unit'] }}" data-waived="false">
+                                    <div class="flex items-center gap-3">
+                                        <input type="checkbox"
+                                               class="item-check w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
+                                               {{ $item['checked'] ? 'checked' : '' }}>
+                                        <span class="text-sm text-gray-700">{{ $item['name'] }}</span>
+                                    </div>
 
-                                {{-- Row actions --}}
-                                <div class="flex items-center gap-2">
-                                    <button type="button"
-                                            class="reduce-btn {{ $item['waived'] ? 'hidden' : '' }} flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                            title="Reduce quantity">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
-                                        </svg>
-                                        Reduce
-                                    </button>
-
-                                    <button type="button"
-                                            class="waive-btn {{ $item['waived'] ? 'hidden' : '' }} flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-gray-300 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                            title="Waive item">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 110 12.728m0-12.728a9 9 0 00-12.728 12.728"/>
-                                        </svg>
-                                        Waive
-                                    </button>
-                                    <button type="button"
-                                            class="undo-btn {{ $item['waived'] ? '' : 'hidden' }} flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-amber-300 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors"
-                                            title="Undo waiver">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v6h6M21 17a9 9 0 01-15 3.7L3 13m0 0v6h6"/>
-                                        </svg>
-                                        Undo
-                                    </button>
+                                    {{-- Plain quantity — Add mode has no reduce/waive --}}
+                                    <span class="text-sm text-gray-900">{{ $item['qty'] }} {{ $item['unit'] }}</span>
                                 </div>
-                            </div>
-                        </div>
-                    @endforeach
+                            @endif
+                        @endforeach
                 </div>
             </div>
         @endforeach
@@ -171,11 +249,15 @@
         {{-- Footer row: summary (left) + actions (right) --}}
         <div class="flex items-center justify-between gap-4 pt-2">
             <p class="text-sm text-gray-500" id="summaryText">
-                {{ $projectCount }} projects &bull; {{ $selectedCount }} items selected ({{ $waivedCount }} waived)
+                @if($isEdit)
+                    {{ $projectCount }} projects &bull; {{ $selectedCount }} items selected ({{ $waivedCount }} waived)
+                @else
+                    {{ $projectCount }} projects &bull; {{ $selectedCount }} items selected
+                @endif
             </p>
 
             <div class="flex items-center gap-3">
-                <a href="{{ route('preplist.show', ['id' => isset($prepList) ? $prepList['id'] : 1]) }}"
+                <a href="{{ route('preplist') }}"
                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -187,7 +269,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0V3h6v4m-6 0h6"/>
                     </svg>
-                    Save changes
+                    {{ $isEdit ? 'Save changes' : 'Compile prep list' }}
                 </button>
             </div>
         </div>
@@ -202,15 +284,44 @@
     (function () {
         const summaryEl = document.getElementById('summaryText');
         const projectsCount = {{ $projectCount }};
+        const isEdit = {{ $isEdit ? 'true' : 'false' }};
 
         function syncSummary() {
-            const waived = document.querySelectorAll('.item-row[data-waived="true"]').length;
-            const activeSelected = document.querySelectorAll('.item-row .item-check:checked').length;
-            const selected = activeSelected + waived; // waived items still count toward "selected"
-            summaryEl.textContent = projectsCount + ' projects \u2022 ' + selected + ' items selected (' + waived + ' waived)';
+            if (isEdit) {
+                const waived = document.querySelectorAll('.item-row[data-waived="true"]').length;
+                const activeSelected = document.querySelectorAll('.item-row .item-check:checked').length;
+                const selected = activeSelected + waived; // waived items still count toward "selected"
+                summaryEl.textContent = projectsCount + ' projects \u2022 ' + selected + ' items selected (' + waived + ' waived)';
+            } else {
+                // Add mode has no "waived" concept — count checked item rows only.
+                const selected = document.querySelectorAll('.item-row .item-check:checked').length;
+                summaryEl.textContent = projectsCount + ' projects \u2022 ' + selected + ' items selected';
+            }
         }
 
-        document.querySelectorAll('.item-row').forEach(function (row) {
+        // "Select all items" for each project header checkbox (both modes).
+        // Clicking the project name works too, since the name sits inside the
+        // same <label> as the checkbox and toggles it natively.
+        document.querySelectorAll('.project-check').forEach(function (projectCheck) {
+            projectCheck.addEventListener('change', function () {
+                const card = projectCheck.closest('.bg-white.rounded-lg');
+                if (!card) return;
+                card.querySelectorAll('.item-check').forEach(function (itemCheck) {
+                    // Edit mode: waived items remain deselected until un-waived,
+                    // so they can't be bulk-checked by the project header.
+                    const row = itemCheck.closest('.item-row');
+                    if (isEdit && row && row.dataset.waived === 'true') {
+                        itemCheck.checked = false;
+                        return;
+                    }
+                    itemCheck.checked = projectCheck.checked;
+                });
+                syncSummary();
+            });
+        });
+
+        if (isEdit) {
+            document.querySelectorAll('.item-row').forEach(function (row) {
             const original = parseInt(row.dataset.original, 10);
             const reduced = parseInt(row.dataset.reduced, 10);
             const unit = row.dataset.unit;
@@ -302,7 +413,14 @@
             } else {
                 renderQty();
             }
-        });
+            });
+        } else {
+            // Add mode: no reduce/waive UI in markup — just keep the summary
+            // in sync as the user ticks/unticks item checkboxes.
+            document.querySelectorAll('.item-row .item-check').forEach(function (checkbox) {
+                checkbox.addEventListener('change', syncSummary);
+            });
+        }
 
         syncSummary();
     })();
