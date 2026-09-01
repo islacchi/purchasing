@@ -7,15 +7,16 @@
    $projects = App\Models\Project::with(['status', 'items'])->latest()->get();
 --}}
 
-{{-- @TODO: Pass projects from controller: return view('projects', compact('projects')); --}}
+{{-- @TODO: Pass projects from controller: return view('Projects.index', compact('projects')); --}}
 
-{{-- @TODO: When database is integrated, move filter and add-project back into header-actions --}}
+{{-- @TODO: When database is integrated, wire up the search filter and decide whether --}}
+{{-- the search/add-project bar should live here or in @section('header-actions'). --}}
 
 @section('header-actions')
 @endsection
 
-@section('content')
-    {{-- Search and actions bar --}}
+    @section('content')
+        {{-- Search and actions bar --}}
     <div class="mb-6 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4 flex-1">
             <div class="max-w-xl w-full">

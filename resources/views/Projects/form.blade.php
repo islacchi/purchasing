@@ -3,11 +3,13 @@
 @section('page-title', 'PROJECTS')
 @section('title', 'Add Project - Purchasing')
 
-{{-- @TODO: This same view will serve both Add and Edit.
-     When database is integrated:
-     - Route::get('/projects/create', ...) passes no $project
-     - Route::get('/projects/{project}/edit', ...) passes $project = Project::with('items')->findOrFail($id)
-     - Heading, submit label, and form action should switch based on isset($project)
+{{-- This view serves both Add and Edit.
+     The @section('title') is set statically to "Add Project" above; the in-page
+     heading and submit label switch on $isEdit inside the content.
+     @TODO: When database is integrated, replace the dummy $project/$items
+     arrays with real Eloquent queries instead of branching on $id:
+     - Add:  $project stays empty, $items has one blank row
+     - Edit: $project = Project::with('items')->findOrFail($id)
 --}}
 
 @section('header-actions')
@@ -76,7 +78,8 @@
 
     <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
 
-    {{-- @TODO: wire this up to a real form once routes/controller exist --}}
+    {{-- @TODO: wire this up to a real store/update route + controller method once --}}
+    {{-- database integration is in place (currently the form posts to '#'). --}}
     <form action="#" method="POST" class="space-y-8">
         @csrf
 

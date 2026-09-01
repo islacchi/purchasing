@@ -1,17 +1,31 @@
 <?php
 
+/**
+ * Web routes.
+ *
+ * Routes outside the `fake.auth` middleware group are public; routes inside
+ * the group require the user to be logged in.
+ *
+ * NOTE: Several show/edit routes currently use inline closures with dummy
+ * data because the underlying models/migrations don't exist yet. See the
+ * inline @TODO comments for the intended controller replacements.
+ */
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PageController;
 
+// Redirect the root path to the login page.
 Route::get('/', function () {
     return redirect('/login');
 });
 
+// Public fake-auth routes (any credentials work for now).
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Authenticated routes — these require the session `logged_in` flag.
 Route::middleware('fake.auth')->group(function () {
     Route::get('/projects', [PageController::class, 'show'])->defaults('page', 'Projects.index')->name('projects');
     Route::get('/projects/create', function () {
