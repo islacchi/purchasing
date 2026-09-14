@@ -82,7 +82,7 @@
     {{-- database integration is in place (currently the form posts to '#'). --}}
     <form action="#" method="POST" class="space-y-8">
         @csrf
-
+<!-- Comment -->
         {{-- Project fields --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
             <div class="space-y-5">

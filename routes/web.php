@@ -66,6 +66,12 @@ Route::middleware('fake.auth')->group(function () {
     Route::get('/preplist/{id}/edit', function ($id) {
         return view('Preplist.form', ['prepList' => ['id' => $id, 'name' => 'PURCHASE OF PHARMA SUPPLIES']]);
     })->name('preplist.edit');
+    // Generate quotation page (dummy data for now).
+    // @TODO: once models + migrations exist, pass the real prep list in:
+    // Route::get('/quotation/generate/{prepList}', [QuotationController::class, 'generate']);
+    Route::get('/quotation/generate', function () {
+        return view('Preplist.generate_rfq'); // view uses hardcoded dummy data
+    })->name('quotation.generate');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
