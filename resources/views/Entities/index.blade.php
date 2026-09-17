@@ -113,9 +113,9 @@
                     <input type="text" placeholder="Search users..."
                            class="w-full px-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
-                <button type="button" class="p-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors" title="Filter">
+                <button type="button" class="p-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors" title="Search">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18v1.5L15 11v7l-6 2.5V11L3 5.5V4z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
                     </svg>
                 </button>
             </div>
@@ -204,9 +204,9 @@
                     <input type="text" placeholder="Search procuring entities..."
                            class="w-full px-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
-                <button type="button" class="p-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors" title="Filter">
+                <button type="button" class="p-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors" title="Search">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18v1.5L15 11v7l-6 2.5V11L3 5.5V4z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
                     </svg>
                 </button>
             </div>
@@ -287,9 +287,9 @@
                     <input type="text" placeholder="Search suppliers..."
                            class="w-full px-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
-                <button type="button" class="p-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors" title="Filter">
+                <button type="button" class="p-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors" title="Search">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18v1.5L15 11v7l-6 2.5V11L3 5.5V4z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
                     </svg>
                 </button>
             </div>
