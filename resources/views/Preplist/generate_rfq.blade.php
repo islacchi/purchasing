@@ -7,6 +7,16 @@
 @endsection
 
 @section('content')
+    <style>
+        /* Keep a checked supplier chip readable on hover —
+           the base hover:bg-gray-50 would turn it near-white while
+           the label stays text-white. Use a slightly darker teal
+           instead, which also gives clear hover feedback. */
+        .supplier-token.bg-\[\#2a7a94\]:hover {
+            background-color: #236b80; /* darker teal */
+        }
+    </style>
+
 
     @php
         // ------------------------------------------------------------------
