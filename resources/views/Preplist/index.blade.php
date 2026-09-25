@@ -124,7 +124,7 @@
                                             <path d="M12 8a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4z"/>
                                         </svg>
                                     </button>
-                                    <div class="dropdown-menu hidden absolute right-0 mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1">
+                                    <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1">
                                         <button class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -162,6 +162,18 @@
 
                 if (!isOpen) {
                     menu.classList.remove('hidden');
+                    // Open the menu upward when it would otherwise overflow the
+                    // bottom of the viewport OR the table's overflow-x-auto box
+                    // (overflow-x-auto implicitly clips overflow-y too), so a
+                    // last-row dropdown is never cut off.
+                    const rect = menu.getBoundingClientRect();
+                    const scrollBox = menu.closest('.overflow-x-auto');
+                    const clipBottom = Math.min(window.innerHeight, scrollBox ? scrollBox.getBoundingClientRect().bottom : Infinity);
+                    const opensUp = rect.bottom + 8 > clipBottom;
+                    menu.classList.toggle('bottom-full', opensUp);
+                    menu.classList.toggle('mb-2', opensUp);
+                    menu.classList.toggle('top-full', !opensUp);
+                    menu.classList.toggle('mt-2', !opensUp);
                 }
             });
         });

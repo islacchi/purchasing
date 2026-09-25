@@ -428,9 +428,13 @@
                     if (!isOpen) {
                         menu.classList.remove('hidden');
                         // Open the menu upward when it would otherwise overflow
-                        // the bottom of the viewport (e.g. last table rows).
+                        // the bottom of the viewport OR the table's overflow-x-auto
+                        // box (overflow-x-auto implicitly clips overflow-y too),
+                        // so a last-row dropdown is never cut off.
                         const rect = menu.getBoundingClientRect();
-                        const opensUp = rect.bottom + 8 > window.innerHeight;
+                        const scrollBox = menu.closest('.overflow-x-auto');
+                        const clipBottom = Math.min(window.innerHeight, scrollBox ? scrollBox.getBoundingClientRect().bottom : Infinity);
+                        const opensUp = rect.bottom + 8 > clipBottom;
                         menu.classList.toggle('bottom-full', opensUp);
                         menu.classList.toggle('mb-2', opensUp);
                         menu.classList.toggle('top-full', !opensUp);
