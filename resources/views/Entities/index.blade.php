@@ -136,7 +136,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                <span class="font-medium">+ Add user</span>
+                <span class="font-medium"> Add user</span>
             </button>
         </div>
     {{-- Table --}}
@@ -228,7 +228,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                <span class="font-medium">+ Add entity</span>
+                <span class="font-medium">Add entity</span>
             </button>
         </div>
 
@@ -312,7 +312,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                <span class="font-medium">+ Add Supplier</span>
+                <span class="font-medium">Add Supplier</span>
             </button>
         </div>
 
@@ -446,7 +446,7 @@
                 }
             });
 
-            // Keep dropdown-item clicks from bubbling and closing the menu first.
+             // Keep dropdown-item clicks from bubbling and closing the menu first.
             document.querySelectorAll('.dropdown-action').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     e.stopPropagation();
