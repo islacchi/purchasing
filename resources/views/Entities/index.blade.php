@@ -18,14 +18,15 @@
         // @TODO: users should come from App\Models\User::with('roles')->get(),
         // with role pills derived from the user's role relation.
         $users = [
-            ['name' => 'J. Santos', 'email' => 'j.santos@company.com', 'role' => 'Procurement officer', 'status' => 'Active'],
-            ['name' => 'M. Reyes',  'email' => 'm.reyes@company.com',  'role' => 'Admin', 'status' => 'Active'],
-            ['name' => 'A. Cruz',   'email' => 'a.cruz@company.com',   'role' => 'Procurement officer', 'status' => 'Inactive'],
+            ['id' => 1, 'name' => 'J. Santos', 'email' => 'j.santos@company.com', 'role' => 'Procurement officer', 'status' => 'Active'],
+            ['id' => 2, 'name' => 'M. Reyes',  'email' => 'm.reyes@company.com',  'role' => 'Admin', 'status' => 'Active'],
+            ['id' => 3, 'name' => 'A. Cruz',   'email' => 'a.cruz@company.com',   'role' => 'Procurement officer', 'status' => 'Inactive'],
         ];
 
         // @TODO: procuring entities should come from App\Models\Entity::all().
         $entities = [
             [
+                'id'             => 1,
                 'name'           => 'DOH Region VII',
                 'address'        => 'Osmeña Blvd, Cebu City',
                 'type'            => 'Regional Office',
@@ -34,6 +35,7 @@
                 'email'           => 'doh.region7@gov.ph',
             ],
             [
+                'id'             => 2,
                 'name'           => 'PGH Manila',
                 'address'        => 'Taft Ave, Ermita, Manila',
                 'type'            => 'Government Hospital',
@@ -42,6 +44,7 @@
                 'email'           => 'procurement@pgh.gov.ph',
             ],
             [
+                'id'             => 3,
                 'name'           => 'Iloilo Provincial Hospital',
                 'address'        => 'Iloilo City',
                 'type'            => 'Provincial Hospital',
@@ -54,6 +57,7 @@
         // @TODO: suppliers should come from App\Models\Supplier::all().
         $suppliers = [
             [
+                'id'             => 1,
                 'name'           => 'Triple Tact',
                 'address'        => 'Mandaue City, Cebu',
                 'contact_person' => 'E. Lim',
@@ -61,6 +65,7 @@
                 'email'          => 'sales@tripletact.com',
             ],
             [
+                'id'             => 2,
                 'name'           => 'GreenCore Pharmaceuticals',
                 'address'        => 'Quezon City, Metro Manila',
                 'contact_person' => 'P. Domingo',
@@ -68,6 +73,7 @@
                 'email'          => 'orders@greencorepharma.ph',
             ],
             [
+                'id'             => 3,
                 'name'           => 'MedSource Inc.',
                 'address'        => 'Pasig City, Metro Manila',
                 'contact_person' => 'C. Fernandez',
@@ -78,14 +84,18 @@
 
         // Small helper for the avatar initials circle in the Users table.
         // @TODO: once Eloquent is wired up, expose the initials directly on the model.
-        function initialsFromName($name)
-        {
-            $initials = '';
-            foreach (preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) as $part) {
-                $initials .= strtoupper(substr($part, 0, 1));
-                if (strlen($initials) >= 2) break;
+        // function_exists() guard: a view can be rendered more than once per
+        // process (tests, repeated includes) and PHP cannot redeclare functions.
+        if (!function_exists('initialsFromName')) {
+            function initialsFromName($name)
+            {
+                $initials = '';
+                foreach (preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) as $part) {
+                    $initials .= strtoupper(substr($part, 0, 1));
+                    if (strlen($initials) >= 2) break;
+                }
+                return $initials;
             }
-            return $initials;
         }
     @endphp
     {{-- Tabs --}}
@@ -146,7 +156,8 @@
                             $roleClass   = $user['role'] === 'Admin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
                             $statusClass = $user['status'] === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
                         @endphp
-                        <tr class="hover:bg-gray-50 transition-colors">
+                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                                data-href="{{ route('entities.show', ['type' => 'user', 'id' => $user['id']]) }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center gap-3">
                                     <div class="flex items-center justify-center w-9 h-9 rounded-full bg-[#2a7a94]/10 text-[#2a7a94] text-xs font-semibold shrink-0">
@@ -236,7 +247,8 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
                     @foreach($entities as $entity)
-                        <tr class="hover:bg-gray-50 transition-colors">
+                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                                data-href="{{ route('entities.show', ['type' => 'procuring_entity', 'id' => $entity['id']]) }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <p class="text-sm font-bold text-gray-900">{{ $entity['name'] }}</p>
                                 <p class="text-xs text-gray-500 mt-0.5">{{ $entity['address'] }}</p>
@@ -318,7 +330,8 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
                     @foreach($suppliers as $supplier)
-                        <tr class="hover:bg-gray-50 transition-colors">
+                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                                data-href="{{ route('entities.show', ['type' => 'supplier', 'id' => $supplier['id']]) }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <p class="text-sm font-bold text-gray-900">{{ $supplier['name'] }}</p>
                                 <p class="text-xs text-gray-500 mt-0.5">{{ $supplier['address'] }}</p>
@@ -437,6 +450,19 @@
             document.querySelectorAll('.dropdown-action').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     e.stopPropagation();
+                });
+            });
+
+            // ------------------------------------------------------------------
+            // Row click navigation — clicking anywhere on a table row opens its
+            // profile page, unless the click landed on the three-dot dropdown.
+            // ------------------------------------------------------------------
+            document.querySelectorAll('tr[data-href]').forEach(function (row) {
+                row.addEventListener('click', function (e) {
+                    if (e.target.closest('.dropdown-trigger') || e.target.closest('.dropdown-menu')) {
+                        return; // let the dropdown handle its own interaction
+                    }
+                    window.location.href = row.dataset.href;
                 });
             });
         })();

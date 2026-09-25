@@ -73,6 +73,12 @@ Route::middleware('fake.auth')->group(function () {
         return view('Preplist.generate_rfq'); // view uses hardcoded dummy data
     })->name('quotation.generate');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
+    // Entity profile page — one view rendered three ways based on {type}.
+    // @TODO: once models + migrations exist, pass the real $user/$entity/$supplier in:
+    // Route::get('/entities/procuring-entities/{id}', [EntityController::class, 'show'])->name('entities.show');
+    Route::get('/entities/{type}/{id}', function ($type, $id) {
+        return view('Entities.show', ['type' => $type, 'id' => $id]); // show.blade.php uses hardcoded dummy data
+    })->whereIn('type', ['user', 'procuring_entity', 'supplier'])->name('entities.show');
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
     Route::get('/settings', [PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
