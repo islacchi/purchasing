@@ -73,6 +73,21 @@ Route::middleware('fake.auth')->group(function () {
         return view('Preplist.generate_rfq'); // view uses hardcoded dummy data
     })->name('quotation.generate');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
+
+    // Add / Edit entity form — one view rendered three ways based on {type}.
+    // NOTE: /entities/{type}/create must be declared BEFORE /entities/{type}/{id}
+    // so "create" is matched as a literal path, not captured by the {id} wildcard.
+    // @TODO: once models + migrations exist, swap the closures for controller methods:
+    // Route::get('/entities/{type}/create', [EntityController::class, 'create'])->name('entities.create');
+    // Route::get('/entities/{type}/{id}/edit', [EntityController::class, 'edit'])->name('entities.edit');
+    Route::get('/entities/{type}/create', function ($type) {
+        return view('Entities.form', ['type' => $type]); // no $id → renders Add mode
+    })->whereIn('type', ['user', 'procuring_entity', 'supplier'])->name('entities.create');
+
+    Route::get('/entities/{type}/{id}/edit', function ($type, $id) {
+        return view('Entities.form', ['type' => $type, 'id' => $id]); // $id present → renders Edit mode
+    })->whereIn('type', ['user', 'procuring_entity', 'supplier'])->name('entities.edit');
+
     // Entity profile page — one view rendered three ways based on {type}.
     // @TODO: once models + migrations exist, pass the real $user/$entity/$supplier in:
     // Route::get('/entities/procuring-entities/{id}', [EntityController::class, 'show'])->name('entities.show');

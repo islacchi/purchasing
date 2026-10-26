@@ -129,15 +129,13 @@
                     </svg>
                 </button>
             </div>
-            {{-- @TODO: route the Add button to the User controller's create method
-                 (e.g. route('users.create')) once real routes/controllers exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
+            <a href="{{ route('entities.create', ['type' => 'user']) }}"
+               class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 <span class="font-medium"> Add user</span>
-            </button>
+            </a>
         </div>
     {{-- Table --}}
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
@@ -183,14 +181,15 @@
                                         </svg>
                                     </button>
                                     <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
-                                        {{-- @TODO: route Edit/Delete to the User controller's
-                                             edit/destroy methods once real routes exist. --}}
-                                        <button type="button" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
+                                        {{-- @TODO: route Delete to the User controller's
+                                             destroy method once real routes exist. --}}
+                                        <a href="{{ route('entities.edit', ['type' => 'user', 'id' => $user['id']]) }}"
+                                           class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
                                             Edit
-                                        </button>
+                                        </a>
                                         <button type="button" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50" title="Delete">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -221,15 +220,13 @@
                     </svg>
                 </button>
             </div>
-            {{-- @TODO: route the Add button to the Entity controller's create method
-                 (e.g. route('entities.create')) once real routes/controllers exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
+            <a href="{{ route('entities.create', ['type' => 'procuring_entity']) }}"
+               class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 <span class="font-medium">Add entity</span>
-            </button>
+            </a>
         </div>
 
         {{-- Table --}}
@@ -267,14 +264,15 @@
                                         </svg>
                                     </button>
                                     <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
-                                        {{-- @TODO: route Edit/Delete to the Entity controller's
-                                             edit/destroy methods once real routes exist. --}}
-                                        <button type="button" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
+                                        {{-- @TODO: route Delete to the Entity controller's
+                                             destroy method once real routes exist. --}}
+                                        <a href="{{ route('entities.edit', ['type' => 'procuring_entity', 'id' => $entity['id']]) }}"
+                                           class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
                                             Edit
-                                        </button>
+                                        </a>
                                         <button type="button" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50" title="Delete">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -305,15 +303,13 @@
                     </svg>
                 </button>
             </div>
-            {{-- @TODO: route the Add button to the Supplier controller's create method
-                 (e.g. route('suppliers.create')) once real routes/controllers exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
+            <a href="{{ route('entities.create', ['type' => 'supplier']) }}"
+               class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 <span class="font-medium">Add Supplier</span>
-            </button>
+            </a>
         </div>
 
         {{-- Table --}}
@@ -347,14 +343,15 @@
                                         </svg>
                                     </button>
                                     <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
-                                        {{-- @TODO: route Edit/Delete to the Supplier controller's
-                                             edit/destroy methods once real routes exist. --}}
-                                        <button type="button" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
+                                        {{-- @TODO: route Delete to the Supplier controller's
+                                             destroy method once real routes exist. --}}
+                                        <a href="{{ route('entities.edit', ['type' => 'supplier', 'id' => $supplier['id']]) }}"
+                                           class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
                                             Edit
-                                        </button>
+                                        </a>
                                         <button type="button" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50" title="Delete">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -376,8 +373,8 @@
     <script>
         // Tab switching + three-dot action dropdowns (plain JS — the rest of the
         // app uses vanilla JS + the Tailwind CDN, no Alpine/Livewire).
-        // @TODO: once real controllers exist, persist actions (Add/Edit/Delete)
-        // by routing to their controller methods instead of being visual-only.
+        // @TODO: once real controllers exist, persist the Delete action by
+        // routing it to a controller method instead of being visual-only.
         (function () {
             'use strict';
 
