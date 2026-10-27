@@ -10,7 +10,7 @@
     <div class="pb-24">
         {{-- Page heading --}}
         <div class="mb-6 flex items-end justify-between gap-4">
-            <h2 class="text-xl font-bold text-gray-900">Quotation</h2>
+            <!-- <h2 class="text-xl font-bold text-gray-900">Quotation</h2> -->
             <p class="text-xs text-gray-500">Supplier responses to sent RFQs</p>
         </div>
 
@@ -61,8 +61,8 @@
                             <th scope="col" class="whitespace-nowrap px-6 py-3">Supplier</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3">Items quoted</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3">Status</th>
-                            <th scope="col" class="sticky right-0 z-20 w-16 border-l border-gray-200 bg-gray-50 px-4 py-3">
-                                <span class="sr-only">Actions</span>
+                            <th scope="col" class="sticky right-0 z-20 bg-gray-50 px-6 py-3 text-center">
+                                Action
                             </th>
                         </tr>
                     </thead>
@@ -79,7 +79,8 @@
                                 // Menus on the last two rows open upward so they are not clipped.
                                 $openMenuUp = $loop->remaining < 2;
                             @endphp
-                            <tr class="group transition-colors hover:bg-gray-50">
+                            <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
+                                data-href="{{ route('quotation.show', ['id' => $quotation['id']]) }}">
                                 <td class="whitespace-nowrap px-6 py-4">
                                     <p class="font-semibold text-gray-900">{{ $quotation['prep_list'] }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">{{ $quotation['ref'] }}</p>
@@ -103,7 +104,7 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="sticky right-0 z-10 border-l border-gray-100 bg-white px-4 py-4 text-right group-hover:bg-gray-50">
+                                <td class="sticky right-0 z-10 bg-white px-6 py-4 text-center group-hover:bg-gray-50">
                                     <div class="relative inline-block text-left">
                                         <button type="button"
                                                 data-quotation-menu-toggle
@@ -203,6 +204,17 @@
 
                 document.addEventListener('keydown', function (event) {
                     if (event.key === 'Escape') closeMenu();
+                });
+
+                // Clicking anywhere on a row opens that quotation's detail page,
+                // unless the click landed on the three-dot menu.
+                document.querySelectorAll('tr[data-href]').forEach(function (row) {
+                    row.addEventListener('click', function (event) {
+                        if (event.target.closest('[data-quotation-menu-toggle]') || event.target.closest('[data-quotation-menu]')) {
+                            return;
+                        }
+                        window.location.href = row.dataset.href;
+                    });
                 });
             })();
         </script>

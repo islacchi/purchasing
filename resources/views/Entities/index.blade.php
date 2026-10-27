@@ -145,7 +145,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 w-14"><span class="sr-only">Actions</span></th>
+                        <th class="px-6 py-3 w-14 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
@@ -174,7 +174,7 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $statusClass }}">{{ $user['status'] }}</span>
                             </td>
-                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
                                 <div class="relative inline-block">
                                     <button type="button" class="dropdown-trigger p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Actions">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -240,7 +240,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact person</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact no.</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 w-14"><span class="sr-only">Actions</span></th>
+                        <th class="px-6 py-3 w-14 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
@@ -257,7 +257,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $entity['contact_person'] }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $entity['contact_no'] }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $entity['email'] }}</td>
-                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
                                 <div class="relative inline-block">
     <button type="button" class="dropdown-trigger p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Actions">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -322,7 +322,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact person</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact no.</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 w-14"><span class="sr-only">Actions</span></th>
+                        <th class="px-6 py-3 w-14 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
@@ -336,7 +336,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $supplier['contact_person'] }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $supplier['contact_no'] }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $supplier['email'] }}</td>
-                            <td class="px-6 py-4 text-right whitespace-nowrap">
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
                                 <div class="relative inline-block">
     <button type="button" class="dropdown-trigger p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Actions">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
