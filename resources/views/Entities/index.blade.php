@@ -163,6 +163,7 @@
                                     <div class="flex items-center justify-center w-9 h-9 rounded-full bg-[#2a7a94]/10 text-[#2a7a94] text-xs font-semibold shrink-0">
                                         {{ initialsFromName($user['name']) }}
                                     </div>
+                                   
                                     <div>
                                         <p class="text-sm font-bold text-gray-900">{{ $user['name'] }}</p>
                                         <p class="text-xs text-gray-500 mt-0.5">{{ $user['email'] }}</p>
