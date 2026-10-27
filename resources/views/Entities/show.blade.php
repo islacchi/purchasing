@@ -107,14 +107,13 @@
                 </svg>
                 Deactivate
             </button>
-            {{-- @TODO: route to the User controller's edit method once real routes exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
+            <a href="{{ route('entities.edit', ['type' => 'user', 'id' => $id]) }}"
+               class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
                 Edit User
-            </button>
+            </a>
         </div>
     @elseif($type === 'procuring_entity')
         @php
@@ -191,14 +190,13 @@
                 </svg>
                 Delete Entity
             </button>
-            {{-- @TODO: route to the Entity controller's edit method once real routes exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
+            <a href="{{ route('entities.edit', ['type' => 'procuring_entity', 'id' => $id]) }}"
+               class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
                 Edit Entity
-            </button>
+            </a>
         </div>
     @else
         @php
@@ -274,14 +272,13 @@
                 </svg>
                 Delete Supplier
             </button>
-            {{-- @TODO: route to the Supplier controller's edit method once real routes exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
+            <a href="{{ route('entities.edit', ['type' => 'supplier', 'id' => $id]) }}"
+               class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
                 Edit Supplier
-            </button>
+            </a>
         </div>
     @endif
 
