@@ -121,8 +121,8 @@
                                         <div data-quotation-menu
                                              role="menu"
                                              class="absolute right-0 z-50 hidden w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg {{ $openMenuUp ? 'bottom-full mb-2' : 'top-full mt-2' }}">
-                                            {{-- @TODO: Point these at route('quotation.show', $quotation['id']) and route('quotation.edit', $quotation['id']) once those routes exist. --}}
-                                            <a href="#" role="menuitem"
+                                            {{-- @TODO: Point the Edit link at route('quotation.edit', $quotation['id']) once that route exists. --}}
+                                            <a href="{{ route('quotation.show', ['id' => $quotation['id']]) }}" role="menuitem"
                                                class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50">
                                                 <svg class="h-4 w-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>

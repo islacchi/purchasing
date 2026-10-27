@@ -74,6 +74,13 @@ Route::middleware('fake.auth')->group(function () {
     })->name('quotation.generate');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
 
+    // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
+    // @TODO: once the Quotation/RFQ models + migrations exist, pass the real quotation in:
+    // Route::get('/quotation/{id}', [QuotationController::class, 'show'])->name('quotation.show');
+    Route::get('/quotation/{id}', function ($id) {
+        return view('Quotation.show', ['id' => $id]);
+    })->name('quotation.show');
+
     // Add / Edit entity form — one view rendered three ways based on {type}.
     // NOTE: /entities/{type}/create must be declared BEFORE /entities/{type}/{id}
     // so "create" is matched as a literal path, not captured by the {id} wildcard.
