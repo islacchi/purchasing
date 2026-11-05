@@ -1,58 +1,190 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Purchasing – Procurement Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel-based purchasing / procurement management application for government and institutional procurement workflows. The system covers the end-to-end procurement cycle: projects, preplists, quotations/RFQs, purchase orders, entities (users, procuring entities, suppliers), price index tracking, and settings.
 
-## About Laravel
+> **Status:** Frontend prototype / work-in-progress. Most pages render with hardcoded dummy data. Database models, migrations, and real controller logic are pending integration (see [Roadmap](#roadmap)).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Tech Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Layer | Technology |
+|-------|------------|
+| Framework | Laravel 12 (PHP 8.2+) |
+| Database | SQLite (default), configurable to MySQL/PostgreSQL/SQL Server |
+| Auth | Custom `FakeAuth` middleware (session `logged_in` flag) — placeholder for real authentication |
+| Frontend | Blade templates, Tailwind CSS v4, Vite |
+| JavaScript | Axios (via `resources/js/bootstrap.js`) |
+| Build Tool | Vite (`vite.config.js`) |
+| Testing | PHPUnit |
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Project Structure
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```
+purchasing/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── AuthController.php      # Fake login/logout
+│   │   │   ├── DashboardController.php # Not yet routed
+│   │   │   ├── PageController.php      # Renders Blade views by name
+│   │   │   ├── SettingsController.php  # Not yet routed
+│   │   │   └── Controller.php          # Abstract base
+│   │   └── Middleware/
+│   │       └── FakeAuth.php            # Session-based fake auth guard
+│   ├── Models/
+│   │   └── User.php                    # Only Eloquent model so far
+│   └── Providers/
+│       └── AppServiceProvider.php
+├── bootstrap/
+│   └── app.php                         # Route + middleware registration
+├── config/                             # Standard Laravel config files
+├── database/
+│   ├── migrations/                     # Default Laravel auth tables only (users, cache, jobs)
+│   ├── factories/UserFactory.php
+│   └── seeders/DatabaseSeeder.php
+├── resources/
+│   ├── views/
+│   │   ├── layouts/app.blade.php       # Main shell: sidebar, header, content
+│   │   ├── auth/login.blade.php
+│   │   ├── welcome.blade.php
+│   │   ├── components/nav-icon.blade.php
+│   │   ├── Projects/                   # index, show, form
+│   │   ├── Preplist/                   # index, show, form, generate_rfq
+│   │   ├── Quotation/                  # index, show
+│   │   ├── Purchaseorder/              # index, show, create
+│   │   ├── Entities/                   # index, form, show (users / procuring_entity / supplier)
+│   │   ├── Priceindex/                 # index
+│   │   └── Settings/                   # index (placeholder)
+│   ├── css/app.css                     # Tailwind v4 import
+│   └── js/                             # app.js, bootstrap.js
+├── routes/
+│   ├── web.php                         # All HTTP routes
+│   └── console.php                     # Artisan commands
+├── tests/                              # PHPUnit unit + feature tests
+├── public/index.php
+├── composer.json
+├── package.json
+├── vite.config.js
+└── .env
+```
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Navigation Module Order (Sidebar)
 
-### Premium Partners
+The sidebar navigation in `resources/views/layouts/app.blade.php` is ordered as follows:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+1. **Projects** — `route('projects')`
+2. **Preplist** — `route('preplist')`
+3. **Quotation** — `route('quotation')`
+4. **Price Index** — `route('priceindex')`
+5. **Purchase Order** — `route('purchase-order')`
+6. **Entities** — `route('entities')` (users / procuring entities / suppliers)
+7. **Settings** — `route('settings')`
 
-## Contributing
+Price Index and Purchase Order were repositioned to appear above Entities and Settings.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+## Routes Summary
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Public (no authentication required)
 
-## Security Vulnerabilities
+| Method | URI | Action | Name |
+|--------|-----|--------|------|
+| GET | `/` | Redirect to `/login` | — |
+| GET | `/login` | `AuthController@showLogin` | `login` |
+| POST | `/login` | `AuthController@login` | — |
+| POST | `/logout` | `AuthController@logout` | `logout` |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Authenticated (protected by `fake.auth` middleware)
+
+| Method | URI | View / Action | Name |
+|--------|-----|---------------|------|
+| GET | `/projects` | `Projects.index` | `projects` |
+| GET | `/projects/create` | `Projects.form` | `projects.create` |
+| GET | `/projects/{id}` | `Projects.show` | `projects.show` |
+| GET | `/projects/{id}/edit` | `Projects.form` | `projects.edit` |
+| GET | `/preplist` | `Preplist.index` | `preplist` |
+| GET | `/preplist/create` | `Preplist.form` | `preplist.create` |
+| GET | `/preplist/{id}` | `Preplist.show` | `preplist.show` |
+| GET | `/preplist/{id}/edit` | `Preplist.form` | `preplist.edit` |
+| GET | `/quotation/generate` | `Preplist.generate_rfq` | `quotation.generate` |
+| GET | `/quotation` | `Quotation.index` | `quotation` |
+| GET | `/quotation/{id}` | `Quotation.show` | `quotation.show` |
+| GET | `/purchase-order` | `Purchaseorder.index` | `purchase-order` |
+| GET | `/purchase-order/create/{quotation}` | `Purchaseorder.create` | `purchase-order.create` |
+| GET | `/purchase-order/{id}` | `Purchaseorder.show` | `purchase-order.show` |
+| GET | `/entities/{type}/create` | `Entities.form` | `entities.create` |
+| GET | `/entities/{type}/{id}/edit` | `Entities.form` | `entities.edit` |
+| GET | `/entities/{type}/{id}` | `Entities.show` | `entities.show` |
+| GET | `/entities` | `Entities.index` | `entities` |
+| GET | `/priceindex` | `Priceindex.index` | `priceindex` |
+| GET | `/settings` | `Settings.index` | `settings` |
+
+> **Note:** Most authenticated routes currently use inline closures or `PageController@show` with hardcoded dummy data. Real controllers (e.g., `ProjectController`, `PurchaseOrderController`) are pending implementation.
+
+---
+
+## Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/islacchi/purchasing.git
+cd purchasing
+
+# 2. Install PHP dependencies
+composer install
+
+# 3. Install Node.js dependencies
+npm install
+
+# 4. Copy environment file and generate key
+cp .env.example .env
+php artisan key:generate
+
+# 5. Run migrations
+php artisan migrate
+
+# 6. Build frontend assets
+npm run build
+
+# 7. Serve the application
+php artisan serve
+```
+
+Or use the provided composer setup script:
+
+```bash
+composer run setup
+```
+
+---
+
+## Current State & Limitations
+
+- **Authentication:** Uses a `FakeAuth` middleware. Any credentials work on the login page; it simply sets a `logged_in` session flag. Replace with real Laravel authentication (Fortify/Breeze or custom) before production use.
+- **Data:** All module views (Projects, Preplist, Quotation, Purchase Order, Entities, Price Index) use hardcoded PHP arrays (`@php` blocks) instead of database queries.
+- **Forms:** All `<form action="#">` submissions are placeholders — no store/update/destroy controller methods exist yet.
+- **Database:** Only default Laravel migrations exist (users, password_reset_tokens, sessions, cache, jobs). Domain tables (projects, preplists, quotations, purchase_orders, entities, suppliers, etc.) are not yet created.
+
+---
+
+## Roadmap
+
+The codebase contains `@TODO` comments throughout indicating the intended next steps:
+
+1. Create migrations and Eloquent models for Project, Preplist, Quotation, PurchaseOrder, Entity, Supplier, and Item.
+2. Replace inline closures in `routes/web.php` with real controller methods.
+3. Wire up form submissions to controller store/update methods.
+4. Replace `FakeAuth` with real authentication (Laravel Breeze/Fortify or custom).
+5. Implement PO status transitions (Draft → Sent → Partial → Completed → Cancelled).
+6. Connect hardcoded dummy data in views to real Eloquent queries.
+
+---
 
 ## License
 
