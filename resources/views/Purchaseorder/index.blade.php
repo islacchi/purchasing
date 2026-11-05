@@ -51,7 +51,7 @@
                 'prep_list' => 'July Region VII batch',
                 'items' => 3,
                 'total' => 49350.00,
-                'status' => 'Sent to supplier',
+                'status' => 'Sent',
                 'issued' => 'Jul 18, 2026',
             ],
             [
@@ -62,7 +62,7 @@
                 'prep_list' => 'Lab reagents – PGH',
                 'items' => 3,
                 'total' => 67700.00,
-                'status' => 'Partially received',
+                'status' => 'Partial',
                 'issued' => 'Jul 15, 2026',
             ],
             [
@@ -106,15 +106,15 @@
                 'prep_list' => 'IT hardware refresh',
                 'items' => 3,
                 'total' => 263500.00,
-                'status' => 'Sent to supplier',
+                'status' => 'Sent',
                 'issued' => 'Jun 25, 2026',
             ],
         ];
 
         $statusStyles = [
             'Draft' => 'bg-gray-100 text-gray-600',
-            'Sent to supplier' => 'bg-blue-100 text-blue-700',
-            'Partially received' => 'bg-amber-100 text-amber-700',
+            'Sent' => 'bg-blue-100 text-blue-700',
+            'Partial' => 'bg-amber-100 text-amber-700',
             'Completed' => 'bg-green-100 text-green-700',
             'Cancelled' => 'bg-red-100 text-red-700',
         ];
@@ -134,13 +134,7 @@
             <p class="text-xs text-gray-500">
                 Orders generated from awarded supplier quotations.
             </p>
-            <a href="{{ route('quotation') }}"
-               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4.5v15m7.5-7.5h-15"/>
-                </svg>
-                Generate from quotation
-            </a>
+   
         </div>
 
         {{-- Filters --}}

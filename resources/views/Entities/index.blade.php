@@ -101,15 +101,15 @@
     {{-- Tabs --}}
     <div class="flex flex-wrap items-center gap-2 mb-6" role="tablist" aria-label="Entity records">
         <button type="button" role="tab" aria-selected="true" data-tab="users"
-                class="tab-btn px-4 py-2 rounded-full border text-sm font-medium transition-colors bg-[#2a7a94] text-white border-[#2a7a94] shadow-sm">
+                class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors bg-[#2a7a94] text-white border-[#2a7a94] shadow-sm">
             Users
         </button>
         <button type="button" role="tab" aria-selected="false" data-tab="entities"
-                class="tab-btn px-4 py-2 rounded-full border text-sm font-medium transition-colors bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
+                class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
             Procuring Entities
         </button>
         <button type="button" role="tab" aria-selected="false" data-tab="suppliers"
-                class="tab-btn px-4 py-2 rounded-full border text-sm font-medium transition-colors bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
+                class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
             Suppliers
         </button>
     </div>
