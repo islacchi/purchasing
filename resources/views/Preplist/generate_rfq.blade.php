@@ -176,6 +176,7 @@
         </div>
         <p class="mt-2 text-xs text-gray-400">
             Tick a supplier's checkbox to include its files when you click Generate File, or click the supplier's name to preview its selected items.
+            Suppliers receive the item list only — our quantities stay internal and are never included in the generated files.
         </p>
     </div>
     {{-- Supplier item preview modal (read-only) --}}
@@ -365,12 +366,9 @@
                         name.className = 'text-sm text-gray-800';
                         name.textContent = item.name;
 
-                        const qty = document.createElement('p');
-                        qty.className = 'text-sm font-semibold text-gray-900 whitespace-nowrap';
-                        qty.textContent = item.total + ' ' + item.unit;
-
+                        // Quantities are intentionally omitted: suppliers quote a
+                        // unit price per item without knowing how much we need.
                         row.appendChild(name);
-                        row.appendChild(qty);
                         modalBody.appendChild(row);
                     });
                 }
@@ -398,9 +396,13 @@
             // every supplier checked in "Quotation files to generate". There is
             // no separate PDF button and no separate Excel button.
             //
+            // Quantities are deliberately NOT included: suppliers only receive
+            // the item list and quote a unit price. Our requested quantities
+            // stay internal and are captured on the purchase order.
+            //
             // @TODO: replace this stub with the real generation logic. It must
             // emit ONE pair of files (PDF + Excel) PER checked supplier, each
-            // containing ONLY that supplier's checked items and their quantities.
+            // containing ONLY that supplier's checked items.
             // ------------------------------------------------------------------
             document.getElementById('generateFileBtn').addEventListener('click', function () {
                 const payload = [];
@@ -413,7 +415,7 @@
                     document.querySelectorAll('.item-supplier-check[data-supplier="' + CSS.escape(supplier) + '"]:checked').forEach(function (itemCb) {
                         const item = ITEM_DATA_BY_KEY[itemCb.dataset.itemKey];
                         if (item) {
-                            items.push({ name: item.name, qty: item.total + ' ' + item.unit });
+                            items.push({ name: item.name });
                         }
                     });
 

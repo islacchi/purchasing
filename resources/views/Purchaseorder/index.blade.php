@@ -134,6 +134,13 @@
             <p class="text-xs text-gray-500">
                 Orders generated from awarded supplier quotations.
             </p>
+            <a href="{{ route('quotation') }}"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4.5v15m7.5-7.5h-15"/>
+                </svg>
+                Generate from quotation
+            </a>
         </div>
 
         {{-- Filters --}}
