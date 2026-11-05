@@ -81,6 +81,19 @@ Route::middleware('fake.auth')->group(function () {
         return view('Quotation.show', ['id' => $id]);
     })->name('quotation.show');
 
+    // Purchase orders generated from awarded quotations.
+    // @TODO: once the PurchaseOrder model + migrations exist, swap for:
+    // Route::get('/purchase-order', [PurchaseOrderController::class, 'index'])->name('purchase-order');
+    Route::get('/purchase-order', [PageController::class, 'show'])
+        ->defaults('page', 'Purchaseorder.index')
+        ->name('purchase-order');
+
+    // Purchase order detail (dummy data for now — the view uses $id to pick a hardcoded record).
+    // @TODO: Route::get('/purchase-order/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('purchase-order.show');
+    Route::get('/purchase-order/{id}', function ($id) {
+        return view('Purchaseorder.show', ['id' => $id]);
+    })->name('purchase-order.show');
+
     // Add / Edit entity form — one view rendered three ways based on {type}.
     // NOTE: /entities/{type}/create must be declared BEFORE /entities/{type}/{id}
     // so "create" is matched as a literal path, not captured by the {id} wildcard.
