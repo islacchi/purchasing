@@ -14,6 +14,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\SettingsController;
 
 // Redirect the root path to the login page.
 Route::get('/', function () {
@@ -81,9 +82,13 @@ Route::middleware('fake.auth')->group(function () {
     })->whereIn('type', ['user', 'procuring_entity', 'supplier'])->name('entities.show');
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
+
+    // Settings sub-pages
     Route::get('/settings', [PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
-});
-// Route: :get('/settings',[PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
+    Route::get('/settings/logs', [SettingsController::class, 'logs'])->name('settings.logs');
+    Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
+    Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
+
   // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
     // @TODO: once the Quotation/RFQ models + migrations exist, pass the real quotation in:
     // Route::get('/quotation/{id}', [QuotationController::class, 'show'])->name('quotation.show');
@@ -125,3 +130,4 @@ Route::middleware('fake.auth')->group(function () {
     Route::get('/entities/{type}/{id}/edit', function ($type, $id) {
         return view('Entities.form', ['type' => $type, 'id' => $id]); // $id present → renders Edit mode
     })->whereIn('type', ['user', 'procuring_entity', 'supplier'])->name('entities.edit');
+});

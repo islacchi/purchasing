@@ -57,7 +57,11 @@ purchasing/
 │   │   ├── Purchaseorder/              # index, show, create
 │   │   ├── Entities/                   # index, form, show (users / procuring_entity / supplier)
 │   │   ├── Priceindex/                 # index
-│   │   └── Settings/                   # index (placeholder)
+│   │   ├── Settings/
+│   │   │   ├── index.blade.php         # Settings dashboard (3 cards)
+│   │   │   ├── logs.blade.php          # System logs viewer
+│   │   │   ├── privileges.blade.php    # User privilege management
+│   │   │   └── backup.blade.php        # Database backup
 │   ├── css/app.css                     # Tailwind v4 import
 │   └── js/                             # app.js, bootstrap.js
 ├── routes/
@@ -124,6 +128,9 @@ Price Index and Purchase Order were repositioned to appear above Entities and Se
 | GET | `/entities` | `Entities.index` | `entities` |
 | GET | `/priceindex` | `Priceindex.index` | `priceindex` |
 | GET | `/settings` | `Settings.index` | `settings` |
+| GET | `/settings/logs` | `SettingsController@logs` | `settings.logs` |
+| GET | `/settings/privileges` | `SettingsController@privileges` | `settings.privileges` |
+| GET | `/settings/backup` | `SettingsController@backup` | `settings.backup` |
 
 > **Note:** Most authenticated routes currently use inline closures or `PageController@show` with hardcoded dummy data. Real controllers (e.g., `ProjectController`, `PurchaseOrderController`) are pending implementation.
 
@@ -167,7 +174,7 @@ composer run setup
 ## Current State & Limitations
 
 - **Authentication:** Uses a `FakeAuth` middleware. Any credentials work on the login page; it simply sets a `logged_in` session flag. Replace with real Laravel authentication (Fortify/Breeze or custom) before production use.
-- **Data:** All module views (Projects, Preplist, Quotation, Purchase Order, Entities, Price Index) use hardcoded PHP arrays (`@php` blocks) instead of database queries.
+- **Data:** All module views (Projects, Preplist, Quotation, Purchase Order, Entities, Price Index, Settings) use hardcoded PHP arrays (`@php` blocks) instead of database queries.
 - **Forms:** All `<form action="#">` submissions are placeholders — no store/update/destroy controller methods exist yet.
 - **Database:** Only default Laravel migrations exist (users, password_reset_tokens, sessions, cache, jobs). Domain tables (projects, preplists, quotations, purchase_orders, entities, suppliers, etc.) are not yet created.
 
