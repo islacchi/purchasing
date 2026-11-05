@@ -25,6 +25,8 @@
                         'requested' => 100,
                         'unit' => 'box',
                         'unit_price' => null,
+                        'min_remaining_months' => 12,
+                        'offered_shelf_life_months' => null,
                         'allocations' => [
                             ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 50],
                             ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 50],
@@ -35,6 +37,8 @@
                         'requested' => 40,
                         'unit' => 'box',
                         'unit_price' => null,
+                        'min_remaining_months' => 24,
+                        'offered_shelf_life_months' => null,
                         'allocations' => [
                             ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 40],
                         ],
@@ -56,6 +60,8 @@
                         'requested' => 100,
                         'unit' => 'box',
                         'unit_price' => 305.00,
+                        'min_remaining_months' => 12,
+                        'offered_shelf_life_months' => 9,
                         'allocations' => [
                             ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 50],
                             ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 50],
@@ -66,6 +72,8 @@
                         'requested' => 40,
                         'unit' => 'box',
                         'unit_price' => null,
+                        'min_remaining_months' => 24,
+                        'offered_shelf_life_months' => null,
                         'allocations' => [
                             ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 40],
                         ],
@@ -87,6 +95,8 @@
                         'requested' => 60,
                         'unit' => 'box',
                         'unit_price' => 850.00,
+                        'min_remaining_months' => 12,
+                        'offered_shelf_life_months' => 12,
                         'allocations' => [
                             ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 30],
                             ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 30],
@@ -97,6 +107,8 @@
                         'requested' => 40,
                         'unit' => 'box',
                         'unit_price' => 310.00,
+                        'min_remaining_months' => 24,
+                        'offered_shelf_life_months' => 30,
                         'allocations' => [
                             ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 40],
                         ],
@@ -106,6 +118,8 @@
                         'requested' => 25,
                         'unit' => 'box',
                         'unit_price' => 220.00,
+                        'min_remaining_months' => 0,
+                        'offered_shelf_life_months' => null,
                         'allocations' => [
                             ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 15],
                             ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 10],
@@ -124,6 +138,20 @@
         $quotedTotal = collect($quotation['items'])
             ->filter(fn ($item) => $item['unit_price'] !== null)
             ->sum(fn ($item) => $item['unit_price'] * $item['requested']);
+
+        // Offers whose shelf life is below the required minimum. A cheap
+        // short-dated quote should not win silently, so these are flagged.
+        $shortDatedCount = collect($quotation['items'])
+            ->filter(function ($item) {
+                $required = $item['min_remaining_months'] ?? 0;
+                $offered = $item['offered_shelf_life_months'] ?? null;
+
+                return $item['unit_price'] !== null
+                    && $required > 0
+                    && $offered !== null
+                    && $offered < $required;
+            })
+            ->count();
 
         $status = $itemsQuoted > 0 ? 'Quoted' : 'Awaiting quote';
 
@@ -160,6 +188,23 @@
                 </span>
             </div>
         </div>
+
+        @if ($shortDatedCount > 0)
+            {{-- Shelf-life warning: this supplier offered stock shorter than required. --}}
+            <div class="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
+                </svg>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-amber-800">
+                        {{ $shortDatedCount }} {{ Str::plural('item', $shortDatedCount) }} below the required shelf life
+                    </p>
+                    <p class="mt-0.5 text-xs text-amber-700">
+                        The supplier offered stock with less remaining shelf life than requested. Confirm before awarding, or ask for fresher stock.
+                    </p>
+                </div>
+            </div>
+        @endif
 
         {{-- Supplier's quotation document --}}
         <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">

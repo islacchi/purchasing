@@ -39,18 +39,23 @@
 
         // @TODO: replace with Preplist::find($id)->items; each item carries its
         // own distinct total quantity — do not reuse one total for every item.
+        // shelf_life = minimum months of shelf life remaining at delivery
+        // (0 / null = non-perishable). This is a quality requirement, not a
+        // quantity, so it is safe to show suppliers on the generated RFQ.
         $items = [
             [
                 'key'   => 'amoxicillin',
                 'name'  => 'Amoxicillin 500mg, box of 100',
                 'total' => 100,
                 'unit'  => 'box',
+                'shelf_life' => 12,
             ],
             [
                 'key'   => 'surgical-gloves',
                 'name'  => 'Surgical gloves, box 50 pairs',
                 'total' => 40,
                 'unit'  => 'box',
+                'shelf_life' => 24,
             ],
         ];
 
@@ -121,7 +126,17 @@
         @foreach($items as $item)
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-100">
-                    <p class="font-bold text-gray-900">{{ $item['name'] }}</p>
+                    <div class="min-w-0">
+                        <p class="font-bold text-gray-900">{{ $item['name'] }}</p>
+                        <p class="mt-1 text-xs text-gray-500">
+                            @if(!empty($item['shelf_life']))
+                                Shelf life required:
+                                <span class="font-medium text-gray-700">&ge; {{ $item['shelf_life'] }} months remaining at delivery</span>
+                            @else
+                                Non-perishable &mdash; no shelf-life requirement
+                            @endif
+                        </p>
+                    </div>
                     <span class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ $item['total'] }} {{ $item['unit'] }} total</span>
                 </div>
                 <div class="px-5 py-4">
@@ -176,7 +191,7 @@
         </div>
         <p class="mt-2 text-xs text-gray-400">
             Tick a supplier's checkbox to include its files when you click Generate File, or click the supplier's name to preview its selected items.
-            Suppliers receive the item list only — our quantities stay internal and are never included in the generated files.
+            Suppliers receive the item list and the minimum shelf-life requirement only — our quantities stay internal and are never included in the generated files.
         </p>
     </div>
     {{-- Supplier item preview modal (read-only) --}}
@@ -237,7 +252,7 @@
             // Item metadata lookup, keyed by each per-item chip's data-item-key.
             const ITEM_DATA_BY_KEY = {};
             @json($items).forEach(function (item) {
-                ITEM_DATA_BY_KEY[item.key] = { name: item.name, total: item.total, unit: item.unit };
+                ITEM_DATA_BY_KEY[item.key] = { name: item.name, total: item.total, unit: item.unit, shelf_life: item.shelf_life };
             });
 
             // ------------------------------------------------------------------
@@ -360,7 +375,7 @@
                 } else {
                     rows.forEach(function (item) {
                         const row = document.createElement('div');
-                        row.className = 'flex items-center justify-between gap-4 py-2.5 border-b border-gray-100 last:border-0';
+                        row.className = 'py-2.5 border-b border-gray-100 last:border-0';
 
                         const name = document.createElement('p');
                         name.className = 'text-sm text-gray-800';
@@ -368,7 +383,16 @@
 
                         // Quantities are intentionally omitted: suppliers quote a
                         // unit price per item without knowing how much we need.
+                        // The shelf-life requirement is a quality condition, so it
+                        // is shown to the supplier.
+                        const condition = document.createElement('p');
+                        condition.className = 'mt-0.5 text-xs text-gray-500';
+                        condition.textContent = item.shelf_life
+                            ? '\u2265 ' + item.shelf_life + ' months remaining at delivery'
+                            : 'Non-perishable \u2014 no shelf-life requirement';
+
                         row.appendChild(name);
+                        row.appendChild(condition);
                         modalBody.appendChild(row);
                     });
                 }
@@ -400,6 +424,10 @@
             // the item list and quote a unit price. Our requested quantities
             // stay internal and are captured on the purchase order.
             //
+            // The minimum shelf life IS included per item, as a supply
+            // condition (">= X months remaining at delivery"), because
+            // suppliers must quote against the real requirement.
+            //
             // @TODO: replace this stub with the real generation logic. It must
             // emit ONE pair of files (PDF + Excel) PER checked supplier, each
             // containing ONLY that supplier's checked items.
@@ -415,7 +443,10 @@
                     document.querySelectorAll('.item-supplier-check[data-supplier="' + CSS.escape(supplier) + '"]:checked').forEach(function (itemCb) {
                         const item = ITEM_DATA_BY_KEY[itemCb.dataset.itemKey];
                         if (item) {
-                            items.push({ name: item.name });
+                            items.push({
+                                name: item.name,
+                                min_remaining_months: item.shelf_life || 0,
+                            });
                         }
                     });
 
