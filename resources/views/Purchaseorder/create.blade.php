@@ -16,6 +16,8 @@
     @php
         // ------------------------------------------------------------------
         // Dummy data for the preparation screen (no DB integration yet).
+        // Reached from the quotation page via "Proceed to PO"; submitting
+        // "Generate purchase order" prepares the draft PO.
         //
         // @TODO: Replace with a real lookup once the Quotation / PurchaseOrder
         // models exist, e.g.:
@@ -131,7 +133,7 @@
             ],
         ];
 
-        $quotation = $quotations[$quotationId] ?? $quotations[2];
+        $quotation = $quotations[$rfqId] ?? $quotations[2];
 
         $peso = fn ($amount) => '₱' . number_format((float) $amount, 2);
 
@@ -743,7 +745,7 @@
                     });
 
                 const payload = {
-                    quotation_id: {{ $quotation['id'] }},
+                    rfq_id: {{ $quotation['id'] }},
                     supplier: @json($quotation['supplier']),
                     items: items,
                     expected_delivery: document.getElementById('poExpected').value,
@@ -755,7 +757,7 @@
                     total: totals.subtotal,
                 };
 
-                console.log('Create purchase order — payload (TODO: POST to controller)', payload);
+                console.log('Generate purchase order — payload (TODO: POST to controller)', payload);
 
                 let summary = totals.count + ' item' + (totals.count === 1 ? '' : 's')
                     + ' · ' + peso(totals.subtotal) + ' · ' + payload.supplier;

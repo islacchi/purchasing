@@ -109,12 +109,13 @@ Route::middleware('fake.auth')->group(function () {
         ->defaults('page', 'Purchaseorder.index')
         ->name('purchase-order');
 
-    // Purchase order preparation screen: pick the quoted items to order and
-    // set the purchase quantity before the PO is created.
+    // Purchase order preparation screen, opened by the quotation page's
+    // "Proceed to PO" button: pick the quoted items to order and set the
+    // purchase quantity before the PO is created.
     // Declared before /purchase-order/{id} so "create" is never captured as an id.
-    // @TODO: Route::get('/purchase-order/create/{quotation}', [PurchaseOrderController::class, 'create'])->name('purchase-order.create');
-    Route::get('/purchase-order/create/{quotation}', function ($quotation) {
-        return view('Purchaseorder.create', ['quotationId' => (int) $quotation]);
+    // @TODO: Route::get('/purchase-order/create/{rfq}', [PurchaseOrderController::class, 'create'])->name('purchase-order.create');
+    Route::get('/purchase-order/create/{rfq}', function ($rfq) {
+        return view('Purchaseorder.create', ['rfqId' => (int) $rfq]);
     })->name('purchase-order.create');
 
     // Purchase order detail (dummy data for now — the view uses $id to pick a hardcoded record).

@@ -32,8 +32,8 @@
                 'email' => 'sales@greencore.ph',
                 'phone' => '+63 2 8123 4567',
                 'address' => '12F One Corporate Centre, Ortigas Center, Pasig City',
-                'quotation_id' => 2,
-                'quotation_ref' => '#2026-0090',
+                'rfq_id' => 2,
+                'rfq_number' => 'RFQ-2026-0090',
                 'prep_list' => 'July Region VII batch',
                 'issued' => 'Jul 18, 2026',
                 'expected' => 'Jul 25, 2026',
@@ -54,8 +54,8 @@
                 'email' => 'orders@medsource.ph',
                 'phone' => '+63 2 8555 0102',
                 'address' => 'Unit 8B, Arcadia Building, Makati City',
-                'quotation_id' => 3,
-                'quotation_ref' => '#2026-0089',
+                'rfq_id' => 3,
+                'rfq_number' => 'RFQ-2026-0089',
                 'prep_list' => 'Lab reagents – PGH',
                 'issued' => 'Jul 15, 2026',
                 'expected' => 'Jul 22, 2026',
@@ -76,8 +76,8 @@
                 'email' => 'sales@tripletact.com',
                 'phone' => '+63 2 8333 7788',
                 'address' => '3F Trade Center, Quezon City',
-                'quotation_id' => 1,
-                'quotation_ref' => '#2026-0088',
+                'rfq_id' => 1,
+                'rfq_number' => 'RFQ-2026-0088',
                 'prep_list' => 'Pharma supplies Q3',
                 'issued' => 'Jul 14, 2026',
                 'expected' => 'Not set',
@@ -97,8 +97,8 @@
                 'email' => 'orders@medsource.ph',
                 'phone' => '+63 2 8555 0102',
                 'address' => 'Unit 8B, Arcadia Building, Makati City',
-                'quotation_id' => 3,
-                'quotation_ref' => '#2026-0087',
+                'rfq_id' => 3,
+                'rfq_number' => 'RFQ-2026-0087',
                 'prep_list' => 'Surgical supplies',
                 'issued' => 'Jul 02, 2026',
                 'expected' => 'Jul 10, 2026',
@@ -120,8 +120,8 @@
                 'email' => 'sales@greencore.ph',
                 'phone' => '+63 2 8123 4567',
                 'address' => '12F One Corporate Centre, Ortigas Center, Pasig City',
-                'quotation_id' => 2,
-                'quotation_ref' => '#2026-0086',
+                'rfq_id' => 2,
+                'rfq_number' => 'RFQ-2026-0086',
                 'prep_list' => 'Laboratory reagents',
                 'issued' => 'Jun 28, 2026',
                 'expected' => '—',
@@ -158,6 +158,23 @@
         ];
 
         $po = $orders[$id] ?? $orders[1];
+
+        // ------------------------------------------------------------------
+        // Receipt state (dummy). In production these flags come from the
+        // received quantity per PO line; here they are seeded from the sample
+        // status so the page opens in a believable state.
+        // @TODO: replace with $po->items->map(fn ($item) => $item->received_qty >= $item->qty)
+        // once receiving is persisted.
+        // ------------------------------------------------------------------
+        $receivedCount = match ($po['status']) {
+            'Completed' => count($po['items']),
+            'Partially received' => count($po['items']) > 1 ? 1 : 0,
+            default => 0,
+        };
+
+        // Receipts can only be recorded once the order has been sent. A
+        // completed order stays editable so a mistaken tick can be corrected.
+        $canReceive = ! in_array($po['status'], ['Draft', 'Cancelled'], true);
 
         // Dummy shelf-life requirement per item (months remaining at delivery,
         // 0 = non-perishable).
@@ -217,7 +234,7 @@
             <div>
                 <div class="flex flex-wrap items-center gap-3">
                     <h2 class="text-xl font-bold text-gray-900">{{ $po['number'] }}</h2>
-                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $statusStyles[$po['status']] ?? 'bg-gray-100 text-gray-600' }}">
+                    <span id="poStatusPill" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $statusStyles[$po['status']] ?? 'bg-gray-100 text-gray-600' }}">
                         {{ $po['status'] }}
                     </span>
                 </div>
@@ -230,16 +247,14 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                @if (! in_array($po['status'], ['Completed', 'Cancelled']))
-                    {{-- @TODO: Wire this to the PO cancel endpoint once it exists. --}}
-                    <button type="button"
-                            class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                        </svg>
-                        Cancel order
-                    </button>
-                @endif
+                {{-- @TODO: Wire this to the PO cancel endpoint once it exists. --}}
+                <button type="button" id="poCancelBtn"
+                        class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 {{ in_array($po['status'], ['Completed', 'Cancelled']) ? 'hidden' : '' }}">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                    </svg>
+                    Cancel order
+                </button>
 
                 {{-- @TODO: Generate the printable PO document. --}}
                 <a href="#"
@@ -265,29 +280,26 @@
             </div>
         @else
             <div class="mb-6 rounded-lg border border-gray-200 bg-white px-6 py-5 shadow-sm">
-                <ol class="flex flex-wrap items-center gap-y-3">
+                <ol id="poStatusTracker" class="flex flex-wrap items-center gap-y-3">
                     @foreach ($stages as $index => $stage)
                         @php
                             $isDone = $index < $currentStage;
                             $isCurrent = $index === $currentStage;
                         @endphp
-                        <li class="flex items-center {{ $loop->last ? '' : 'flex-1' }}">
-                            <span class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold
+                        <li class="flex items-center {{ $loop->last ? '' : 'flex-1' }}" data-stage-index="{{ $index }}">
+                            <span data-stage-dot class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold
                                 {{ $isDone ? 'bg-green-100 text-green-600' : ($isCurrent ? 'bg-[#2a7a94] text-white' : 'bg-gray-100 text-gray-400') }}">
-                                @if ($isDone)
-                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m5 13 4 4L19 7"/>
-                                    </svg>
-                                @else
-                                    {{ $index + 1 }}
-                                @endif
+                                <span data-stage-number class="{{ $isDone ? 'hidden' : '' }}">{{ $index + 1 }}</span>
+                                <svg data-stage-check class="h-3.5 w-3.5 {{ $isDone ? '' : 'hidden' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m5 13 4 4L19 7"/>
+                                </svg>
                             </span>
-                            <span class="ml-2 whitespace-nowrap text-xs font-medium
+                            <span data-stage-label class="ml-2 whitespace-nowrap text-xs font-medium
                                 {{ $isCurrent ? 'text-[#2a7a94]' : ($isDone ? 'text-gray-700' : 'text-gray-400') }}">
                                 {{ $stage }}
                             </span>
                             @if (! $loop->last)
-                                <span class="mx-3 hidden h-0.5 flex-1 rounded-full sm:block {{ $isDone ? 'bg-green-200' : 'bg-gray-100' }}"></span>
+                                <span data-stage-connector class="mx-3 hidden h-0.5 flex-1 rounded-full sm:block {{ $isDone ? 'bg-green-200' : 'bg-gray-100' }}"></span>
                             @endif
                         </li>
                     @endforeach
@@ -365,26 +377,35 @@
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Items ordered</h3>
-                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                    {{ count($po['items']) }} items
-                </span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span id="receiptSummary" class="inline-flex items-center rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-xs font-medium text-[#2a7a94]">
+                        {{ $receivedCount }} of {{ count($po['items']) }} received
+                    </span>
+                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                        {{ count($po['items']) }} items
+                    </span>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[840px] text-sm">
+                <table class="w-full min-w-[940px] text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                             <th scope="col" class="w-12 px-6 py-3 text-center">#</th>
                             <th scope="col" class="px-6 py-3">Item</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 text-center">Qty</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 text-center">Shelf life req.</th>
+                            <th scope="col" class="whitespace-nowrap px-6 py-3 text-center">Received</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Unit price</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Extended</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach ($po['items'] as $item)
-                            @php $minShelf = $shelfLifeByItem[$item['name']] ?? 0; @endphp
+                            @php
+                                $minShelf = $shelfLifeByItem[$item['name']] ?? 0;
+                                $isReceived = $loop->index < $receivedCount;
+                            @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 text-center text-xs text-gray-400">{{ $loop->iteration }}</td>
                                 <td class="px-6 py-4">
@@ -399,6 +420,14 @@
                                         <span class="text-xs text-gray-400" title="Non-perishable">&mdash;</span>
                                     @endif
                                 </td>
+                                <td class="whitespace-nowrap px-6 py-4 text-center">
+                                    <input type="checkbox"
+                                           class="po-receipt h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:cursor-not-allowed disabled:opacity-40"
+                                           data-item="{{ $item['name'] }}"
+                                           title="{{ $canReceive ? 'Tick when the full quantity for this line has arrived and passed the shelf-life check' : 'Send the PO to the supplier before recording receipts' }}"
+                                           {{ $isReceived ? 'checked' : '' }}
+                                           {{ $canReceive ? '' : 'disabled' }}>
+                                </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-right text-gray-700">{{ $peso($item['price']) }}</td>
                                 <td class="whitespace-nowrap px-6 py-4 text-right font-semibold text-gray-900">
                                     {{ $peso($item['qty'] * $item['price']) }}
@@ -408,15 +437,15 @@
                     </tbody>
                     <tfoot class="border-t border-gray-200 bg-gray-50">
                         <tr>
-                            <td colspan="5" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Subtotal</td>
+                            <td colspan="6" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Subtotal</td>
                             <td class="whitespace-nowrap px-6 py-3 text-right text-sm text-gray-700">{{ $peso($subtotal) }}</td>
                         </tr>
                         <tr>
-                            <td colspan="5" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery</td>
+                            <td colspan="6" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery</td>
                             <td class="whitespace-nowrap px-6 py-3 text-right text-sm text-gray-700">{{ $peso($freight) }}</td>
                         </tr>
                         <tr class="border-t border-gray-200">
-                            <td colspan="5" class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">Total</td>
+                            <td colspan="6" class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">Total</td>
                             <td class="whitespace-nowrap px-6 py-4 text-right text-base font-bold text-gray-900">{{ $peso($total) }}</td>
                         </tr>
                     </tfoot>
@@ -429,7 +458,7 @@
                     {{ $po['notes'] }}
                 </p>
                 <p class="mt-1 text-[11px] text-gray-400">
-                    Shelf life is a delivery requirement. Batch/lot expiry is recorded when the goods are received.
+                    Tick <span class="font-medium text-gray-500">Received</span> when the full quantity for a line has arrived and passed the shelf-life check. Batch/lot expiry is recorded at receiving.
                 </p>
             </div>
         </div>
@@ -453,4 +482,136 @@
             </a>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            /**
+             * Receiving drives the PO status:
+             *   0 lines received  -> Sent to supplier
+             *   some received     -> Partially received
+             *   all received      -> Completed
+             *
+             * Draft and Cancelled orders render their receipt boxes disabled,
+             * so we leave the server-rendered state untouched for them.
+             *
+             * @TODO: POST the receipt state to the backend and let the derived
+             * status be persisted on the purchase order instead of only in DOM.
+             */
+            var receipts = Array.prototype.slice.call(document.querySelectorAll('.po-receipt'));
+
+            if (!receipts.length || receipts.every(function (cb) { return cb.disabled; })) {
+                return;
+            }
+
+            var pill = document.getElementById('poStatusPill');
+            var summary = document.getElementById('receiptSummary');
+            var cancelBtn = document.getElementById('poCancelBtn');
+            var tracker = document.getElementById('poStatusTracker');
+
+            var stages = ['Draft', 'Sent to supplier', 'Partially received', 'Completed'];
+
+            var pillStyles = {
+                'Draft': ['bg-gray-100', 'text-gray-600'],
+                'Sent to supplier': ['bg-blue-100', 'text-blue-700'],
+                'Partially received': ['bg-amber-100', 'text-amber-700'],
+                'Completed': ['bg-green-100', 'text-green-700'],
+                'Cancelled': ['bg-red-100', 'text-red-700']
+            };
+
+            var allPillClasses = [
+                'bg-gray-100', 'text-gray-600',
+                'bg-blue-100', 'text-blue-700',
+                'bg-amber-100', 'text-amber-700',
+                'bg-green-100', 'text-green-700',
+                'bg-red-100', 'text-red-700'
+            ];
+
+            function addAll(el, classes) {
+                classes.forEach(function (cls) { el.classList.add(cls); });
+            }
+
+            function removeAll(el, classes) {
+                classes.forEach(function (cls) { el.classList.remove(cls); });
+            }
+
+            function derivedStatus(checked, total) {
+                if (checked === 0) {
+                    return 'Sent to supplier';
+                }
+
+                return checked === total ? 'Completed' : 'Partially received';
+            }
+
+            function renderTracker(status) {
+                if (!tracker) {
+                    return;
+                }
+
+                var current = stages.indexOf(status);
+
+                Array.prototype.forEach.call(tracker.querySelectorAll('[data-stage-index]'), function (li) {
+                    var index = parseInt(li.getAttribute('data-stage-index'), 10);
+                    var isDone = index < current;
+                    var isCurrent = index === current;
+
+                    var dot = li.querySelector('[data-stage-dot]');
+                    var number = li.querySelector('[data-stage-number]');
+                    var check = li.querySelector('[data-stage-check]');
+                    var label = li.querySelector('[data-stage-label]');
+                    var connector = li.querySelector('[data-stage-connector]');
+
+                    if (dot) {
+                        removeAll(dot, ['bg-green-100', 'text-green-600', 'bg-[#2a7a94]', 'text-white', 'bg-gray-100', 'text-gray-400']);
+                        addAll(dot, isDone
+                            ? ['bg-green-100', 'text-green-600']
+                            : (isCurrent ? ['bg-[#2a7a94]', 'text-white'] : ['bg-gray-100', 'text-gray-400']));
+                    }
+
+                    if (number) {
+                        number.classList.toggle('hidden', isDone);
+                    }
+
+                    if (check) {
+                        check.classList.toggle('hidden', ! isDone);
+                    }
+
+                    if (label) {
+                        removeAll(label, ['text-[#2a7a94]', 'text-gray-700', 'text-gray-400']);
+                        addAll(label, [isCurrent ? 'text-[#2a7a94]' : (isDone ? 'text-gray-700' : 'text-gray-400')]);
+                    }
+
+                    if (connector) {
+                        connector.classList.toggle('bg-green-200', isDone);
+                        connector.classList.toggle('bg-gray-100', ! isDone);
+                    }
+                });
+            }
+
+            function render() {
+                var total = receipts.length;
+                var checked = receipts.filter(function (cb) { return cb.checked; }).length;
+                var status = derivedStatus(checked, total);
+
+                if (pill) {
+                    pill.textContent = status;
+                    removeAll(pill, allPillClasses);
+                    addAll(pill, pillStyles[status] || []);
+                }
+
+                if (summary) {
+                    summary.textContent = checked + ' of ' + total + ' received';
+                }
+
+                if (cancelBtn) {
+                    cancelBtn.classList.toggle('hidden', status === 'Completed');
+                }
+
+                renderTracker(status);
+            }
+
+            receipts.forEach(function (cb) {
+                cb.addEventListener('change', render);
+            });
+        });
+    </script>
 @endsection

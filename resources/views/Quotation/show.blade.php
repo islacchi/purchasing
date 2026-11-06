@@ -363,8 +363,9 @@
                         Remove quotation
                     </a>
 
-                    {{-- Pre-fills the PO preparation screen with this quotation's
-                         quoted items; quantities are set there, not in the RFQ. --}}
+                    {{-- "Proceed to PO" opens the PO preparation screen prefilled
+                         with this quotation's quoted items; quantities are set
+                         there, not in the RFQ. --}}
                     <a href="{{ route('purchase-order.create', ['quotation' => $quotation['id']]) }}"
                        class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
