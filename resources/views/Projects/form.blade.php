@@ -37,6 +37,7 @@
             $items = [
                 [
                     'description' => 'Mefenamic Capsule - 500mg',
+                    'category' => 'drugs and medicines',
                     'unit' => 'Box',
                     'quantity' => 50,
                     'unit_cost' => 320.00,
@@ -44,6 +45,7 @@
                 ],
                 [
                     'description' => 'Amoxicillin 250mg suspension',
+                    'category' => 'drugs and medicines',
                     'unit' => 'Box',
                     'quantity' => 50,
                     'unit_cost' => 320.00,
@@ -51,6 +53,7 @@
                 ],
                 [
                     'description' => 'Paracetamol 500mg tablet',
+                    'category' => 'drugs and medicines',
                     'unit' => 'Box',
                     'quantity' => 100,
                     'unit_cost' => 150.00,
@@ -71,7 +74,7 @@
             ];
 
             $items = [
-                ['description' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
+                ['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
             ];
         }
     @endphp
@@ -164,8 +167,9 @@
             <label class="block text-sm font-medium text-gray-800 mb-2">Items</label>
 
                 <div id="itemRows" class="border border-gray-300 rounded-lg overflow-hidden">
-                <div class="grid grid-cols-[2fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
+                <div class="grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
                     <div class="text-xs font-semibold text-gray-700">Description</div>
+                    <div class="text-xs font-semibold text-gray-700">Category</div>
                     <div class="text-xs font-semibold text-gray-700">Unit</div>
                     <div class="text-xs font-semibold text-gray-700">Quantity</div>
                     <div class="text-xs font-semibold text-gray-700">Unit cost</div>
@@ -173,10 +177,17 @@
                     <div></div>
                 </div>
                 @foreach ($items as $i => $item)
-                    <div class="item-row grid grid-cols-[2fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2">
+                    <div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2">
                         <div>
                             <input type="text" name="items[{{ $i }}][description]" value="{{ $item['description'] }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                        </div>
+                        <div>
+                            <select name="items[{{ $i }}][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="" {{ empty($item['category']) ? 'selected' : '' }}>Select...</option>
+                                <option value="drugs and medicines" {{ ($item['category'] ?? '') === 'drugs and medicines' ? 'selected' : '' }}>Drugs and medicines</option>
+                                <option value="supplies and equipments" {{ ($item['category'] ?? '') === 'supplies and equipments' ? 'selected' : '' }}>Supplies and equipments</option>
+                            </select>
                         </div>
                         <div>
                             <input type="text" name="items[{{ $i }}][unit]" value="{{ $item['unit'] }}"
@@ -259,6 +270,11 @@
                 input.value = '';
                 input.name = input.name.replace(/items\[\d+\]/, `items[${newIndex}]`);
             });
+            const categorySelect = template.querySelector('select');
+            if (categorySelect) {
+                categorySelect.value = '';
+                categorySelect.name = `items[${newIndex}][category]`;
+            }
             template.querySelector('.item-select').checked = false;
 
             rowsContainer.appendChild(template);

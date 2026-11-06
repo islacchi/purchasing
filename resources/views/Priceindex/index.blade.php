@@ -33,7 +33,7 @@
                 'id' => 1,
                 'name' => 'Amoxicillin 500mg',
                 'unit' => 'box of 100',
-                'category' => 'Pharmaceuticals',
+                'category' => 'drugs and medicines',
                 'requested' => 100,
                 'projects' => ['Pharma supplies Q3', 'Laboratory reagents'],
                 'quotes' => [
@@ -46,7 +46,7 @@
                 'id' => 2,
                 'name' => 'Surgical gloves',
                 'unit' => 'box of 50',
-                'category' => 'Medical supplies',
+                'category' => 'supplies and equipments',
                 'requested' => 40,
                 'projects' => ['Pharma supplies Q3'],
                 'quotes' => [
@@ -58,7 +58,7 @@
                 'id' => 3,
                 'name' => 'Sodium chloride 0.9% 500mL',
                 'unit' => 'box of 24',
-                'category' => 'Pharmaceuticals',
+                'category' => 'drugs and medicines',
                 'requested' => 60,
                 'projects' => ['Laboratory reagents'],
                 'quotes' => [
@@ -69,7 +69,7 @@
                 'id' => 4,
                 'name' => 'Microscope slides',
                 'unit' => 'box of 100',
-                'category' => 'Laboratory supplies',
+                'category' => 'supplies and equipments',
                 'requested' => 25,
                 'projects' => ['Laboratory reagents'],
                 'quotes' => [
@@ -82,7 +82,7 @@
                 'id' => 5,
                 'name' => 'Sterile syringes 5mL',
                 'unit' => 'box of 100',
-                'category' => 'Medical supplies',
+                'category' => 'supplies and equipments',
                 'requested' => 30,
                 'projects' => ['Pharma supplies Q3', 'Laboratory reagents'],
                 'quotes' => [
@@ -94,7 +94,7 @@
                 'id' => 6,
                 'name' => 'Laboratory gloves',
                 'unit' => 'box of 50',
-                'category' => 'Laboratory supplies',
+                'category' => 'supplies and equipments',
                 'requested' => 20,
                 'projects' => ['Laboratory reagents'],
                 'quotes' => [],
