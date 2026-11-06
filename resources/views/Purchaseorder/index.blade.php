@@ -91,7 +91,7 @@
                 'id' => 5,
                 'number' => 'PO-2026-0113',
                 'supplier' => 'GreenCore Pharmaceuticals',
-                'quotation_ref' => '#2026-0086',
+                'rfq_number' => '#2026-0086',
                 'prep_list' => 'Laboratory reagents',
                 'items' => 2,
                 'total' => 19950.00,
@@ -102,7 +102,7 @@
                 'id' => 6,
                 'number' => 'PO-2026-0112',
                 'supplier' => 'Triple Tact',
-                'quotation_ref' => '#2026-0085',
+                'rfq_number' => '#2026-0085',
                 'prep_list' => 'IT hardware refresh',
                 'items' => 3,
                 'total' => 263500.00,
@@ -200,12 +200,12 @@
                         @foreach ($purchaseOrders as $po)
                             <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
                                 data-href="{{ route('purchase-order.show', ['id' => $po['id']]) }}"
-                                data-search="{{ strtolower($po['number'] . ' ' . $po['supplier'] . ' ' . $po['prep_list'] . ' ' . $po['quotation_ref']) }}"
+                                data-search="{{ strtolower($po['number'] . ' ' . $po['supplier'] . ' ' . $po['prep_list'] . ' ' . $po['rfq_number']) }}"
                                 data-supplier="{{ $po['supplier'] }}"
                                 data-status="{{ $po['status'] }}">
                                 <td class="whitespace-nowrap px-6 py-4">
                                     <p class="font-semibold text-gray-900">{{ $po['number'] }}</p>
-                                    <p class="mt-0.5 text-xs text-gray-500">from quotation {{ $po['quotation_ref'] }}</p>
+                                    <p class="mt-0.5 text-xs text-gray-500">from quotation Q-{{ substr($po['rfq_number'], 4) }}</p>
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-gray-700">
                                     {{ $po['supplier'] }}
@@ -422,3 +422,5 @@
         })();
     </script>
 @endsection
+
+

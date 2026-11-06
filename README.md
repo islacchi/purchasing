@@ -120,7 +120,7 @@ Price Index and Purchase Order were repositioned to appear above Entities and Se
 | GET | `/quotation` | `Quotation.index` | `quotation` |
 | GET | `/quotation/{id}` | `Quotation.show` | `quotation.show` |
 | GET | `/purchase-order` | `Purchaseorder.index` | `purchase-order` |
-| GET | `/purchase-order/create/{quotation}` | `Purchaseorder.create` | `purchase-order.create` |
+| GET | `/purchase-order/create/{rfq}` | `Purchaseorder.create` | `purchase-order.create` |
 | GET | `/purchase-order/{id}` | `Purchaseorder.show` | `purchase-order.show` |
 | GET | `/entities/{type}/create` | `Entities.form` | `entities.create` |
 | GET | `/entities/{type}/{id}/edit` | `Entities.form` | `entities.edit` |

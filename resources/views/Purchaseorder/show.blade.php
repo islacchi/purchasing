@@ -240,13 +240,22 @@
                 </div>
                 <p class="mt-1 text-xs text-gray-500">
                     Issued from quotation
-                    <a href="{{ route('quotation.show', ['id' => $po['quotation_id']]) }}"
-                       class="font-medium text-[#2a7a94] hover:underline">{{ $po['quotation_ref'] }}</a>
+                    <a href="{{ route('quotation.show', ['id' => $po['quotation_id'] ?? $po['rfq_id']]) }}"
+                       class="font-medium text-[#2a7a94] hover:underline">{{ $po['quotation_ref'] ?? $po['rfq_number'] }}</a>
                     · {{ $po['prep_list'] }}
                 </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
+                {{-- @TODO: Wire this to the real send endpoint once it exists. --}}
+                <button type="button" id="poSendBtn"
+                        class="inline-flex items-center gap-2 rounded-lg border border-[#2a7a94] bg-white px-4 py-2 text-sm font-medium text-[#2a7a94] transition-colors hover:bg-teal-50 {{ $po['status'] !== 'Draft' ? 'hidden' : '' }}">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M22 2 11 13m0 0L2 9v4l9-7 9 7v4L22 2z"/>
+                    </svg>
+                    Send to supplier
+                </button>
+
                 {{-- @TODO: Wire this to the PO cancel endpoint once it exists. --}}
                 <button type="button" id="poCancelBtn"
                         class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 {{ in_array($po['status'], ['Completed', 'Cancelled']) ? 'hidden' : '' }}">
@@ -473,7 +482,7 @@
                 Back to list
             </a>
 
-            <a href="{{ route('quotation.show', ['id' => $po['quotation_id']]) }}"
+            <a href="{{ route('quotation.show', ['id' => $po['quotation_id'] ?? $po['rfq_id']]) }}"
                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3h-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
@@ -498,15 +507,22 @@
              * status be persisted on the purchase order instead of only in DOM.
              */
             var receipts = Array.prototype.slice.call(document.querySelectorAll('.po-receipt'));
-
-            if (!receipts.length || receipts.every(function (cb) { return cb.disabled; })) {
-                return;
-            }
-
             var pill = document.getElementById('poStatusPill');
             var summary = document.getElementById('receiptSummary');
             var cancelBtn = document.getElementById('poCancelBtn');
             var tracker = document.getElementById('poStatusTracker');
+            var sendBtn = document.getElementById('poSendBtn');
+
+            if (sendBtn) {
+                sendBtn.addEventListener('click', function () {
+                    // @TODO: POST the send action to the backend to persist sent_at
+                    // and the status move (Draft -> Sent to supplier).
+                    // A draft carries no receipts, so enabling the still-unchecked
+                    // boxes lets render() derive the "Sent to supplier" status.
+                    receipts.forEach(function (cb) { cb.disabled = false; });
+                    render();
+                });
+            }
 
             var stages = ['Draft', 'Sent to supplier', 'Partially received', 'Completed'];
 
@@ -607,6 +623,10 @@
                 }
 
                 renderTracker(status);
+            }
+
+            if (!receipts.length || receipts.every(function (cb) { return cb.disabled; })) {
+                return;
             }
 
             receipts.forEach(function (cb) {
