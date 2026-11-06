@@ -159,6 +159,22 @@
 
         $po = $orders[$id] ?? $orders[1];
 
+        // Dummy shelf-life requirement per item (months remaining at delivery,
+        // 0 = non-perishable).
+        // @TODO: once purchase_order_items exists, read the requirement from
+        // the PO line ($item['min_remaining_months']) instead of this map.
+        $shelfLifeByItem = [
+            'Amoxicillin 500mg' => 12,
+            'Sterile syringes 5mL' => 0,
+            'Microscope slides' => 0,
+            'Surgical gloves' => 24,
+            'Sodium chloride 0.9% 500mL' => 12,
+            'Laboratory gloves' => 24,
+            'External SSD 1TB' => 0,
+            'USB-C docking station' => 0,
+            '24-inch monitor' => 0,
+        ];
+
         $statusStyles = [
             'Draft' => 'bg-gray-100 text-gray-600',
             'Sent to supplier' => 'bg-blue-100 text-blue-700',
@@ -355,18 +371,20 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[720px] text-sm">
+                <table class="w-full min-w-[840px] text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                             <th scope="col" class="w-12 px-6 py-3 text-center">#</th>
                             <th scope="col" class="px-6 py-3">Item</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 text-center">Qty</th>
+                            <th scope="col" class="whitespace-nowrap px-6 py-3 text-center">Shelf life req.</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Unit price</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Extended</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach ($po['items'] as $item)
+                            @php $minShelf = $shelfLifeByItem[$item['name']] ?? 0; @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 text-center text-xs text-gray-400">{{ $loop->iteration }}</td>
                                 <td class="px-6 py-4">
@@ -374,6 +392,13 @@
                                     <p class="mt-0.5 text-xs text-gray-500">{{ $item['unit'] }}</p>
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-center text-gray-700">{{ $item['qty'] }}</td>
+                                <td class="whitespace-nowrap px-6 py-4 text-center">
+                                    @if ($minShelf > 0)
+                                        <span class="text-gray-700" title="Minimum {{ $minShelf }} months remaining shelf life at delivery">&ge; {{ $minShelf }} mo</span>
+                                    @else
+                                        <span class="text-xs text-gray-400" title="Non-perishable">&mdash;</span>
+                                    @endif
+                                </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-right text-gray-700">{{ $peso($item['price']) }}</td>
                                 <td class="whitespace-nowrap px-6 py-4 text-right font-semibold text-gray-900">
                                     {{ $peso($item['qty'] * $item['price']) }}
@@ -383,15 +408,15 @@
                     </tbody>
                     <tfoot class="border-t border-gray-200 bg-gray-50">
                         <tr>
-                            <td colspan="4" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Subtotal</td>
+                            <td colspan="5" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Subtotal</td>
                             <td class="whitespace-nowrap px-6 py-3 text-right text-sm text-gray-700">{{ $peso($subtotal) }}</td>
                         </tr>
                         <tr>
-                            <td colspan="4" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery</td>
+                            <td colspan="5" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery</td>
                             <td class="whitespace-nowrap px-6 py-3 text-right text-sm text-gray-700">{{ $peso($freight) }}</td>
                         </tr>
                         <tr class="border-t border-gray-200">
-                            <td colspan="4" class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">Total</td>
+                            <td colspan="5" class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">Total</td>
                             <td class="whitespace-nowrap px-6 py-4 text-right text-base font-bold text-gray-900">{{ $peso($total) }}</td>
                         </tr>
                     </tfoot>
@@ -402,6 +427,9 @@
                 <p class="text-xs text-gray-500">
                     {{-- @TODO: Replace with the PO note field once the model exists. --}}
                     {{ $po['notes'] }}
+                </p>
+                <p class="mt-1 text-[11px] text-gray-400">
+                    Shelf life is a delivery requirement. Batch/lot expiry is recorded when the goods are received.
                 </p>
             </div>
         </div>

@@ -7,21 +7,13 @@
 
     @php
         // ------------------------------------------------------------------
-        // Dummy data for the three tabs below (no DB integration yet).
+        // Dummy data for the two tabs below (no DB integration yet).
         //
         // @TODO: Replace the hardcoded arrays with real Eloquent queries once the
-        // User/Role, Entity, and Supplier models + migrations exist:
-        //   $users     = App\Models\User::with('roles')->get();
+        // Entity and Supplier models + migrations exist:
         //   $entities  = App\Models\Entity::all();
         //   $suppliers = App\Models\Supplier::all();
         // ------------------------------------------------------------------
-        // @TODO: users should come from App\Models\User::with('roles')->get(),
-        // with role pills derived from the user's role relation.
-        $users = [
-            ['id' => 1, 'name' => 'J. Santos', 'email' => 'j.santos@company.com', 'role' => 'Procurement officer', 'status' => 'Active'],
-            ['id' => 2, 'name' => 'M. Reyes',  'email' => 'm.reyes@company.com',  'role' => 'Admin', 'status' => 'Active'],
-            ['id' => 3, 'name' => 'A. Cruz',   'email' => 'a.cruz@company.com',   'role' => 'Procurement officer', 'status' => 'Inactive'],
-        ];
 
         // @TODO: procuring entities should come from App\Models\Entity::all().
         $entities = [
@@ -82,30 +74,11 @@
             ],
         ];
 
-        // Small helper for the avatar initials circle in the Users table.
-        // @TODO: once Eloquent is wired up, expose the initials directly on the model.
-        // function_exists() guard: a view can be rendered more than once per
-        // process (tests, repeated includes) and PHP cannot redeclare functions.
-        if (!function_exists('initialsFromName')) {
-            function initialsFromName($name)
-            {
-                $initials = '';
-                foreach (preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) as $part) {
-                    $initials .= strtoupper(substr($part, 0, 1));
-                    if (strlen($initials) >= 2) break;
-                }
-                return $initials;
-            }
-        }
     @endphp
     {{-- Tabs --}}
     <div class="flex flex-wrap items-center gap-2 mb-6" role="tablist" aria-label="Entity records">
-        <button type="button" role="tab" aria-selected="true" data-tab="users"
+        <button type="button" role="tab" aria-selected="true" data-tab="entities"
                 class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors bg-[#2a7a94] text-white border-[#2a7a94] shadow-sm">
-            Users
-        </button>
-        <button type="button" role="tab" aria-selected="false" data-tab="entities"
-                class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
             Procuring Entities
         </button>
         <button type="button" role="tab" aria-selected="false" data-tab="suppliers"
@@ -114,100 +87,8 @@
         </button>
     </div>
 
-    {{-- USERS TAB --}}
-    <div class="tab-panel" id="tab-panel-users" data-panel="users">
-        {{-- Toolbar --}}
-        <div class="mb-4 flex items-center justify-between gap-4">
-            <div class="flex items-center gap-3 flex-1">
-                <div class="max-w-md w-full">
-                    <input type="text" placeholder="Search users..."
-                           class="w-full px-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
-                </div>
-                <button type="button" class="p-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors" title="Search">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
-                    </svg>
-                </button>
-            </div>
-            <a href="{{ route('entities.create', ['type' => 'user']) }}"
-               class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                <span class="font-medium"> Add user</span>
-            </a>
-        </div>
-    {{-- Table --}}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 w-14 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 bg-white">
-                    @foreach($users as $user)
-                        @php
-                            $roleClass   = $user['role'] === 'Admin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
-                            $statusClass = $user['status'] === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
-                        @endphp
-                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                                data-href="{{ route('entities.show', ['type' => 'user', 'id' => $user['id']]) }}">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center gap-3">
-                                    <div class="flex items-center justify-center w-9 h-9 rounded-full bg-[#2a7a94]/10 text-[#2a7a94] text-xs font-semibold shrink-0">
-                                        {{ initialsFromName($user['name']) }}
-                                    </div>
-                                   
-                                    <div>
-                                        <p class="text-sm font-bold text-gray-900">{{ $user['name'] }}</p>
-                                        <p class="text-xs text-gray-500 mt-0.5">{{ $user['email'] }}</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $roleClass }}">{{ $user['role'] }}</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $statusClass }}">{{ $user['status'] }}</span>
-                            </td>
-                            <td class="px-6 py-4 text-center whitespace-nowrap">
-                                <div class="relative inline-block">
-                                    <button type="button" class="dropdown-trigger p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Actions">
-                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                            <circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>
-                                        </svg>
-                                    </button>
-                                    <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
-                                        {{-- @TODO: route Delete to the User controller's
-                                             destroy method once real routes exist. --}}
-                                        <a href="{{ route('entities.edit', ['type' => 'user', 'id' => $user['id']]) }}"
-                                           class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                            </svg>
-                                            Edit
-                                        </a>
-                                        <button type="button" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50" title="Delete">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                            </svg>
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
     {{-- PROCURING ENTITIES TAB --}}
-    <div class="tab-panel hidden" id="tab-panel-entities" data-panel="entities">
+    <div class="tab-panel" id="tab-panel-entities" data-panel="entities">
         {{-- Toolbar --}}
         <div class="mb-4 flex items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-1">
@@ -406,7 +287,7 @@
 
             // ------------------------------------------------------------------
             // Three-dot action dropdowns (Edit / Delete) — one shared handler
-            // for all three tables.
+            // for both tables.
             // ------------------------------------------------------------------
             function resetDropdown(menu) {
                 menu.classList.add('hidden');

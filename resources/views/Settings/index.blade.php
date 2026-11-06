@@ -38,7 +38,7 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900">User Privilege</h3>
-                    <p class="text-sm text-gray-500 mt-1">Manage user roles and access permissions.</p>
+                    <p class="text-sm text-gray-500 mt-1">Manage user accounts, roles, and access permissions.</p>
                 </div>
             </div>
             <div class="mt-auto pt-4 border-t border-gray-100 text-xs font-medium text-[#2a7a94]">

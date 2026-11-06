@@ -197,7 +197,7 @@
                 </svg>
                 <div class="min-w-0">
                     <p class="text-sm font-semibold text-amber-800">
-                        {{ $shortDatedCount }} {{ Str::plural('item', $shortDatedCount) }} below the required shelf life
+                        {{ $shortDatedCount }} {{ $shortDatedCount === 1 ? 'item' : 'items' }} below the required shelf life
                     </p>
                     <p class="mt-0.5 text-xs text-amber-700">
                         The supplier offered stock with less remaining shelf life than requested. Confirm before awarding, or ask for fresher stock.
@@ -253,14 +253,35 @@
             @foreach ($quotation['items'] as $item)
                 @php
                     $isQuoted = $item['unit_price'] !== null;
+                    $requiredShelf = $item['min_remaining_months'] ?? 0;
+                    $offeredShelf = $item['offered_shelf_life_months'] ?? null;
+                    $isShortDated = $isQuoted
+                        && $requiredShelf > 0
+                        && $offeredShelf !== null
+                        && $offeredShelf < $requiredShelf;
                 @endphp
 
                 <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
                     <div class="flex items-start justify-between gap-4 px-5 py-4">
                         <div class="min-w-0">
-                            <p class="font-bold text-gray-900">{{ $item['name'] }}</p>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="font-bold text-gray-900">{{ $item['name'] }}</p>
+                                @if ($isShortDated)
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                        Short-dated
+                                    </span>
+                                @endif
+                            </div>
                             <p class="mt-1 text-xs text-gray-500">
                                 {{ $item['requested'] }} {{ $item['unit'] }} requested
+                            </p>
+                            <p class="mt-0.5 text-xs text-gray-500">
+                                @if ($requiredShelf > 0)
+                                    Shelf life required:
+                                    <span class="font-medium text-gray-700">&ge; {{ $requiredShelf }} months at delivery</span>
+                                @else
+                                    Non-perishable &mdash; no shelf-life requirement
+                                @endif
                             </p>
                         </div>
 
@@ -272,6 +293,18 @@
                                 <p class="mt-1 text-xs text-gray-500">
                                     {{ $peso($item['unit_price'] * $item['requested']) }} subtotal
                                 </p>
+                                @if ($requiredShelf > 0)
+                                    <p class="mt-1 text-xs {{ $isShortDated ? 'font-semibold text-amber-600' : 'text-gray-500' }}">
+                                        @if ($offeredShelf !== null)
+                                            Offered: {{ $offeredShelf }} months
+                                            @if ($isShortDated)
+                                                &mdash; below requirement
+                                            @endif
+                                        @else
+                                            Offered shelf life not stated
+                                        @endif
+                                    </p>
+                                @endif
                             @else
                                 <p class="text-sm text-gray-400">Pending</p>
                             @endif

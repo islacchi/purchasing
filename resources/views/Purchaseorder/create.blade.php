@@ -43,6 +43,8 @@
                         'requested' => 100,
                         'unit' => 'box',
                         'unit_price' => null,
+                        'min_remaining_months' => 12,
+                        'offered_shelf_life_months' => null,
                         'allocations' => ['Pharma supplies Q3', 'Laboratory reagents'],
                     ],
                     [
@@ -50,6 +52,8 @@
                         'requested' => 40,
                         'unit' => 'box',
                         'unit_price' => null,
+                        'min_remaining_months' => 24,
+                        'offered_shelf_life_months' => null,
                         'allocations' => ['Pharma supplies Q3'],
                     ],
                 ],
@@ -70,6 +74,8 @@
                         'requested' => 100,
                         'unit' => 'box',
                         'unit_price' => 305.00,
+                        'min_remaining_months' => 12,
+                        'offered_shelf_life_months' => 9,
                         'allocations' => ['Pharma supplies Q3', 'Laboratory reagents'],
                     ],
                     [
@@ -77,6 +83,8 @@
                         'requested' => 40,
                         'unit' => 'box',
                         'unit_price' => null,
+                        'min_remaining_months' => 24,
+                        'offered_shelf_life_months' => null,
                         'allocations' => ['Pharma supplies Q3'],
                     ],
                 ],
@@ -97,6 +105,8 @@
                         'requested' => 60,
                         'unit' => 'box',
                         'unit_price' => 850.00,
+                        'min_remaining_months' => 12,
+                        'offered_shelf_life_months' => 12,
                         'allocations' => ['Laboratory reagents', 'Pharma supplies Q3'],
                     ],
                     [
@@ -104,6 +114,8 @@
                         'requested' => 40,
                         'unit' => 'box',
                         'unit_price' => 310.00,
+                        'min_remaining_months' => 24,
+                        'offered_shelf_life_months' => 30,
                         'allocations' => ['Laboratory reagents'],
                     ],
                     [
@@ -111,6 +123,8 @@
                         'requested' => 25,
                         'unit' => 'box',
                         'unit_price' => 220.00,
+                        'min_remaining_months' => 0,
+                        'offered_shelf_life_months' => null,
                         'allocations' => ['Laboratory reagents', 'Pharma supplies Q3'],
                     ],
                 ],
@@ -200,6 +214,7 @@
                                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Items to order</h3>
                                 <p class="mt-0.5 text-xs text-gray-500">
                                     Uncheck items you do not need. Purchase quantity defaults to the amount requested internally.
+                                    Shelf life is the minimum months that must remain at delivery.
                                 </p>
                             </div>
                             <span id="poSelectedCount"
@@ -220,7 +235,7 @@
                         @endif
 
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[860px] text-sm">
+                            <table class="w-full min-w-[1040px] text-sm">
                                 <thead>
                                     <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                                         <th scope="col" class="w-12 px-4 py-3 text-center">
@@ -231,6 +246,7 @@
                                         </th>
                                         <th scope="col" class="px-4 py-3">Item</th>
                                         <th scope="col" class="whitespace-nowrap px-4 py-3 text-center">Requested</th>
+                                        <th scope="col" class="whitespace-nowrap px-4 py-3 text-center">Shelf life req.</th>
                                         <th scope="col" class="whitespace-nowrap px-4 py-3 text-right">Unit price</th>
                                         <th scope="col" class="whitespace-nowrap px-4 py-3 text-center">Purchase qty</th>
                                         <th scope="col" class="whitespace-nowrap px-4 py-3 text-right">Amount</th>
@@ -248,7 +264,8 @@
                                             data-name="{{ $item['name'] }}"
                                             data-price="{{ $isQuoted ? $item['unit_price'] : 0 }}"
                                             data-max="{{ $item['requested'] }}"
-                                            data-unit="{{ $item['unit'] }}">
+                                            data-unit="{{ $item['unit'] }}"
+                                            data-offered-shelf-life="{{ $item['offered_shelf_life_months'] ?? '' }}">
                                             <td class="px-4 py-4 text-center">
                                                 <input type="checkbox"
                                                        class="po-include h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:cursor-not-allowed"
@@ -262,9 +279,32 @@
                                                     <span class="mx-1 text-gray-300">&middot;</span>
                                                     {{ implode(' · ', $item['allocations']) }}
                                                 </p>
+                                                @if ($item['offered_shelf_life_months'] !== null)
+                                                    <p class="mt-1 text-xs text-gray-500">
+                                                        Supplier offered {{ $item['offered_shelf_life_months'] }} months
+                                                    </p>
+                                                @endif
                                             </td>
                                             <td class="whitespace-nowrap px-4 py-4 text-center text-gray-700">
                                                 {{ $item['requested'] }}
+                                            </td>
+                                            <td class="whitespace-nowrap px-4 py-4 text-center">
+                                                @if ($isQuoted)
+                                                    <div class="inline-flex items-center gap-1">
+                                                        <input type="number"
+                                                               class="po-shelf-life w-16 rounded-md border border-gray-300 px-2 py-1 text-center text-sm text-gray-900 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20"
+                                                               value="{{ $item['min_remaining_months'] ?? 0 }}"
+                                                               min="0"
+                                                               step="1"
+                                                               inputmode="numeric"
+                                                               aria-label="Minimum remaining shelf life in months for {{ $item['name'] }}">
+                                                        <span class="text-[11px] text-gray-400">mo</span>
+                                                    </div>
+                                                    <p class="mt-1 text-[11px] text-gray-400" data-min-expiry>&mdash;</p>
+                                                    <p class="mt-1 hidden text-[11px] font-medium text-amber-600" data-shelf-warning></p>
+                                                @else
+                                                    <span class="text-xs text-gray-400">&mdash;</span>
+                                                @endif
                                             </td>
                                             <td class="whitespace-nowrap px-4 py-4 text-right {{ $isQuoted ? 'text-gray-700' : 'text-gray-400' }}">
                                                 {{ $isQuoted ? $peso($item['unit_price']) : '—' }}
@@ -295,7 +335,7 @@
 
                         <div class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-6 py-3">
                             <p class="text-xs text-gray-500">
-                                Quantities are internal. The supplier only sees them once the PO is issued.
+                                Quantities are internal until the PO is issued. The shelf-life requirement is a quality condition, not a quantity, and is also shown on the RFQ.
                             </p>
                             <p class="text-sm font-semibold text-gray-900">
                                 Subtotal <span id="poTableSubtotal">{{ $peso($subtotal) }}</span>
@@ -442,6 +482,7 @@
             const createBtn = document.getElementById('poCreateBtn');
             const banner = document.getElementById('poCreatedBanner');
             const bannerSummary = document.getElementById('poCreatedSummary');
+            const expectedInput = document.getElementById('poExpected');
 
             function peso(amount) {
                 return '₱' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -449,6 +490,96 @@
 
             function qtyInput(row) {
                 return row.querySelector('.po-qty');
+            }
+
+            // ------------------------------------------------------------------
+            // Shelf life: the PO line carries a minimum months-remaining
+            // requirement. The date below it is only advisory (expected
+            // delivery + required months); the binding check happens at
+            // receiving against the actual receipt date.
+            // ------------------------------------------------------------------
+            function shelfLifeInput(row) {
+                return row.querySelector('.po-shelf-life');
+            }
+
+            function readRequiredMonths(row) {
+                const input = shelfLifeInput(row);
+                if (!input) return 0;
+
+                let value = parseInt(input.value, 10);
+                if (isNaN(value) || value < 0) value = 0;
+                return value;
+            }
+
+            function offeredMonths(row) {
+                const raw = row.dataset.offeredShelfLife;
+                if (raw === undefined || raw === '') return null;
+
+                const value = parseInt(raw, 10);
+                return isNaN(value) ? null : value;
+            }
+
+            function parseIsoDate(value) {
+                if (!value) return null;
+
+                const parts = value.split('-').map(Number);
+                if (parts.length !== 3 || parts.some(isNaN)) return null;
+
+                return new Date(parts[0], parts[1] - 1, parts[2]);
+            }
+
+            function addMonths(date, months) {
+                const day = date.getDate();
+                const target = new Date(date.getFullYear(), date.getMonth() + months, 1);
+                const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+                target.setDate(Math.min(day, lastDay));
+                return target;
+            }
+
+            function formatDate(date) {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear();
+            }
+
+            function clampShelfLife(input) {
+                let value = parseInt(input.value, 10);
+                if (isNaN(value) || value < 0) value = 0;
+                input.value = value;
+                return value;
+            }
+
+            function updateShelfRow(row) {
+                const input = shelfLifeInput(row);
+                if (!input) return;
+
+                const required = readRequiredMonths(row);
+                const expiryEl = row.querySelector('[data-min-expiry]');
+                const warningEl = row.querySelector('[data-shelf-warning]');
+                const expected = parseIsoDate(expectedInput ? expectedInput.value : '');
+
+                if (expiryEl) {
+                    if (required === 0) {
+                        expiryEl.textContent = 'No requirement';
+                    } else if (expected) {
+                        expiryEl.textContent = 'Min expiry ' + formatDate(addMonths(expected, required));
+                    } else {
+                        expiryEl.textContent = 'Set delivery date';
+                    }
+                }
+
+                if (warningEl) {
+                    const offered = offeredMonths(row);
+                    const shortDated = offered !== null && required > 0 && offered < required;
+
+                    warningEl.classList.toggle('hidden', !shortDated);
+                    warningEl.textContent = shortDated
+                        ? 'Supplier offered ' + offered + ' months \u2014 below requirement'
+                        : '';
+                }
+            }
+
+            function updateShelfDates() {
+                rows.forEach(updateShelfRow);
             }
 
             function clampQty(input) {
@@ -474,6 +605,7 @@
             function recalc() {
                 let subtotal = 0;
                 let count = 0;
+                let shortDated = 0;
 
                 rows.forEach(function (row) {
                     const include = row.querySelector('.po-include');
@@ -491,6 +623,13 @@
                         const amount = rowAmount(row);
                         subtotal += amount;
                         count++;
+
+                        const required = readRequiredMonths(row);
+                        const offered = offeredMonths(row);
+                        if (offered !== null && required > 0 && offered < required) {
+                            shortDated++;
+                        }
+
                         if (amountCell) amountCell.textContent = peso(amount);
                     } else if (amountCell && include && !include.disabled) {
                         amountCell.textContent = '—';
@@ -519,12 +658,13 @@
                 tableSubtotal.textContent = peso(subtotal);
                 createBtn.disabled = count === 0;
 
-                return { subtotal: subtotal, count: count };
+                return { subtotal: subtotal, count: count, shortDated: shortDated };
             }
 
             rows.forEach(function (row) {
                 const include = row.querySelector('.po-include');
                 const input = qtyInput(row);
+                const shelf = shelfLifeInput(row);
 
                 if (include) {
                     include.addEventListener('change', recalc);
@@ -541,7 +681,26 @@
                         recalc();
                     });
                 }
+
+                if (shelf) {
+                    shelf.addEventListener('input', function () {
+                        updateShelfRow(row);
+                    });
+                    shelf.addEventListener('change', function () {
+                        clampShelfLife(shelf);
+                        updateShelfRow(row);
+                    });
+                    shelf.addEventListener('blur', function () {
+                        clampShelfLife(shelf);
+                        updateShelfRow(row);
+                    });
+                }
             });
+
+            if (expectedInput) {
+                expectedInput.addEventListener('input', updateShelfDates);
+                expectedInput.addEventListener('change', updateShelfDates);
+            }
 
             if (includeAll) {
                 includeAll.addEventListener('change', function () {
@@ -578,6 +737,8 @@
                             unit: row.dataset.unit,
                             qty: parseInt(input.value, 10),
                             unit_price: parseFloat(row.dataset.price),
+                            min_remaining_months: readRequiredMonths(row),
+                            offered_shelf_life_months: offeredMonths(row),
                         };
                     });
 
@@ -596,12 +757,18 @@
 
                 console.log('Create purchase order — payload (TODO: POST to controller)', payload);
 
-                bannerSummary.textContent = totals.count + ' item' + (totals.count === 1 ? '' : 's')
+                let summary = totals.count + ' item' + (totals.count === 1 ? '' : 's')
                     + ' · ' + peso(totals.subtotal) + ' · ' + payload.supplier;
+                if (totals.shortDated > 0) {
+                    summary += ' · ' + totals.shortDated + ' short-dated line' + (totals.shortDated === 1 ? '' : 's');
+                }
+
+                bannerSummary.textContent = summary;
                 banner.classList.remove('hidden');
                 banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
 
+            updateShelfDates();
             recalc();
         })();
     </script>

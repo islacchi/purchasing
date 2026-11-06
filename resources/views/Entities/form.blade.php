@@ -10,15 +10,14 @@
 
     @php
         // ------------------------------------------------------------------
-        // This single view serves Add and Edit for all three entity types:
-        //   'user', 'procuring_entity', and 'supplier'.
+        // This single view serves Add and Edit for both entity types:
+        //   'procuring_entity' and 'supplier'.
         //
         //   - Add:  $id is null       -> blank form
         //   - Edit: $id is provided   -> prefill from the sample rows below
         //
         // @TODO: once models + migrations exist, replace the hardcoded $samples
         // rows with real Eloquent queries:
-        //   - user:             App\Models\User::with('roles')->findOrFail($id)
         //   - procuring_entity: App\Models\Entity::findOrFail($id)
         //   - supplier:         App\Models\Supplier::findOrFail($id)
         // ------------------------------------------------------------------
@@ -26,26 +25,6 @@
         $isEdit = isset($id) && $id !== null;
 
         $samples = [
-            'user' => [
-                1 => [
-                    'name'   => 'J. Santos',
-                    'email'  => 'j.santos@company.com',
-                    'role'   => 'Procurement officer',
-                    'status' => 'Active',
-                ],
-                2 => [
-                    'name'   => 'M. Reyes',
-                    'email'  => 'm.reyes@company.com',
-                    'role'   => 'Admin',
-                    'status' => 'Active',
-                ],
-                3 => [
-                    'name'   => 'A. Cruz',
-                    'email'  => 'a.cruz@company.com',
-                    'role'   => 'Procurement officer',
-                    'status' => 'Inactive',
-                ],
-            ],
             'procuring_entity' => [
                 1 => [
                     'name'           => 'DOH Region VII',
@@ -105,20 +84,7 @@
             abort(404);
         }
 
-        // @TODO: add password / password_confirmation fields once real user
-        // accounts and authentication exist. Intentionally omitted for now.
-
         $typeConfigs = [
-            'user' => [
-                'title'    => 'USER',
-                'singular' => 'User',
-                'fields'   => [
-                    ['name' => 'name',   'label' => 'Name',   'type' => 'text',   'placeholder' => 'e.g. J. SANTOS'],
-                    ['name' => 'email',  'label' => 'Email',  'type' => 'email',  'placeholder' => 'e.g. J.SANTOS@COMPANY.COM'],
-                    ['name' => 'role',   'label' => 'Role',   'type' => 'select', 'placeholder' => 'Select role',   'options' => ['Admin', 'Procurement officer']],
-                    ['name' => 'status', 'label' => 'Status', 'type' => 'select', 'placeholder' => 'Select status', 'options' => ['Active', 'Inactive']],
-                ],
-            ],
             'procuring_entity' => [
                 'title'    => 'PROCURING ENTITY',
                 'singular' => 'Entity',

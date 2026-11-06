@@ -10,112 +10,23 @@
 
     @php
         // ------------------------------------------------------------------
-        // This single view renders three profile layouts depending on $type:
-        //   'user', 'procuring_entity', or 'supplier'.
+        // This single view renders two profile layouts depending on $type:
+        //   'procuring_entity' or 'supplier'.
         //
-        // Dummy data for all three types is hardcoded below (no DB integration yet).
+        // Dummy data for both types is hardcoded below (no DB integration yet).
         //
         // @TODO: once models + migrations exist, replace each branch with a real
         // Eloquent query:
-        //   - user:             App\Models\User::with('roles')->findOrFail($id)
         //   - procuring_entity: App\Models\Entity::with('projects')->findOrFail($id)
         //   - supplier:         App\Models\Supplier::with('quotations')->findOrFail($id)
         //                       (or whichever relation connects suppliers to their
         //                        RFQ / quotation history)
         // ------------------------------------------------------------------
 
-        $type = $type ?? 'user';
-
-        // Small helper for the avatar initials circle (Users profile only).
-        // @TODO: once Eloquent is wired up, expose initials directly on the model.
-        // function_exists() guard: a view can be rendered more than once per
-        // process (tests, repeated includes) and PHP cannot redeclare functions.
-        if (!function_exists('initialsFromName')) {
-            function initialsFromName($name)
-            {
-                $initials = '';
-                foreach (preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) as $part) {
-                    $initials .= strtoupper(substr($part, 0, 1));
-                    if (strlen($initials) >= 2) break;
-                }
-                return $initials;
-            }
-        }
+        $type = $type ?? 'procuring_entity';
     @endphp
 
-    @if($type === 'user')
-        @php
-            // @TODO: pull from App\Models\User::with('roles')->findOrFail($id).
-            $user = [
-                'name'       => 'J. Santos',
-                'email'      => 'j.santos@company.com',
-                'role'       => 'Procurement officer',
-                'status'     => 'Active',
-                'date_added' => 'Feb 3, 2026',
-            ];
-            $rolePill    = $user['role'] === 'Admin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
-            $statusPill  = $user['status'] === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
-            $accountRows = [
-                ['FULL NAME', $user['name']],
-                ['EMAIL', $user['email']],
-                ['ROLE', $user['role']],
-                ['STATUS', $user['status']],
-                ['DATE ADDED', $user['date_added']],
-            ];
-        @endphp
-
-        {{-- Type label --}}
-        <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">USER PROFILE</p>
-
-        {{-- Header card --}}
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <div class="flex items-center gap-5">
-                <div class="flex items-center justify-center w-16 h-16 rounded-full bg-[#2a7a94] text-white text-lg font-bold shrink-0">
-                    {{ initialsFromName($user['name']) }}
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900">{{ $user['name'] }}</h2>
-                    <p class="text-sm text-gray-500">{{ $user['email'] }}</p>
-                    <div class="flex items-center gap-2 mt-2">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $rolePill }}">{{ $user['role'] }}</span>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $statusPill }}">{{ $user['status'] }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    {{-- Account details --}}
-        <div class="mt-6">
-            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">ACCOUNT DETAILS</p>
-            <div class="bg-white rounded-lg border border-gray-200 shadow-sm divide-y divide-gray-100">
-                @foreach($accountRows as $row)
-                    <div class="flex items-center justify-between px-5 py-3">
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $row[0] }}</p>
-                        <p class="text-sm font-medium text-gray-900">{{ $row[1] }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-
-        {{-- Actions --}}
-        <div class="flex items-center justify-end gap-3 mt-8">
-            {{-- @TODO: route to the User controller's deactivate/destroy method once real routes exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M18 6l-12 12"/>
-                </svg>
-                Deactivate
-            </button>
-            <a href="{{ route('entities.edit', ['type' => 'user', 'id' => $id]) }}"
-               class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-                Edit User
-            </a>
-        </div>
-    @elseif($type === 'procuring_entity')
+    @if($type === 'procuring_entity')
         @php
             // @TODO: pull from App\Models\Entity::with('projects')->findOrFail($id).
             $entity = [

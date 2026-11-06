@@ -159,22 +159,23 @@ class SettingsController extends Controller
     }
 
     /**
-     * Show the user privilege management page.
+     * Dummy user accounts used by the privilege screens.
      *
-     * Displays dummy user data with role/privilege information.
-     * Pending real User/Role model integration.
+     * @TODO: replace with App\Models\User::with('role')->get() once the
+     * User/Role models and migrations exist.
      *
-     * @return Response
+     * @return array
      */
-    public function privileges()
+    private function dummyUsers()
     {
-        $users = [
+        return [
             [
                 'id' => 1,
                 'name' => 'J. Santos',
                 'email' => 'j.santos@company.com',
                 'role' => 'Procurement officer',
                 'status' => 'Active',
+                'date_added' => 'Feb 3, 2026',
             ],
             [
                 'id' => 2,
@@ -182,6 +183,7 @@ class SettingsController extends Controller
                 'email' => 'm.reyes@company.com',
                 'role' => 'Admin',
                 'status' => 'Active',
+                'date_added' => 'Jan 12, 2026',
             ],
             [
                 'id' => 3,
@@ -189,16 +191,74 @@ class SettingsController extends Controller
                 'email' => 'a.cruz@company.com',
                 'role' => 'Procurement officer',
                 'status' => 'Inactive',
+                'date_added' => 'Mar 8, 2026',
             ],
         ];
+    }
 
-        $roles = [
+    /**
+     * Dummy roles available for assignment.
+     *
+     * @TODO: replace with App\Models\Role::all() once the Role model exists.
+     *
+     * @return array
+     */
+    private function dummyRoles()
+    {
+        return [
             ['name' => 'Admin', 'description' => 'Full system access'],
             ['name' => 'Procurement officer', 'description' => 'Can create and manage purchase orders'],
             ['name' => 'Viewer', 'description' => 'Read-only access to all modules'],
         ];
+    }
+
+    /**
+     * Show the user privilege management page.
+     *
+     * Displays dummy user accounts with role/privilege information.
+     * Pending real User/Role model integration.
+     *
+     * @return Response
+     */
+    public function privileges()
+    {
+        $users = $this->dummyUsers();
+        $roles = $this->dummyRoles();
 
         return view('settings.privileges', compact('users', 'roles'));
+    }
+
+    /**
+     * Show the form for creating a new user account.
+     *
+     * @return Response
+     */
+    public function privilegeCreate()
+    {
+        $roles = $this->dummyRoles();
+
+        return view('settings.privilege_form', [
+            'user' => null,
+            'roles' => $roles,
+        ]);
+    }
+
+    /**
+     * Show the form for editing an existing user account.
+     *
+     * @param  int  $id
+     * @return Response
+     */
+    public function privilegeEdit($id)
+    {
+        $user = collect($this->dummyUsers())->firstWhere('id', (int) $id);
+
+        // @TODO: replace with App\Models\User::findOrFail($id) once the model exists.
+        abort_if($user === null, 404);
+
+        $roles = $this->dummyRoles();
+
+        return view('settings.privilege_form', compact('user', 'roles'));
     }
 
     /**

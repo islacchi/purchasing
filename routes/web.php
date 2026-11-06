@@ -74,19 +74,25 @@ Route::middleware('fake.auth')->group(function () {
         return view('Preplist.generate_rfq'); // view uses hardcoded dummy data
     })->name('quotation.generate');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
-    // Entity profile page — one view rendered three ways based on {type}.
-    // @TODO: once models + migrations exist, pass the real $user/$entity/$supplier in:
+    // Entity profile page — one view rendered two ways based on {type}.
+    // @TODO: once models + migrations exist, pass the real $entity/$supplier in:
     // Route::get('/entities/procuring-entities/{id}', [EntityController::class, 'show'])->name('entities.show');
     Route::get('/entities/{type}/{id}', function ($type, $id) {
         return view('Entities.show', ['type' => $type, 'id' => $id]); // show.blade.php uses hardcoded dummy data
-    })->whereIn('type', ['user', 'procuring_entity', 'supplier'])->name('entities.show');
+    })->whereIn('type', ['procuring_entity', 'supplier'])->name('entities.show');
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
 
     // Settings sub-pages
     Route::get('/settings', [PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
     Route::get('/settings/logs', [SettingsController::class, 'logs'])->name('settings.logs');
+
+    // User accounts + privileges (moved here from the Entities module).
+    // NOTE: /settings/privileges/create must stay before the {id}/edit route.
     Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
+    Route::get('/settings/privileges/create', [SettingsController::class, 'privilegeCreate'])->name('settings.privileges.create');
+    Route::get('/settings/privileges/{id}/edit', [SettingsController::class, 'privilegeEdit'])->name('settings.privileges.edit');
+
     Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
 
   // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
@@ -117,7 +123,7 @@ Route::middleware('fake.auth')->group(function () {
         return view('Purchaseorder.show', ['id' => $id]);
     })->name('purchase-order.show');
 
-    // Add / Edit entity form — one view rendered three ways based on {type}.
+    // Add / Edit entity form — one view rendered two ways based on {type}.
     // NOTE: /entities/{type}/create must be declared BEFORE /entities/{type}/{id}
     // so "create" is matched as a literal path, not captured by the {id} wildcard.
     // @TODO: once models + migrations exist, swap the closures for controller methods:
@@ -125,9 +131,9 @@ Route::middleware('fake.auth')->group(function () {
     // Route::get('/entities/{type}/{id}/edit', [EntityController::class, 'edit'])->name('entities.edit');
     Route::get('/entities/{type}/create', function ($type) {
         return view('Entities.form', ['type' => $type]); // no $id → renders Add mode
-    })->whereIn('type', ['user', 'procuring_entity', 'supplier'])->name('entities.create');
+    })->whereIn('type', ['procuring_entity', 'supplier'])->name('entities.create');
 
     Route::get('/entities/{type}/{id}/edit', function ($type, $id) {
         return view('Entities.form', ['type' => $type, 'id' => $id]); // $id present → renders Edit mode
-    })->whereIn('type', ['user', 'procuring_entity', 'supplier'])->name('entities.edit');
+    })->whereIn('type', ['procuring_entity', 'supplier'])->name('entities.edit');
 });
