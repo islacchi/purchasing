@@ -8,6 +8,12 @@
 
 @section('content')
 
+    {{-- Dummy data for frontend development.
+         @TODO: When the database is integrated, replace the dummy $project / $items
+         arrays below with real queries once the Project model and migrations exist,
+         e.g. $project = Project::with('items')->findOrFail($id);
+    --}}
+
     @php
         // Dummy data for frontend development
         $project = [
@@ -18,6 +24,7 @@
             'amount_awarded' => 482000.00,
             'date_awarded' => 'July 3, 2026',
             'delivery_period' => 'Aug 1 - Aug 15, 2026',
+            'notes' => 'Quarterly procurement of pharmaceutical supplies for regional health facilities.',
             'status' => 'In-progress',
             'progress' => '3/5 items fulfilled',
         ];
@@ -101,6 +108,10 @@
                         <label class="block text-xs font-medium text-gray-500 mb-1">Delivery period</label>
                         <p class="text-sm font-semibold text-gray-900">{{ $project['delivery_period'] }}</p>
                     </div>
+                    <div class="p-4">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Notes</label>
+                        <p class="text-sm text-gray-900">{{ $project['notes'] }}</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -155,6 +166,10 @@
     </div>
 
     {{-- Action Buttons --}}
+
+    {{-- @TODO: wire the Delete and Edit actions below to their controller routes
+           and methods once the Projects controller methods exist. --}}
+
     <div class="flex items-center justify-end gap-3 mt-6">
         <a href="{{ route('projects') }}"
            class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">

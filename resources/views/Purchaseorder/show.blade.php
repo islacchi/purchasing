@@ -622,6 +622,11 @@
                     cancelBtn.classList.toggle('hidden', status === 'Completed');
                 }
 
+                if (sendBtn) {
+                    // The send action is only offered while the order is still a draft.
+                    sendBtn.classList.toggle('hidden', status !== 'Draft');
+                }
+
                 renderTracker(status);
             }
 
