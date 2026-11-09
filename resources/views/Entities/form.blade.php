@@ -113,7 +113,7 @@
         $config    = $typeConfigs[$type];
         $typeLabel = $config['title'] . ' FORM';
         $formTitle = ($isEdit ? 'EDIT ' : 'ADD ') . $config['title'];
-        $saveLabel = 'Save ' . $config['singular'];
+        $saveLabel = ($isEdit ? 'Save ' : 'Add ') . $config['singular'];
 
         // Group the configured fields into their left/right columns while
         // preserving the order defined above.

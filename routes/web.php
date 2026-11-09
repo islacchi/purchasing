@@ -79,7 +79,7 @@ Route::middleware('auth')->group(function () {
     // Route::get('/entities/procuring-entities/{id}', [EntityController::class, 'show'])->name('entities.show');
     Route::get('/entities/{type}/{id}', function ($type, $id) {
         return view('Entities.show', ['type' => $type, 'id' => $id]); // show.blade.php uses hardcoded dummy data
-    })->whereIn('type', ['procuring_entity', 'supplier'])->name('entities.show');
+    })->whereIn('type', ['procuring_entity', 'supplier'])->whereNumber('id')->name('entities.show');
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
 
