@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -14,7 +18,7 @@ class AuthController extends Controller
     /**
      * Show the login page.
      *
-     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
+     * @return Response|RedirectResponse
      */
     public function showLogin()
     {
@@ -28,7 +32,7 @@ class AuthController extends Controller
     /**
      * Authenticate the user with their username (or email) and password.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function login(Request $request)
     {
@@ -41,17 +45,27 @@ class AuthController extends Controller
             ? 'email'
             : 'name';
 
-        $authenticated = Auth::attempt([
-            $field => $credentials['login'],
-            'password' => $credentials['password'],
-            'is_active' => true,
-        ]);
+        $user = User::where($field, $credentials['login'])->first();
 
-        if (! $authenticated) {
+        if (! $user) {
             throw ValidationException::withMessages([
-                'login' => __('The provided credentials do not match our records.'),
+                'login' => __('No account exists for that username or email.'),
             ]);
         }
+
+        if (! $user->is_active) {
+            throw ValidationException::withMessages([
+                'login' => __('This account is inactive or disabled. Please contact an administrator to activate your account.'),
+            ]);
+        }
+
+        if (! Hash::check($credentials['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => __('The password you entered is incorrect.'),
+            ]);
+        }
+
+        Auth::login($user);
 
         $request->session()->regenerate();
 
@@ -61,7 +75,7 @@ class AuthController extends Controller
     /**
      * Log the user out and invalidate the session.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function logout(Request $request)
     {

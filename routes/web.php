@@ -91,6 +91,7 @@ Route::middleware('auth')->group(function () {
         // User accounts + privileges (moved here from the Entities module).
         // NOTE: /settings/privileges/create must stay before the {id}/edit route.
         Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
+        Route::get('/settings/privileges/search', [SettingsController::class, 'privilegeSearch'])->name('settings.privileges.search');
         Route::get('/settings/privileges/create', [SettingsController::class, 'privilegeCreate'])->name('settings.privileges.create');
         Route::post('/settings/privileges', [SettingsController::class, 'privilegeStore'])->name('settings.privileges.store');
         Route::get('/settings/privileges/{id}/edit', [SettingsController::class, 'privilegeEdit'])->name('settings.privileges.edit');

@@ -47,7 +47,53 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response->assertRedirect('/login');
-        $response->assertSessionHasErrors('login');
+        $response->assertSessionHasErrors('password');
+        $this->assertGuest();
+    }
+
+    public function test_login_with_unknown_account_displays_a_clear_message(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $response = $this->from('/login')->post('/login', [
+            'login' => 'missing-user',
+            'password' => 'secret123',
+        ]);
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors(['login' => 'No account exists for that username or email.']);
+        $this->assertGuest();
+    }
+
+    public function test_inactive_account_cannot_login_and_is_told_to_contact_an_administrator(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $admin = User::where('name', 'admin')->firstOrFail();
+        $admin->update(['is_active' => false]);
+
+        $response = $this->from('/login')->post('/login', [
+            'login' => 'admin',
+            'password' => 'admin',
+        ]);
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors([
+            'login' => 'This account is inactive or disabled. Please contact an administrator to activate your account.',
+        ]);
+        $this->assertGuest();
+    }
+
+    public function test_active_account_with_wrong_password_displays_a_clear_message(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $response = $this->from('/login')->post('/login', [
+            'login' => 'admin',
+            'password' => 'wrong-password',
+        ]);
+
+        $response->assertSessionHasErrors(['password' => 'The password you entered is incorrect.']);
         $this->assertGuest();
     }
 

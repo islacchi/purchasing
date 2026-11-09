@@ -53,6 +53,30 @@ class UserPrivilegeTest extends TestCase
             ->assertDontSee('user2@example.com');
     }
 
+    public function test_live_privilege_search_returns_matching_rows_only(): void
+    {
+        $admin = $this->admin();
+
+        $response = $this->actingAs($admin)
+            ->get(route('settings.privileges.search', ['search' => 'user1']));
+
+        $response->assertOk()
+            ->assertSee('user1@example.com')
+            ->assertSee('Procurement Officer')
+            ->assertDontSee('user2@example.com')
+            ->assertDontSee('Viewer');
+    }
+
+    public function test_live_privilege_search_returns_empty_state_when_nothing_matches(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->get(route('settings.privileges.search', ['search' => 'missing-user']))
+            ->assertOk()
+            ->assertSee('No users match your search.');
+    }
+
     public function test_administrator_can_open_the_create_and_edit_forms(): void
     {
         $admin = $this->admin();
@@ -229,6 +253,7 @@ class UserPrivilegeTest extends TestCase
         $officer = User::where('name', 'user1')->firstOrFail();
 
         $this->actingAs($officer)->get('/settings/privileges')->assertForbidden();
+        $this->actingAs($officer)->get(route('settings.privileges.search'))->assertForbidden();
         $this->actingAs($officer)->post('/settings/privileges', [
             'name' => 'intruder',
             'email' => 'intruder@example.com',

@@ -167,7 +167,33 @@ class SettingsController extends Controller
     {
         $search = trim((string) $request->input('search', ''));
 
-        $users = User::query()
+        $users = $this->privilegeUsers($search);
+
+        $roles = Role::query()
+            ->withCount('users')
+            ->orderBy('name')
+            ->get();
+
+        return view('Settings.privileges', compact('users', 'roles', 'search'));
+    }
+
+    /**
+     * Return the matching user rows for live search.
+     */
+    public function privilegeSearch(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+        $users = $this->privilegeUsers($search);
+
+        return view('Settings.privileges_user_rows', compact('users', 'search'));
+    }
+
+    /**
+     * Build the filtered user query used by the privilege screens.
+     */
+    private function privilegeUsers(string $search)
+    {
+        return User::query()
             ->with('role')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
@@ -180,13 +206,6 @@ class SettingsController extends Controller
             })
             ->orderBy('name')
             ->get();
-
-        $roles = Role::query()
-            ->withCount('users')
-            ->orderBy('name')
-            ->get();
-
-        return view('Settings.privileges', compact('users', 'roles', 'search'));
     }
 
     /**

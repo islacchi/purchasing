@@ -7,32 +7,6 @@
 @endsection
 
 @section('content')
-    @php
-        // Small helper for the avatar initials circle. The function_exists()
-        // guard prevents redeclaration when a view renders more than once in
-        // the same process.
-        if (!function_exists('initialsFromName')) {
-            function initialsFromName($name)
-            {
-                $initials = '';
-                foreach (preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) as $part) {
-                    $initials .= strtoupper(substr($part, 0, 1));
-                    if (strlen($initials) >= 2) break;
-                }
-                return $initials;
-            }
-        }
-
-        $rolePill = function ($role) {
-            return match ($role) {
-                'Administrator' => 'bg-blue-100 text-blue-700',
-                'Procurement Officer' => 'bg-teal-100 text-teal-700',
-                'Viewer' => 'bg-purple-100 text-purple-700',
-                default => 'bg-gray-100 text-gray-700',
-            };
-        };
-    @endphp
-
     {{-- Page heading + primary action --}}
     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
@@ -73,7 +47,7 @@
         {{-- Users table --}}
         <div class="xl:col-span-2 space-y-4">
             {{-- Search toolbar --}}
-            <form method="GET" action="{{ route('settings.privileges') }}" class="flex items-center gap-3">
+            <form id="user-search-form" method="GET" action="{{ route('settings.privileges') }}" data-live-search-url="{{ route('settings.privileges.search') }}" class="flex items-center gap-3">
                 <div class="relative max-w-md w-full">
                     <button type="submit" title="Search" aria-label="Search"
                             class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 transition-colors hover:text-[#2a7a94]">
@@ -81,14 +55,13 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
                         </svg>
                     </button>
-                    <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Search users..."
+                    <input id="user-search-input" type="text" name="search" value="{{ $search ?? '' }}" placeholder="Search users..." autocomplete="off"
+                           aria-controls="user-table-body"
                            class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
-                @if (! empty($search))
-                    <a href="{{ route('settings.privileges') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">
-                        Clear
-                    </a>
-                @endif
+                <a id="user-search-clear" href="{{ route('settings.privileges') }}" class="{{ empty($search) ? 'hidden ' : '' }}text-sm font-medium text-gray-500 hover:text-gray-700">
+                    Clear
+                </a>
             </form>
 
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
@@ -102,78 +75,8 @@
                             <th class="px-6 py-3 w-14 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 bg-white">
-                        @forelse($users as $user)
-                            @php
-                                $statusClass = $user->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
-                            @endphp
-                            <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                                data-href="{{ route('settings.privileges.edit', $user->id) }}">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex items-center justify-center w-9 h-9 rounded-full bg-[#2a7a94]/10 text-[#2a7a94] text-xs font-semibold shrink-0">
-                                            {{ initialsFromName($user->name) }}
-                                        </div>
-                                        <div>
-                                            <p class="text-sm font-bold text-gray-900">{{ $user->name }}</p>
-                                            <p class="text-xs text-gray-500 mt-0.5">{{ $user->email }}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $rolePill($user->role?->name) }}">{{ $user->role?->name ?? 'Unassigned' }}</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $statusClass }}">{{ $user->is_active ? 'Active' : 'Inactive' }}</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->created_at?->format('M j, Y') ?? '—' }}</td>
-                                <td class="px-6 py-4 text-center whitespace-nowrap">
-                                    <div class="relative inline-block">
-                                        <button type="button" class="dropdown-trigger p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Actions">
-                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                <circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>
-                                            </svg>
-                                        </button>
-                                        <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-40 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
-                                            <a href="{{ route('settings.privileges.edit', $user->id) }}"
-                                               class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                </svg>
-                                                Edit
-                                            </a>
-                                            <form method="POST" action="{{ route('settings.privileges.toggle-status', $user->id) }}">
-                                                @csrf
-                                                <button type="submit" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                                        title="{{ $user->is_active ? 'Deactivate' : 'Activate' }}">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                                                    </svg>
-                                                    {{ $user->is_active ? 'Deactivate' : 'Activate' }}
-                                                </button>
-                                            </form>
-                                            <form method="POST" action="{{ route('settings.privileges.destroy', $user->id) }}"
-                                                  onsubmit="return confirm('Delete this user account? This cannot be undone.');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50" title="Delete">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                    </svg>
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
-                                    {{ ! empty($search) ? 'No users match your search.' : 'No user accounts yet.' }}
-                                </td>
-                            </tr>
-                        @endforelse
+                    <tbody id="user-table-body" class="divide-y divide-gray-100 bg-white">
+                        @include('Settings.privileges_user_rows', ['users' => $users, 'search' => $search ?? ''])
                     </tbody>
                 </table>
             </div>
@@ -217,8 +120,8 @@
     <div class="pb-12"></div>
 
     <script>
-        // Three-dot action dropdowns + row navigation (plain JS, matching the
-        // rest of the app — no Alpine/Livewire).
+        // Live user search and three-dot action dropdowns (plain JS, matching
+        // the rest of the app — no Alpine/Livewire).
         (function () {
             'use strict';
 
@@ -228,50 +131,144 @@
                 menu.classList.add('top-full', 'mt-2');
             }
 
-            document.querySelectorAll('.dropdown-trigger').forEach(function (trigger) {
-                trigger.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    const menu = this.nextElementSibling;
-                    const isOpen = !menu.classList.contains('hidden');
+            function resetDropdowns(exceptMenu) {
+                document.querySelectorAll('.dropdown-menu').forEach(function (menu) {
+                    if (menu !== exceptMenu) {
+                        resetDropdown(menu);
+                    }
+                });
+            }
 
-                    document.querySelectorAll('.dropdown-menu').forEach(resetDropdown);
+            document.addEventListener('click', function (e) {
+                var trigger = e.target.closest('.dropdown-trigger');
+
+                if (trigger) {
+                    var menu = trigger.nextElementSibling;
+                    var isOpen = !menu.classList.contains('hidden');
+
+                    resetDropdowns();
 
                     if (!isOpen) {
                         menu.classList.remove('hidden');
                         // Open upward when the menu would be clipped by the
                         // viewport or the table's overflow container.
-                        const rect = menu.getBoundingClientRect();
-                        const scrollBox = menu.closest('.overflow-x-auto');
-                        const clipBottom = Math.min(window.innerHeight, scrollBox ? scrollBox.getBoundingClientRect().bottom : Infinity);
-                        const opensUp = rect.bottom + 8 > clipBottom;
+                        var rect = menu.getBoundingClientRect();
+                        var scrollBox = menu.closest('.overflow-x-auto');
+                        var clipBottom = Math.min(window.innerHeight, scrollBox ? scrollBox.getBoundingClientRect().bottom : Infinity);
+                        var opensUp = rect.bottom + 8 > clipBottom;
                         menu.classList.toggle('bottom-full', opensUp);
                         menu.classList.toggle('mb-2', opensUp);
                         menu.classList.toggle('top-full', !opensUp);
                         menu.classList.toggle('mt-2', !opensUp);
                     }
-                });
-            });
 
-            document.addEventListener('click', function (e) {
-                if (!e.target.closest('.dropdown-trigger')) {
-                    document.querySelectorAll('.dropdown-menu').forEach(resetDropdown);
+                    return;
+                }
+
+                if (!e.target.closest('.dropdown-menu')) {
+                    resetDropdowns();
+                }
+
+                var row = e.target.closest('tr[data-href]');
+                if (row && !e.target.closest('.dropdown-trigger') && !e.target.closest('.dropdown-menu')) {
+                    window.location.href = row.dataset.href;
                 }
             });
 
-            document.querySelectorAll('.dropdown-action').forEach(function (btn) {
-                btn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                });
-            });
+            var searchForm = document.getElementById('user-search-form');
+            var searchInput = document.getElementById('user-search-input');
+            var clearSearch = document.getElementById('user-search-clear');
+            var tableBody = document.getElementById('user-table-body');
+            var liveSearchUrl = searchForm ? searchForm.dataset.liveSearchUrl : null;
+            var searchTimer = null;
+            var searchController = null;
 
-            document.querySelectorAll('tr[data-href]').forEach(function (row) {
-                row.addEventListener('click', function (e) {
-                    if (e.target.closest('.dropdown-trigger') || e.target.closest('.dropdown-menu')) {
-                        return;
-                    }
-                    window.location.href = row.dataset.href;
+            function updateClearVisibility() {
+                if (!clearSearch || !searchInput) {
+                    return;
+                }
+
+                clearSearch.classList.toggle('hidden', searchInput.value.trim() === '');
+            }
+
+            function fetchUsers(query) {
+                if (!liveSearchUrl || !tableBody) {
+                    return;
+                }
+
+                if (searchController) {
+                    searchController.abort();
+                }
+
+                searchController = new AbortController();
+                var requestUrl = new URL(liveSearchUrl, window.location.origin);
+                requestUrl.searchParams.set('search', query);
+
+                fetch(requestUrl.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: searchController.signal
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('Unable to load matching users.');
+                        }
+
+                        return response.text();
+                    })
+                    .then(function (html) {
+                        tableBody.innerHTML = html;
+                        resetDropdowns();
+                    })
+                    .catch(function (error) {
+                        if (error.name !== 'AbortError') {
+                            tableBody.innerHTML = '<tr class="no-results-row"><td colspan="5" class="px-6 py-10 text-center text-sm text-red-600">Unable to load matching users. Please try again.</td></tr>';
+                        }
+                    });
+            }
+
+            function updateUrl(query) {
+                var url = window.location.pathname;
+                if (query !== '') {
+                    url += '?search=' + encodeURIComponent(query);
+                }
+
+                window.history.replaceState(null, '', url);
+            }
+
+            function runSearch(query) {
+                query = query.trim();
+                updateClearVisibility();
+                updateUrl(query);
+                fetchUsers(query);
+            }
+
+            if (searchForm && searchInput) {
+                searchInput.addEventListener('input', function () {
+                    var query = searchInput.value;
+
+                    updateClearVisibility();
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(function () {
+                        runSearch(query);
+                    }, 150);
                 });
-            });
+
+                searchForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    clearTimeout(searchTimer);
+                    runSearch(searchInput.value);
+                });
+            }
+
+            if (clearSearch && searchInput) {
+                clearSearch.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    searchInput.value = '';
+                    clearTimeout(searchTimer);
+                    runSearch('');
+                    searchInput.focus();
+                });
+            }
         })();
     </script>
 @endsection
