@@ -25,6 +25,13 @@
 
         #mainContent { margin-left: 80px; }
         html.sidebar-expanded #mainContent { margin-left: 16rem; }
+
+        /* Profile dropdown: compact presentation while the sidebar is collapsed. */
+        html:not(.sidebar-expanded) #userMenu .signout-label { display: none; }
+        html:not(.sidebar-expanded) #userMenu form button { justify-content: center; }
+        html:not(.sidebar-expanded) .user-caret { display: none; }
+        html.sidebar-expanded .sidebar-user { padding-right: 12px; }
+        html.sidebar-expanded .sidebar-user .label { max-width: 130px; }
     </style>
 </head>
 
@@ -35,16 +42,31 @@
         {{-- Sidebar --}}
         <aside id="sidebar" class="fixed left-0 top-0 h-screen bg-[#0e3a4c] flex flex-col items-center pt-0 z-50 transition-all duration-300 overflow-hidden">
 
-  {{-- Authenticated user + role --}}
-<div class="h-[80px] w-full flex items-center text-white">
-    <div class="sidebar-icon flex items-center gap-3">
-        <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  {{-- Authenticated user + role (profile dropdown) --}}
+<div class="relative h-[80px] w-full flex items-center text-white">
+    <button type="button" id="userMenuBtn" aria-haspopup="true" aria-expanded="false"
+            class="sidebar-icon sidebar-user flex h-full w-full items-center gap-3 text-left">
+        <svg class="user-avatar w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
         </svg>
-        <span class="label whitespace-nowrap">
-            <span class="block text-xs font-semibold">{{ auth()->user()->name }}</span>
-            <span class="block text-[11px] text-white/50">{{ auth()->user()->role?->name ?? 'User' }}</span>
+        <span class="label whitespace-nowrap min-w-0">
+            <span class="block text-xs font-semibold truncate">{{ auth()->user()->name }}</span>
+            <span class="block text-[11px] text-white/50 truncate">{{ auth()->user()->role?->name ?? 'User' }}</span>
         </span>
+        <svg class="user-caret ml-auto h-4 w-4 flex-shrink-0 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/>
+        </svg>
+    </button>
+
+    {{-- Profile dropdown --}}
+    <div id="userMenu" class="hidden absolute left-2 right-2 top-[calc(100%-8px)] z-[60] overflow-hidden rounded-lg bg-[#0e5266] shadow-xl ring-1 ring-white/10">
+        <button type="button" id="signoutOpen" title="Sign out" aria-haspopup="dialog"
+                class="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white">
+            <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span class="signout-label">Sign out</span>
+        </button>
     </div>
 </div>
             {{-- Navigation icons --}}
@@ -169,15 +191,6 @@
                 </a>
                 @endcan
                 </nav>
-            {{-- Sign out --}}
-            <div class="mb-2 w-full flex justify-center">
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" title="Sign out" class="text-white/60 hover:text-white transition-colors">
-                        <x-nav-icon name="logout" />
-                    </button>
-                </form>
-            </div>
 
             {{-- Collapse toggle --}}
             <div class="mb-4 w-full flex justify-center">
@@ -242,6 +255,37 @@
         </div>
 
     </div>
+
+    {{-- Sign-out confirmation modal --}}
+    <div id="signoutModal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="signoutModalTitle">
+        <div id="signoutModalOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+            <div class="flex items-start gap-3 px-5 py-4">
+                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                    <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <h3 id="signoutModalTitle" class="text-base font-bold text-gray-900">Sign out?</h3>
+                    <p class="mt-1 text-sm text-gray-500">You will be returned to the sign-in page and will need to enter your credentials again.</p>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('logout') }}" class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                @csrf
+                <button type="button" id="signoutCancel"
+                        class="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 rounded-md bg-[#0e5266] text-white text-sm font-medium hover:bg-[#0c4757] transition-colors cursor-pointer">
+                    Sign out
+                </button>
+            </form>
+        </div>
+    </div>
 <script>
     const toggleBtn = document.getElementById('sidebarToggle');
     const collapseIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>';
@@ -272,6 +316,59 @@
             notifPanel.classList.add('hidden');
         }
     });
+
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userMenu = document.getElementById('userMenu');
+
+    function closeUserMenu() {
+        userMenu.classList.add('hidden');
+        userMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    userMenuBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isHidden = userMenu.classList.toggle('hidden');
+        userMenuBtn.setAttribute('aria-expanded', String(! isHidden));
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!userMenu.contains(e.target) && !userMenuBtn.contains(e.target)) {
+            closeUserMenu();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeUserMenu();
+            closeSignoutModal();
+        }
+    });
+
+    // Sign-out confirmation modal
+    const signoutModal = document.getElementById('signoutModal');
+    const signoutModalOverlay = document.getElementById('signoutModalOverlay');
+    const signoutOpen = document.getElementById('signoutOpen');
+    const signoutCancel = document.getElementById('signoutCancel');
+
+    function openSignoutModal() {
+        closeUserMenu();
+        signoutModal.classList.remove('hidden');
+        signoutModal.classList.add('flex');
+        signoutCancel.focus();
+    }
+
+    function closeSignoutModal() {
+        if (signoutModal.classList.contains('hidden')) {
+            return;
+        }
+        signoutModal.classList.add('hidden');
+        signoutModal.classList.remove('flex');
+        userMenuBtn.focus();
+    }
+
+    signoutOpen.addEventListener('click', openSignoutModal);
+    signoutCancel.addEventListener('click', closeSignoutModal);
+    signoutModalOverlay.addEventListener('click', closeSignoutModal);
 </script>
 </body>
 </html>
