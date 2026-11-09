@@ -75,4 +75,56 @@ class AuthenticationTest extends TestCase
             ->assertSee('admin')
             ->assertSee('Administrator');
     }
+
+    public function test_procurement_officer_can_login(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $response = $this->post('/login', [
+            'login' => 'user1',
+            'password' => 'user1',
+        ]);
+
+        $response->assertRedirect('/projects');
+        $this->assertAuthenticated();
+    }
+
+    public function test_viewer_can_login(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $response = $this->post('/login', [
+            'login' => 'user2',
+            'password' => 'user2',
+        ]);
+
+        $response->assertRedirect('/projects');
+        $this->assertAuthenticated();
+    }
+
+    public function test_settings_link_is_visible_to_administrator_only(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $admin = User::where('name', 'admin')->firstOrFail();
+        $officer = User::where('name', 'user1')->firstOrFail();
+        $viewer = User::where('name', 'user2')->firstOrFail();
+
+        $this->actingAs($admin)->get('/projects')->assertSee(route('settings'));
+        $this->actingAs($officer)->get('/projects')->assertDontSee(route('settings'));
+        $this->actingAs($viewer)->get('/projects')->assertDontSee(route('settings'));
+    }
+
+    public function test_only_administrator_can_access_settings(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $admin = User::where('name', 'admin')->firstOrFail();
+        $officer = User::where('name', 'user1')->firstOrFail();
+        $viewer = User::where('name', 'user2')->firstOrFail();
+
+        $this->actingAs($admin)->get('/settings')->assertOk();
+        $this->actingAs($officer)->get('/settings')->assertForbidden();
+        $this->actingAs($viewer)->get('/settings')->assertForbidden();
+    }
 }

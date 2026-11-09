@@ -83,17 +83,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
 
-    // Settings sub-pages
-    Route::get('/settings', [PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
-    Route::get('/settings/logs', [SettingsController::class, 'logs'])->name('settings.logs');
+    // Settings (administrator only)
+    Route::middleware('can:access-settings')->group(function () {
+        Route::get('/settings', [PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
+        Route::get('/settings/logs', [SettingsController::class, 'logs'])->name('settings.logs');
 
-    // User accounts + privileges (moved here from the Entities module).
-    // NOTE: /settings/privileges/create must stay before the {id}/edit route.
-    Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
-    Route::get('/settings/privileges/create', [SettingsController::class, 'privilegeCreate'])->name('settings.privileges.create');
-    Route::get('/settings/privileges/{id}/edit', [SettingsController::class, 'privilegeEdit'])->name('settings.privileges.edit');
+        // User accounts + privileges (moved here from the Entities module).
+        // NOTE: /settings/privileges/create must stay before the {id}/edit route.
+        Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
+        Route::get('/settings/privileges/create', [SettingsController::class, 'privilegeCreate'])->name('settings.privileges.create');
+        Route::get('/settings/privileges/{id}/edit', [SettingsController::class, 'privilegeEdit'])->name('settings.privileges.edit');
 
-    Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
+        Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
+    });
 
   // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
     // @TODO: once the Quotation/RFQ models + migrations exist, pass the real quotation in:

@@ -150,7 +150,8 @@
                     </div>
                 </a>
 
-                {{-- Settings --}}
+                {{-- Settings (administrator only) --}}
+                @can('access-settings')
                 <a href="{{ route('settings') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
                         {{ request()->is('settings') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
@@ -166,6 +167,7 @@
                         <span class="label whitespace-nowrap">Settings</span>
                     </div>
                 </a>
+                @endcan
                 </nav>
             {{-- Sign out --}}
             <div class="mb-2 w-full flex justify-center">
