@@ -67,6 +67,8 @@ class AuthController extends Controller
         Auth::login($user);
 
         $request->session()->regenerate();
+        $request->session()->put('authenticated_at', now()->timestamp);
+        $request->session()->put('last_activity_at', now()->timestamp);
 
         return redirect()->intended(route('projects'));
     }

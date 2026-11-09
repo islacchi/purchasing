@@ -127,6 +127,66 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    public function test_recently_active_session_can_access_authenticated_routes(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $user = User::where('name', 'admin')->firstOrFail();
+        $now = now()->timestamp;
+
+        $this->actingAs($user)
+            ->withSession([
+                'authenticated_at' => $now,
+                'last_activity_at' => $now,
+            ])
+            ->get('/projects')
+            ->assertOk();
+
+        $this->assertAuthenticated();
+    }
+
+    public function test_session_expires_after_inactivity_timeout(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $user = User::where('name', 'admin')->firstOrFail();
+        $idleSince = now()->subMinutes(21)->timestamp;
+
+        $response = $this->actingAs($user)
+            ->withSession([
+                'authenticated_at' => $idleSince,
+                'last_activity_at' => $idleSince,
+            ])
+            ->get('/projects');
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors([
+            'login' => 'Your session expired due to inactivity. Please sign in again.',
+        ]);
+        $this->assertGuest();
+    }
+
+    public function test_session_expires_after_absolute_lifetime(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $user = User::where('name', 'admin')->firstOrFail();
+        $signedInAt = now()->subMinutes(481)->timestamp;
+
+        $response = $this->actingAs($user)
+            ->withSession([
+                'authenticated_at' => $signedInAt,
+                'last_activity_at' => now()->timestamp,
+            ])
+            ->get('/projects');
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors([
+            'login' => 'Your session reached its maximum lifetime. Please sign in again.',
+        ]);
+        $this->assertGuest();
+    }
+
     public function test_authenticated_admin_can_access_projects_page(): void
     {
         $this->seed(AdminUserSeeder::class);

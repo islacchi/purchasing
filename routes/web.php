@@ -28,7 +28,7 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Authenticated routes — these require a valid authenticated session.
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'session.active'])->group(function () {
     Route::get('/projects', [PageController::class, 'show'])->defaults('page', 'Projects.index')->name('projects');
     Route::get('/projects/create', function () {
         return view('Projects.form');

@@ -32,9 +32,35 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    'lifetime' => (int) env('SESSION_LIFETIME', 480),
 
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Idle Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | This is the number of minutes an authenticated user may remain idle
+    | before the application invalidates the session. Laravel's built-in
+    | lifetime remains the outer storage boundary; this provides the
+    | shorter application-level idle timeout enforced by middleware.
+    |
+    */
+
+    'idle_lifetime' => (int) env('SESSION_IDLE_LIFETIME', 20),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Absolute Session Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | This is the maximum number of minutes an authenticated session may
+    | live from the time the user signed in, regardless of activity.
+    |
+    */
+
+    'absolute_lifetime' => (int) env('SESSION_ABSOLUTE_LIFETIME', 480),
 
     /*
     |--------------------------------------------------------------------------
