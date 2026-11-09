@@ -10,7 +10,7 @@
     @endphp
 
     @if (session('status'))
-        <div class="mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div class="flash-message mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700" role="status">
             <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
             </svg>
@@ -206,9 +206,6 @@
         </div>
     </div>
 
-    {{-- Bottom spacer so dropdowns on the last rows have room and are not clipped --}}
-    <div class="pb-12"></div>
-
     <script>
         // Tab switching + three-dot action dropdowns (plain JS — the rest of the
         // app uses vanilla JS + the Tailwind CDN, no Alpine/Livewire).
@@ -250,6 +247,11 @@
                 menu.classList.add('hidden');
                 menu.classList.remove('bottom-full', 'mb-2');
                 menu.classList.add('top-full', 'mt-2');
+                menu.style.position = '';
+                menu.style.left = '';
+                menu.style.top = '';
+                menu.style.right = '';
+                menu.style.width = '';
             }
 
             document.querySelectorAll('.dropdown-trigger').forEach(function (trigger) {
@@ -259,18 +261,42 @@
 
                     document.querySelectorAll('.dropdown-menu').forEach(resetDropdown);
 
-                    if (!isOpen) {
-                        menu.classList.remove('hidden');
-                        const rect = menu.getBoundingClientRect();
-                        const scrollBox = menu.closest('.overflow-x-auto');
-                        const clipBottom = Math.min(window.innerHeight, scrollBox ? scrollBox.getBoundingClientRect().bottom : Infinity);
-                        const opensUp = rect.bottom + 8 > clipBottom;
-                        menu.classList.toggle('bottom-full', opensUp);
-                        menu.classList.toggle('mb-2', opensUp);
-                        menu.classList.toggle('top-full', !opensUp);
-                        menu.classList.toggle('mt-2', !opensUp);
+                    if (isOpen) {
+                        return;
                     }
+
+                    menu.classList.remove('hidden');
+
+                    // Render the menu with position: fixed so the table's
+                    // overflow clipping cannot cut it off. Align its right
+                    // edge with the trigger; flip above if there is not
+                    // enough room below.
+                    const rect = trigger.getBoundingClientRect();
+                    const menuSize = menu.getBoundingClientRect();
+                    let left = rect.right - menuSize.width;
+                    if (left < 8) left = 8;
+
+                    let top = rect.bottom + 6;
+                    if (top + menuSize.height > window.innerHeight - 8) {
+                        top = rect.top - menuSize.height - 6;
+                    }
+
+                    menu.style.position = 'fixed';
+                    menu.style.left = left + 'px';
+                    menu.style.top = top + 'px';
+                    menu.style.right = 'auto';
+                    menu.style.width = menuSize.width + 'px';
+                    menu.classList.remove('mt-2', 'mb-2', 'top-full', 'bottom-full');
                 });
+            });
+
+            // Menus are fixed-position; close them on any scroll (capture so we
+            // catch the inner <main> scroller) or resize.
+            window.addEventListener('scroll', function () {
+                document.querySelectorAll('.dropdown-menu').forEach(resetDropdown);
+            }, true);
+            window.addEventListener('resize', function () {
+                document.querySelectorAll('.dropdown-menu').forEach(resetDropdown);
             });
 
             document.addEventListener('click', function (e) {

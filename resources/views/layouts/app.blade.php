@@ -287,6 +287,17 @@
         </div>
     </div>
 <script>
+    // Auto-dismiss flash success messages after a few seconds.
+    document.querySelectorAll('.flash-message').forEach(function (el) {
+        el.style.transition = 'opacity 300ms ease, transform 300ms ease';
+        setTimeout(function () {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-4px)';
+            el.style.pointerEvents = 'none';
+            setTimeout(function () { el.remove(); }, 350);
+        }, 4000);
+    });
+
     const toggleBtn = document.getElementById('sidebarToggle');
     const collapseIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>';
     const expandIcon = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>';
