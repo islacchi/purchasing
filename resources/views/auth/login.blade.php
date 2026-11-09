@@ -13,23 +13,21 @@
 
         <form method="POST" action="{{ route('login') }}">
             @csrf
-            <div class="mb-4">
+            <div>
                 <label for="login" class="block text-sm font-medium text-gray-700 mb-1">Email or Username</label>
                 <input type="text" name="login" id="login" value="{{ old('login') }}"
                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                       placeholder="admin" autocomplete="username" autofocus required>
-                @error('login')
-                    <p id="login-error" class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
+                       placeholder="admin" autocomplete="username" autofocus required aria-describedby="login-error">
+                {{-- Keep the original field spacing while reserving room for a one-line error. --}}
+                <p id="login-error" class="mb-1 min-h-4 leading-4 text-xs text-red-600" aria-live="polite">{{ $errors->first('login') }}</p>
             </div>
-            <div class="mb-6">
+            <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
                 <input type="password" name="password" id="password"
                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                       placeholder="********" autocomplete="current-password" required>
-                @error('password')
-                    <p id="password-error" class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
+                       placeholder="********" autocomplete="current-password" required aria-describedby="password-error">
+                {{-- Keep the original field spacing while reserving room for a one-line error. --}}
+                <p id="password-error" class="mb-1 min-h-6 leading-6 text-xs text-red-600" aria-live="polite">{{ $errors->first('password') }}</p>
             </div>
             <button type="submit"
                     class="w-full bg-teal-600 text-white font-semibold py-2 px-4 rounded hover:bg-teal-700 transition-colors">
