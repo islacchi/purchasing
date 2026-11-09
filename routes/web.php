@@ -3,7 +3,7 @@
 /**
  * Web routes.
  *
- * Routes outside the `fake.auth` middleware group are public; routes inside
+ * Routes outside the `auth` middleware group are public; routes inside
  * the group require the user to be logged in.
  *
  * NOTE: Several show/edit routes currently use inline closures with dummy
@@ -21,13 +21,13 @@ Route::get('/', function () {
     return redirect('/login');
 });
 
-// Public fake-auth routes (any credentials work for now).
+// Public authentication routes.
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Authenticated routes — these require the session `logged_in` flag.
-Route::middleware('fake.auth')->group(function () {
+// Authenticated routes — these require a valid authenticated session.
+Route::middleware('auth')->group(function () {
     Route::get('/projects', [PageController::class, 'show'])->defaults('page', 'Projects.index')->name('projects');
     Route::get('/projects/create', function () {
         return view('Projects.form');

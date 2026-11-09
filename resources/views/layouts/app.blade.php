@@ -35,15 +35,15 @@
         {{-- Sidebar --}}
         <aside id="sidebar" class="fixed left-0 top-0 h-screen bg-[#0e3a4c] flex flex-col items-center pt-0 z-50 transition-all duration-300 overflow-hidden">
 
-  {{-- User icon + name/role (hardcoded for now — replace with auth()->user()->name and role once DB is wired up) --}}
+  {{-- Authenticated user + role --}}
 <div class="h-[80px] w-full flex items-center text-white">
     <div class="sidebar-icon flex items-center gap-3">
         <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
         </svg>
         <span class="label whitespace-nowrap">
-            <span class="block text-xs font-semibold">Juan Dela Cruz</span>
-            <span class="block text-[11px] text-white/50">Procurement Officer</span>
+            <span class="block text-xs font-semibold">{{ auth()->user()->name }}</span>
+            <span class="block text-[11px] text-white/50">{{ auth()->user()->role?->name ?? 'User' }}</span>
         </span>
     </div>
 </div>
@@ -167,6 +167,16 @@
                     </div>
                 </a>
                 </nav>
+            {{-- Sign out --}}
+            <div class="mb-2 w-full flex justify-center">
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" title="Sign out" class="text-white/60 hover:text-white transition-colors">
+                        <x-nav-icon name="logout" />
+                    </button>
+                </form>
+            </div>
+
             {{-- Collapse toggle --}}
             <div class="mb-4 w-full flex justify-center">
                 <button type="button" id="sidebarToggle" class="text-white/60 hover:text-white transition-colors">

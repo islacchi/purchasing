@@ -3,52 +3,73 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 /**
- * Handles the fake/demo authentication flow: rendering the login page,
- * flagging the session as authenticated, and clearing that flag.
- *
- * NOTE: No credentials are validated — any submit simply sets a session
- * `logged_in` flag. Replace with real auth once user records and a proper
- * authentication library are wired up.
+ * Handles authentication using Laravel's session guard.
  */
 class AuthController extends Controller
 {
     /**
      * Show the login page.
      *
-     * @return Response
+     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
     public function showLogin()
     {
+        if (Auth::check()) {
+            return redirect()->route('projects');
+        }
+
         return view('auth.login');
     }
 
     /**
-     * Log the user in by flagging the session as authenticated, then
-     * redirect to the projects page.
+     * Authenticate the user with their username (or email) and password.
      *
-     * @param  Request  $request
-     * @return Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function login(Request $request)
     {
-        $request->session()->put('logged_in', true);
+        $credentials = $request->validate([
+            'login' => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ]);
 
-        return redirect('/projects');
+        $field = filter_var($credentials['login'], FILTER_VALIDATE_EMAIL)
+            ? 'email'
+            : 'name';
+
+        $authenticated = Auth::attempt([
+            $field => $credentials['login'],
+            'password' => $credentials['password'],
+            'is_active' => true,
+        ]);
+
+        if (! $authenticated) {
+            throw ValidationException::withMessages([
+                'login' => __('The provided credentials do not match our records.'),
+            ]);
+        }
+
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('projects'));
     }
 
     /**
-     * Log the user out by clearing the authenticated flag, then redirect
-     * back to the login page.
+     * Log the user out and invalidate the session.
      *
-     * @param  Request  $request
-     * @return Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function logout(Request $request)
     {
-        $request->session()->forget('logged_in');
+        Auth::logout();
 
-        return redirect('/login');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
     }
 }
