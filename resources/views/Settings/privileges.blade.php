@@ -74,15 +74,16 @@
         <div class="xl:col-span-2 space-y-4">
             {{-- Search toolbar --}}
             <form method="GET" action="{{ route('settings.privileges') }}" class="flex items-center gap-3">
-                <div class="max-w-md w-full">
+                <div class="relative max-w-md w-full">
+                    <button type="submit" title="Search" aria-label="Search"
+                            class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 transition-colors hover:text-[#2a7a94]">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
+                        </svg>
+                    </button>
                     <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Search users..."
-                           class="w-full px-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
+                           class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
-                <button type="submit" class="p-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors" title="Search">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
-                    </svg>
-                </button>
                 @if (! empty($search))
                     <a href="{{ route('settings.privileges') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">
                         Clear
