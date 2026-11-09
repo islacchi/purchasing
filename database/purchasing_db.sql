@@ -303,7 +303,7 @@ CREATE TABLE `procuring_entities` (
   `email` varchar(255) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -566,7 +566,7 @@ CREATE TABLE `suppliers` (
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `suppliers_name_unique` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -589,7 +589,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `users_email_unique` (`email`),
   KEY `users_role_id_foreign` (`role_id`),
   CONSTRAINT `users_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -605,7 +605,7 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-09 11:18:00
+-- Dump completed on 2026-11-09 15:25:50
 -- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
 --
 -- Host: 127.0.0.1    Database: purchasing_db
@@ -710,6 +710,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `procuring_entities` WRITE;
 /*!40000 ALTER TABLE `procuring_entities` DISABLE KEYS */;
+INSERT INTO `procuring_entities` VALUES (1,'hmmmm','Government Hospital','asdsdad','asdadas','asdasd','asdasdasd@gmail.com',NULL);
 /*!40000 ALTER TABLE `procuring_entities` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -801,6 +802,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `suppliers` WRITE;
 /*!40000 ALTER TABLE `suppliers` DISABLE KEYS */;
+INSERT INTO `suppliers` VALUES (1,'kyle','taga tiptip ko bai 2','Peter gihapon','62626523625','kyle@gmail.com',NULL);
 /*!40000 ALTER TABLE `suppliers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -810,7 +812,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (2,2,'admin','admin@example.com','$2y$12$ubzJUQAv7HFYCBLMALyUQOyXxT5qiPhEYGVd9EYnoblotuNHSEqYu',1,'2026-11-08 19:17:50','2026-11-08 19:17:50'),(3,3,'user1','user1@example.com','$2y$12$riPutKXkT/TdHmETTIhoS.Lc7ryP60tTFW2xIRVCux7gR4.ZPP8om',1,'2026-11-08 19:17:50','2026-11-08 19:17:50'),(4,4,'user2','user2@example.com','$2y$12$6Urj1Cv6o2.rrReLJ2zKYeKfB7YDqJVT1BphM7.M7ksXKQo7d1Le6',1,'2026-11-08 19:17:50','2026-11-08 19:17:50');
+INSERT INTO `users` VALUES (2,2,'admin','admin@example.com','$2y$12$ubzJUQAv7HFYCBLMALyUQOyXxT5qiPhEYGVd9EYnoblotuNHSEqYu',1,'2026-11-08 19:17:50','2026-11-08 19:17:50'),(3,3,'user1','user1@example.com','$2y$12$riPutKXkT/TdHmETTIhoS.Lc7ryP60tTFW2xIRVCux7gR4.ZPP8om',1,'2026-11-08 19:17:50','2026-11-08 19:17:50'),(5,4,'kyle','kyle@gmail.com','$2y$12$LA2Sh0JIv5jegbi3CZYHReHuu1QdwYDKdC3e7ZlM9eoC7xjeEW1ZO',0,'2026-11-08 19:22:38','2026-11-08 21:26:38');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -822,4 +824,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-09 11:18:00
+-- Dump completed on 2026-11-09 15:25:50
