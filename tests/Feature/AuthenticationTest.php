@@ -109,6 +109,24 @@ class AuthenticationTest extends TestCase
             ->assertSee('Purchasing Login');
     }
 
+    public function test_first_load_always_shows_the_login_view_even_when_authenticated(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        $user = User::where('name', 'admin')->firstOrFail();
+
+        $this->actingAs($user)
+            ->get('/')
+            ->assertRedirect('/login');
+
+        $this->actingAs($user)
+            ->get('/login')
+            ->assertOk()
+            ->assertSee('Purchasing Login');
+
+        $this->assertAuthenticated();
+    }
+
     public function test_authenticated_admin_can_access_projects_page(): void
     {
         $this->seed(AdminUserSeeder::class);

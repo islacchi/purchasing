@@ -18,14 +18,13 @@ class AuthController extends Controller
     /**
      * Show the login page.
      *
-     * @return Response|RedirectResponse
+     * The first app screen should always be the login page, even if a
+     * browser still carries a previous application session.
+     *
+     * @return Response
      */
     public function showLogin()
     {
-        if (Auth::check()) {
-            return redirect()->route('projects');
-        }
-
         return view('auth.login');
     }
 
