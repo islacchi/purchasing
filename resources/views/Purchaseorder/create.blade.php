@@ -189,16 +189,6 @@
                     <p class="mt-1 text-xs text-green-700">
                         Nothing was saved yet — wiring this to the PurchaseOrder controller is still a @TODO.
                     </p>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <a href="{{ route('purchase-order') }}"
-                           class="inline-flex items-center gap-2 rounded-lg bg-green-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-800">
-                            Back to purchase orders
-                        </a>
-                        <button type="button" id="poCreatedDismiss"
-                                class="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-800 transition-colors hover:bg-green-100">
-                            Keep editing
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -484,6 +474,7 @@
             const createBtn = document.getElementById('poCreateBtn');
             const banner = document.getElementById('poCreatedBanner');
             const bannerSummary = document.getElementById('poCreatedSummary');
+            let bannerTimer = null;
             const expectedInput = document.getElementById('poExpected');
 
             function peso(amount) {
@@ -715,10 +706,6 @@
                 });
             }
 
-            document.getElementById('poCreatedDismiss').addEventListener('click', function () {
-                banner.classList.add('hidden');
-            });
-
             // @TODO: replace this stub with a POST to the PurchaseOrder controller.
             // The payload below is everything the backend needs to create the PO.
             form.addEventListener('submit', function (event) {
@@ -768,6 +755,12 @@
                 bannerSummary.textContent = summary;
                 banner.classList.remove('hidden');
                 banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                // Informational only: hide it again after a few seconds.
+                clearTimeout(bannerTimer);
+                bannerTimer = setTimeout(function () {
+                    banner.classList.add('hidden');
+                }, 5000);
             });
 
             updateShelfDates();
