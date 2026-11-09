@@ -14,13 +14,6 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * The model does not use created_at / updated_at columns.
-     *
-     * @var bool
-     */
-    public $timestamps = false;
-
-    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

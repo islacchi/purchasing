@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 /**
  * Renders the settings page.
@@ -123,12 +125,12 @@ class SettingsController extends Controller
 
             // Date range filtering
             $matchDateRange = true;
-            if (!empty($filterFrom) || !empty($filterTo)) {
+            if (! empty($filterFrom) || ! empty($filterTo)) {
                 $logDate = date('Y-m-d', strtotime($log['time']));
-                if (!empty($filterFrom) && $logDate < $filterFrom) {
+                if (! empty($filterFrom) && $logDate < $filterFrom) {
                     $matchDateRange = false;
                 }
-                if (!empty($filterTo) && $logDate > $filterTo) {
+                if (! empty($filterTo) && $logDate > $filterTo) {
                     $matchDateRange = false;
                 }
             }
@@ -159,106 +161,202 @@ class SettingsController extends Controller
     }
 
     /**
-     * Dummy user accounts used by the privilege screens.
-     *
-     * @TODO: replace with App\Models\User::with('role')->get() once the
-     * User/Role models and migrations exist.
-     *
-     * @return array
-     */
-    private function dummyUsers()
-    {
-        return [
-            [
-                'id' => 1,
-                'name' => 'J. Santos',
-                'email' => 'j.santos@company.com',
-                'role' => 'Procurement officer',
-                'status' => 'Active',
-                'date_added' => 'Feb 3, 2026',
-            ],
-            [
-                'id' => 2,
-                'name' => 'M. Reyes',
-                'email' => 'm.reyes@company.com',
-                'role' => 'Admin',
-                'status' => 'Active',
-                'date_added' => 'Jan 12, 2026',
-            ],
-            [
-                'id' => 3,
-                'name' => 'A. Cruz',
-                'email' => 'a.cruz@company.com',
-                'role' => 'Procurement officer',
-                'status' => 'Inactive',
-                'date_added' => 'Mar 8, 2026',
-            ],
-        ];
-    }
-
-    /**
-     * Dummy roles available for assignment.
-     *
-     * @TODO: replace with App\Models\Role::all() once the Role model exists.
-     *
-     * @return array
-     */
-    private function dummyRoles()
-    {
-        return [
-            ['name' => 'Admin', 'description' => 'Full system access'],
-            ['name' => 'Procurement officer', 'description' => 'Can create and manage purchase orders'],
-            ['name' => 'Viewer', 'description' => 'Read-only access to all modules'],
-        ];
-    }
-
-    /**
      * Show the user privilege management page.
-     *
-     * Displays dummy user accounts with role/privilege information.
-     * Pending real User/Role model integration.
-     *
-     * @return Response
      */
-    public function privileges()
+    public function privileges(Request $request)
     {
-        $users = $this->dummyUsers();
-        $roles = $this->dummyRoles();
+        $search = trim((string) $request->input('search', ''));
 
-        return view('settings.privileges', compact('users', 'roles'));
+        $users = User::query()
+            ->with('role')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhereHas('role', function ($query) use ($search) {
+                            $query->where('name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy('name')
+            ->get();
+
+        $roles = Role::query()
+            ->withCount('users')
+            ->orderBy('name')
+            ->get();
+
+        return view('Settings.privileges', compact('users', 'roles', 'search'));
     }
 
     /**
      * Show the form for creating a new user account.
-     *
-     * @return Response
      */
     public function privilegeCreate()
     {
-        $roles = $this->dummyRoles();
+        $roles = Role::query()->orderBy('name')->get();
 
-        return view('settings.privilege_form', [
+        return view('Settings.privilege_form', [
             'user' => null,
             'roles' => $roles,
         ]);
     }
 
     /**
+     * Store a newly created user account.
+     */
+    public function privilegeStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255', Rule::unique('users', 'name')],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'role_id' => ['required', 'integer', 'exists:roles,id'],
+            'status' => ['required', Rule::in(['Active', 'Inactive'])],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        User::create([
+            'role_id' => $validated['role_id'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'is_active' => $validated['status'] === 'Active',
+        ]);
+
+        return redirect()
+            ->route('settings.privileges')
+            ->with('status', 'User account created successfully.');
+    }
+
+    /**
      * Show the form for editing an existing user account.
-     *
-     * @param  int  $id
-     * @return Response
      */
     public function privilegeEdit($id)
     {
-        $user = collect($this->dummyUsers())->firstWhere('id', (int) $id);
+        $user = User::query()->with('role')->findOrFail($id);
+        $roles = Role::query()->orderBy('name')->get();
 
-        // @TODO: replace with App\Models\User::findOrFail($id) once the model exists.
-        abort_if($user === null, 404);
+        return view('Settings.privilege_form', compact('user', 'roles'));
+    }
 
-        $roles = $this->dummyRoles();
+    /**
+     * Update an existing user account.
+     */
+    public function privilegeUpdate(Request $request, $id)
+    {
+        $user = User::query()->with('role')->findOrFail($id);
 
-        return view('settings.privilege_form', compact('user', 'roles'));
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255', Rule::unique('users', 'name')->ignore($user->id)],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'role_id' => ['required', 'integer', 'exists:roles,id'],
+            'status' => ['required', Rule::in(['Active', 'Inactive'])],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $role = Role::findOrFail($validated['role_id']);
+        $willBeAdministrator = $role->name === 'Administrator';
+        $willBeActive = $validated['status'] === 'Active';
+        $editingSelf = $request->user()->id === $user->id;
+
+        if ($editingSelf && (! $willBeAdministrator || ! $willBeActive)) {
+            return back()
+                ->withInput()
+                ->with('error', 'You cannot remove your own administrator access or deactivate your own account.');
+        }
+
+        if ($user->isAdministrator() && (! $willBeAdministrator || ! $willBeActive)
+            && ! $this->hasOtherActiveAdministrator($user)) {
+            return back()
+                ->withInput()
+                ->with('error', 'At least one active administrator account must remain.');
+        }
+
+        $user->fill([
+            'role_id' => $validated['role_id'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'is_active' => $willBeActive,
+        ]);
+
+        if (! empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        return redirect()
+            ->route('settings.privileges')
+            ->with('status', 'User account updated successfully.');
+    }
+
+    /**
+     * Activate or deactivate a user account.
+     */
+    public function privilegeToggleStatus(Request $request, $id)
+    {
+        $user = User::query()->with('role')->findOrFail($id);
+
+        if ($user->is_active && $request->user()->id === $user->id) {
+            return redirect()
+                ->route('settings.privileges')
+                ->with('error', 'You cannot deactivate your own account.');
+        }
+
+        if ($user->is_active && $user->isAdministrator() && ! $this->hasOtherActiveAdministrator($user)) {
+            return redirect()
+                ->route('settings.privileges')
+                ->with('error', 'At least one active administrator account must remain.');
+        }
+
+        $user->is_active = ! $user->is_active;
+        $user->save();
+
+        return redirect()
+            ->route('settings.privileges')
+            ->with('status', $user->is_active
+                ? 'User account activated successfully.'
+                : 'User account deactivated successfully.');
+    }
+
+    /**
+     * Delete a user account.
+     */
+    public function privilegeDestroy(Request $request, $id)
+    {
+        $user = User::query()->with('role')->findOrFail($id);
+
+        if ($request->user()->id === $user->id) {
+            return redirect()
+                ->route('settings.privileges')
+                ->with('error', 'You cannot delete your own account.');
+        }
+
+        if ($user->is_active && $user->isAdministrator() && ! $this->hasOtherActiveAdministrator($user)) {
+            return redirect()
+                ->route('settings.privileges')
+                ->with('error', 'At least one active administrator account must remain.');
+        }
+
+        $user->delete();
+
+        return redirect()
+            ->route('settings.privileges')
+            ->with('status', 'User account deleted successfully.');
+    }
+
+    /**
+     * Determine whether another active administrator exists besides the given user.
+     */
+    private function hasOtherActiveAdministrator(User $user): bool
+    {
+        return User::query()
+            ->whereKeyNot($user->getKey())
+            ->where('is_active', true)
+            ->whereHas('role', function ($query) {
+                $query->where('name', 'Administrator');
+            })
+            ->exists();
     }
 
     /**

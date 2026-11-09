@@ -190,7 +190,7 @@ CREATE TABLE `migrations` (
   `migration` varchar(255) NOT NULL,
   `batch` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -583,6 +583,8 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `users_email_unique` (`email`),
   KEY `users_role_id_foreign` (`role_id`),
@@ -603,7 +605,7 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-09 10:58:00
+-- Dump completed on 2026-11-09 11:18:00
 -- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
 --
 -- Host: 127.0.0.1    Database: purchasing_db
@@ -653,7 +655,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `migrations` WRITE;
 /*!40000 ALTER TABLE `migrations` DISABLE KEYS */;
-INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_roles_table',1),(2,'0001_01_01_000000_create_users_table',1),(3,'0001_01_01_000001_create_cache_table',1),(4,'0001_01_01_000002_create_jobs_table',1),(5,'2026_11_09_000001_create_number_sequences_table',1),(6,'2026_11_09_000002_create_procuring_entities_table',1),(7,'2026_11_09_000003_create_item_categories_table',1),(8,'2026_11_09_000004_create_items_table',1),(9,'2026_11_09_000005_create_suppliers_table',1),(10,'2026_11_09_000006_create_projects_table',1),(11,'2026_11_09_000007_create_preplists_table',1),(12,'2026_11_09_000008_create_preplist_items_table',1),(13,'2026_11_09_000009_create_activity_logs_table',1),(14,'2026_11_09_000010_create_project_items_table',1),(15,'2026_11_09_000011_create_preplist_item_sources_table',1),(16,'2026_11_09_000012_create_quotations_table',1),(17,'2026_11_09_000013_create_quotation_items_table',1),(18,'2026_11_09_000014_create_purchase_orders_table',1),(19,'2026_11_09_000015_create_purchase_order_items_table',1),(20,'2026_11_09_000016_create_purchase_order_receipts_table',1),(21,'2026_11_09_000017_create_purchase_order_item_allocations_table',1);
+INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_roles_table',1),(2,'0001_01_01_000000_create_users_table',1),(3,'0001_01_01_000001_create_cache_table',1),(4,'0001_01_01_000002_create_jobs_table',1),(5,'2026_11_09_000001_create_number_sequences_table',1),(6,'2026_11_09_000002_create_procuring_entities_table',1),(7,'2026_11_09_000003_create_item_categories_table',1),(8,'2026_11_09_000004_create_items_table',1),(9,'2026_11_09_000005_create_suppliers_table',1),(10,'2026_11_09_000006_create_projects_table',1),(11,'2026_11_09_000007_create_preplists_table',1),(12,'2026_11_09_000008_create_preplist_items_table',1),(13,'2026_11_09_000009_create_activity_logs_table',1),(14,'2026_11_09_000010_create_project_items_table',1),(15,'2026_11_09_000011_create_preplist_item_sources_table',1),(16,'2026_11_09_000012_create_quotations_table',1),(17,'2026_11_09_000013_create_quotation_items_table',1),(18,'2026_11_09_000014_create_purchase_orders_table',1),(19,'2026_11_09_000015_create_purchase_order_items_table',1),(20,'2026_11_09_000016_create_purchase_order_receipts_table',1),(21,'2026_11_09_000017_create_purchase_order_item_allocations_table',1),(22,'2026_11_09_000018_add_timestamps_to_users_table',2);
 /*!40000 ALTER TABLE `migrations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -808,7 +810,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (2,2,'admin','admin@example.com','$2y$12$ubzJUQAv7HFYCBLMALyUQOyXxT5qiPhEYGVd9EYnoblotuNHSEqYu',1),(3,3,'user1','user1@example.com','$2y$12$riPutKXkT/TdHmETTIhoS.Lc7ryP60tTFW2xIRVCux7gR4.ZPP8om',1),(4,4,'user2','user2@example.com','$2y$12$6Urj1Cv6o2.rrReLJ2zKYeKfB7YDqJVT1BphM7.M7ksXKQo7d1Le6',1);
+INSERT INTO `users` VALUES (2,2,'admin','admin@example.com','$2y$12$ubzJUQAv7HFYCBLMALyUQOyXxT5qiPhEYGVd9EYnoblotuNHSEqYu',1,'2026-11-08 19:17:50','2026-11-08 19:17:50'),(3,3,'user1','user1@example.com','$2y$12$riPutKXkT/TdHmETTIhoS.Lc7ryP60tTFW2xIRVCux7gR4.ZPP8om',1,'2026-11-08 19:17:50','2026-11-08 19:17:50'),(4,4,'user2','user2@example.com','$2y$12$6Urj1Cv6o2.rrReLJ2zKYeKfB7YDqJVT1BphM7.M7ksXKQo7d1Le6',1,'2026-11-08 19:17:50','2026-11-08 19:17:50');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -820,4 +822,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-09 10:58:01
+-- Dump completed on 2026-11-09 11:18:00

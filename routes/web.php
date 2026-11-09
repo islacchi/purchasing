@@ -11,10 +11,10 @@
  * inline @TODO comments for the intended controller replacements.
  */
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SettingsController;
+use Illuminate\Support\Facades\Route;
 
 // Redirect the root path to the login page.
 Route::get('/', function () {
@@ -92,12 +92,16 @@ Route::middleware('auth')->group(function () {
         // NOTE: /settings/privileges/create must stay before the {id}/edit route.
         Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
         Route::get('/settings/privileges/create', [SettingsController::class, 'privilegeCreate'])->name('settings.privileges.create');
+        Route::post('/settings/privileges', [SettingsController::class, 'privilegeStore'])->name('settings.privileges.store');
         Route::get('/settings/privileges/{id}/edit', [SettingsController::class, 'privilegeEdit'])->name('settings.privileges.edit');
+        Route::put('/settings/privileges/{id}', [SettingsController::class, 'privilegeUpdate'])->name('settings.privileges.update');
+        Route::post('/settings/privileges/{id}/toggle-status', [SettingsController::class, 'privilegeToggleStatus'])->name('settings.privileges.toggle-status');
+        Route::delete('/settings/privileges/{id}', [SettingsController::class, 'privilegeDestroy'])->name('settings.privileges.destroy');
 
         Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
     });
 
-  // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
+    // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
     // @TODO: once the Quotation/RFQ models + migrations exist, pass the real quotation in:
     // Route::get('/quotation/{id}', [QuotationController::class, 'show'])->name('quotation.show');
     Route::get('/quotation/{id}', function ($id) {
