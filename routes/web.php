@@ -12,6 +12,7 @@
  */
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EntityController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -75,13 +76,22 @@ Route::middleware('auth')->group(function () {
     })->name('quotation.generate');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
     // Entity profile page — one view rendered two ways based on {type}.
-    // @TODO: once models + migrations exist, pass the real $entity/$supplier in:
-    // Route::get('/entities/procuring-entities/{id}', [EntityController::class, 'show'])->name('entities.show');
-    Route::get('/entities/{type}/{id}', function ($type, $id) {
-        return view('Entities.show', ['type' => $type, 'id' => $id]); // show.blade.php uses hardcoded dummy data
-    })->whereIn('type', ['procuring_entity', 'supplier'])->whereNumber('id')->name('entities.show');
-    Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
+    Route::get('/entities/{type}/{id}', [EntityController::class, 'show'])->whereIn('type', ['procuring_entity', 'supplier'])->whereNumber('id')->name('entities.show');
+    Route::get('/entities', [EntityController::class, 'index'])->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
+
+    // Add / Edit entity form — one view rendered two ways based on {type}.
+    // NOTE: /entities/{type}/create must be declared BEFORE /entities/{type}/{id}
+    // so "create" is matched as a literal path, not captured by the {id} wildcard.
+    Route::get('/entities/{type}/create', [EntityController::class, 'create'])->whereIn('type', ['procuring_entity', 'supplier'])->name('entities.create');
+
+    Route::get('/entities/{type}/{id}/edit', [EntityController::class, 'edit'])->whereIn('type', ['procuring_entity', 'supplier'])->whereNumber('id')->name('entities.edit');
+
+    Route::post('/entities/{type}/store', [EntityController::class, 'store'])->whereIn('type', ['procuring_entity', 'supplier'])->name('entities.store');
+
+    Route::put('/entities/{type}/{id}', [EntityController::class, 'update'])->whereIn('type', ['procuring_entity', 'supplier'])->whereNumber('id')->name('entities.update');
+
+    Route::delete('/entities/{type}/{id}', [EntityController::class, 'destroy'])->whereIn('type', ['procuring_entity', 'supplier'])->whereNumber('id')->name('entities.destroy');
 
     // Settings (administrator only)
     Route::middleware('can:access-settings')->group(function () {

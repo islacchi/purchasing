@@ -13,14 +13,8 @@
         // This single view renders two profile layouts depending on $type:
         //   'procuring_entity' or 'supplier'.
         //
-        // Dummy data for both types is hardcoded below (no DB integration yet).
-        //
-        // @TODO: once models + migrations exist, replace each branch with a real
-        // Eloquent query:
-        //   - procuring_entity: App\Models\Entity::with('projects')->findOrFail($id)
-        //   - supplier:         App\Models\Supplier::with('quotations')->findOrFail($id)
-        //                       (or whichever relation connects suppliers to their
-        //                        RFQ / quotation history)
+        // Records are provided by EntityController::show() from the real
+        // database rows for the selected type.
         // ------------------------------------------------------------------
 
         $type = $type ?? 'procuring_entity';
@@ -28,15 +22,8 @@
 
     @if($type === 'procuring_entity')
         @php
-            // @TODO: pull from App\Models\Entity::with('projects')->findOrFail($id).
-            $entity = [
-                'name'           => 'DOH Region VII',
-                'address'        => 'Osmeña Blvd, Cebu City',
-                'type'            => 'Regional Office',
-                'contact_person'  => 'Dr. R. Villanueva',
-                'contact_no'      => '032-123-4567',
-                'email'           => 'doh.region7@gov.ph',
-            ];
+            // Fetched by EntityController::show() from the real database row.
+            $entity = $entity ?? [];
             $contactRows = [
                 ['CONTACT PERSON', $entity['contact_person']],
                 ['CONTACT NO.', $entity['contact_no']],
@@ -93,14 +80,17 @@
 
         {{-- Actions --}}
         <div class="flex items-center justify-end gap-3 mt-8">
-            {{-- @TODO: route to the Entity controller's destroy method once real routes exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-red-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-                Delete Entity
-            </button>
+            <form method="POST" action="{{ route('entities.destroy', ['type' => 'procuring_entity', 'id' => $id]) }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-red-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Delete Entity
+                </button>
+            </form>
             <a href="{{ route('entities.edit', ['type' => 'procuring_entity', 'id' => $id]) }}"
                class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -111,15 +101,8 @@
         </div>
     @else
         @php
-            // @TODO: pull from App\Models\Supplier::with('quotations')->findOrFail($id)
-            // (or whichever relation connects suppliers to their RFQ / quotation history).
-            $supplier = [
-                'name'           => 'GreenCore Pharmaceuticals',
-                'address'        => 'Quezon City, Metro Manila',
-                'contact_person' => 'P. Domingo',
-                'contact_no'     => '02-8123-4455',
-                'email'          => 'orders@greencorepharma.ph',
-            ];
+            // Fetched by EntityController::show() from the real database row.
+            $supplier = $supplier ?? [];
             $contactRows = [
                 ['CONTACT PERSON', $supplier['contact_person']],
                 ['CONTACT NO.', $supplier['contact_no']],
@@ -175,14 +158,17 @@
 
         {{-- Actions --}}
         <div class="flex items-center justify-end gap-3 mt-8">
-            {{-- @TODO: route to the Supplier controller's destroy method once real routes exist. --}}
-            <button type="button"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-red-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-                Delete Supplier
-            </button>
+            <form method="POST" action="{{ route('entities.destroy', ['type' => 'supplier', 'id' => $id]) }}">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-red-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Delete Supplier
+                </button>
+            </form>
             <a href="{{ route('entities.edit', ['type' => 'supplier', 'id' => $id]) }}"
                class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

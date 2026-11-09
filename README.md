@@ -121,10 +121,13 @@ Price Index and Purchase Order were repositioned to appear above Entities and Se
 | GET | `/purchase-order` | `Purchaseorder.index` | `purchase-order` |
 | GET | `/purchase-order/create/{rfq}` | `Purchaseorder.create` | `purchase-order.create` |
 | GET | `/purchase-order/{id}` | `Purchaseorder.show` | `purchase-order.show` |
-| GET | `/entities/{type}/create` | `Entities.form` | `entities.create` |
-| GET | `/entities/{type}/{id}/edit` | `Entities.form` | `entities.edit` |
-| GET | `/entities/{type}/{id}` | `Entities.show` | `entities.show` |
-| GET | `/entities` | `Entities.index` | `entities` |
+| GET | `/entities/{type}/create` | `EntityController@create` | `entities.create` |
+| GET | `/entities/{type}/{id}/edit` | `EntityController@edit` | `entities.edit` |
+| GET | `/entities/{type}/{id}` | `EntityController@show` | `entities.show` |
+| POST | `/entities/{type}/store` | `EntityController@store` | `entities.store` |
+| PUT | `/entities/{type}/{id}` | `EntityController@update` | `entities.update` |
+| DELETE | `/entities/{type}/{id}` | `EntityController@destroy` | `entities.destroy` |
+| GET | `/entities` | `EntityController@index` | `entities` |
 | GET | `/priceindex` | `Priceindex.index` | `priceindex` |
 | GET | `/settings` | `Settings.index` | `settings` |
 | GET | `/settings/logs` | `SettingsController@logs` | `settings.logs` |
@@ -173,8 +176,8 @@ composer run setup
 ## Current State & Limitations
 
 - **Authentication:** Uses Laravel's session guard with a database-backed administrator account. Seed the account with `php artisan db:seed` (default credentials: `admin` / `admin`; change before production).
-- **Data:** All module views (Projects, Preplist, Quotation, Purchase Order, Entities, Price Index, Settings) use hardcoded PHP arrays (`@php` blocks) instead of database queries.
-- **Forms:** All `<form action="#">` submissions are placeholders — no store/update/destroy controller methods exist yet.
+- **Data:** The Entities module now uses `App\Models\ProcuringEntity` and `App\Models\Supplier` with their corresponding MySQL tables (`procuring_entities`, `suppliers`). Other module views still use hardcoded data pending controller integration.
+- **Forms:** The Entities module now has working add, edit, and delete form submissions. Other module forms remain placeholders — no store/update/destroy controller methods exist yet.
 - **Database:** MySQL schema and migrations for the procurement domain are in place. Module views still use hardcoded data pending controller integration.
 
 ---
