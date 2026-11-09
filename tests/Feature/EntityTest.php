@@ -84,6 +84,42 @@ class EntityTest extends TestCase
         ]);
     }
 
+    public function test_procuring_entity_edit_form_shows_original_data(): void
+    {
+        $entity = ProcuringEntity::create([
+            'name' => 'DOH Region VII',
+            'type' => 'Regional Office',
+            'address' => 'Osmeña Blvd, Cebu City',
+            'contact_person' => 'Dr. R. Villanueva',
+            'contact_no' => '032-123-4567',
+            'email' => 'doh.region7@gov.ph',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('entities.edit', ['type' => 'procuring_entity', 'id' => $entity->id]))
+            ->assertOk()
+            ->assertSee('value="'.$entity->name.'"', false)
+            ->assertSee($entity->address)
+            ->assertSee('value="'.$entity->email.'"', false);
+    }
+
+    public function test_supplier_edit_form_shows_original_data(): void
+    {
+        $supplier = Supplier::create([
+            'name' => 'GreenCore Pharmaceuticals',
+            'address' => 'Quezon City, Metro Manila',
+            'contact_person' => 'P. Domingo',
+            'contact_no' => '02-8123-4455',
+            'email' => 'orders@greencorepharma.ph',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('entities.edit', ['type' => 'supplier', 'id' => $supplier->id]))
+            ->assertOk()
+            ->assertSee('value="'.$supplier->name.'"', false)
+            ->assertSee('value="'.$supplier->email.'"', false);
+    }
+
     public function test_procuring_entity_can_be_updated(): void
     {
         $entity = ProcuringEntity::create([
