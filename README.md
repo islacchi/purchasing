@@ -11,8 +11,8 @@ A Laravel-based purchasing / procurement management application for government a
 | Layer | Technology |
 |-------|------------|
 | Framework | Laravel 12 (PHP 8.2+) |
-| Database | SQLite (default), configurable to MySQL/PostgreSQL/SQL Server |
-| Auth | Custom `FakeAuth` middleware (session `logged_in` flag) — placeholder for real authentication |
+| Database | MySQL (configured via `.env`); Laravel supports SQLite/PostgreSQL/SQL Server |
+| Auth | Laravel session guard with database-backed administrator account |
 | Frontend | Blade templates, Tailwind CSS v4, Vite |
 | JavaScript | Axios (via `resources/js/bootstrap.js`) |
 | Build Tool | Vite (`vite.config.js`) |
@@ -27,24 +27,23 @@ purchasing/
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── AuthController.php      # Fake login/logout
+│   │   │   ├── AuthController.php      # Login/logout
 │   │   │   ├── DashboardController.php # Not yet routed
 │   │   │   ├── PageController.php      # Renders Blade views by name
 │   │   │   ├── SettingsController.php  # Not yet routed
 │   │   │   └── Controller.php          # Abstract base
-│   │   └── Middleware/
-│   │       └── FakeAuth.php            # Session-based fake auth guard
 │   ├── Models/
-│   │   └── User.php                    # Only Eloquent model so far
+│   │   ├── Role.php                    # User roles
+│   │   └── User.php                    # Authenticated user
 │   └── Providers/
 │       └── AppServiceProvider.php
 ├── bootstrap/
 │   └── app.php                         # Route + middleware registration
 ├── config/                             # Standard Laravel config files
 ├── database/
-│   ├── migrations/                     # Default Laravel auth tables only (users, cache, jobs)
-│   ├── factories/UserFactory.php
-│   └── seeders/DatabaseSeeder.php
+│   ├── migrations/                     # Procurement domain + Laravel support tables
+│   ├── factories/                      # UserFactory, RoleFactory
+│   └── seeders/                        # DatabaseSeeder, AdminUserSeeder
 ├── resources/
 │   ├── views/
 │   │   ├── layouts/app.blade.php       # Main shell: sidebar, header, content
@@ -173,10 +172,10 @@ composer run setup
 
 ## Current State & Limitations
 
-- **Authentication:** Uses a `FakeAuth` middleware. Any credentials work on the login page; it simply sets a `logged_in` session flag. Replace with real Laravel authentication (Fortify/Breeze or custom) before production use.
+- **Authentication:** Uses Laravel's session guard with a database-backed administrator account. Seed the account with `php artisan db:seed` (default credentials: `admin` / `admin`; change before production).
 - **Data:** All module views (Projects, Preplist, Quotation, Purchase Order, Entities, Price Index, Settings) use hardcoded PHP arrays (`@php` blocks) instead of database queries.
 - **Forms:** All `<form action="#">` submissions are placeholders — no store/update/destroy controller methods exist yet.
-- **Database:** Only default Laravel migrations exist (users, password_reset_tokens, sessions, cache, jobs). Domain tables (projects, preplists, quotations, purchase_orders, entities, suppliers, etc.) are not yet created.
+- **Database:** MySQL schema and migrations for the procurement domain are in place. Module views still use hardcoded data pending controller integration.
 
 ---
 
@@ -184,10 +183,10 @@ composer run setup
 
 The codebase contains `@TODO` comments throughout indicating the intended next steps:
 
-1. Create migrations and Eloquent models for Project, Preplist, Quotation, PurchaseOrder, Entity, Supplier, and Item.
+1. Create Eloquent models for the remaining procurement domain tables.
 2. Replace inline closures in `routes/web.php` with real controller methods.
 3. Wire up form submissions to controller store/update methods.
-4. Replace `FakeAuth` with real authentication (Laravel Breeze/Fortify or custom).
+4. Add role-based authorization and user management (create/edit/deactivate accounts).
 5. Implement PO status transitions (Draft → Sent → Partial → Completed → Cancelled).
 6. Connect hardcoded dummy data in views to real Eloquent queries.
 

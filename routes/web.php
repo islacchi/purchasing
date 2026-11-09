@@ -3,7 +3,7 @@
 /**
  * Web routes.
  *
- * Routes outside the `fake.auth` middleware group are public; routes inside
+ * Routes outside the `auth` middleware group are public; routes inside
  * the group require the user to be logged in.
  *
  * NOTE: Several show/edit routes currently use inline closures with dummy
@@ -11,23 +11,23 @@
  * inline @TODO comments for the intended controller replacements.
  */
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SettingsController;
+use Illuminate\Support\Facades\Route;
 
 // Redirect the root path to the login page.
 Route::get('/', function () {
     return redirect('/login');
 });
 
-// Public fake-auth routes (any credentials work for now).
+// Public authentication routes.
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Authenticated routes — these require the session `logged_in` flag.
-Route::middleware('fake.auth')->group(function () {
+// Authenticated routes — these require a valid authenticated session.
+Route::middleware('auth')->group(function () {
     Route::get('/projects', [PageController::class, 'show'])->defaults('page', 'Projects.index')->name('projects');
     Route::get('/projects/create', function () {
         return view('Projects.form');
@@ -83,19 +83,25 @@ Route::middleware('fake.auth')->group(function () {
     Route::get('/entities', [PageController::class, 'show'])->defaults('page', 'Entities.index')->name('entities');
     Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
 
-    // Settings sub-pages
-    Route::get('/settings', [PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
-    Route::get('/settings/logs', [SettingsController::class, 'logs'])->name('settings.logs');
+    // Settings (administrator only)
+    Route::middleware('can:access-settings')->group(function () {
+        Route::get('/settings', [PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
+        Route::get('/settings/logs', [SettingsController::class, 'logs'])->name('settings.logs');
 
-    // User accounts + privileges (moved here from the Entities module).
-    // NOTE: /settings/privileges/create must stay before the {id}/edit route.
-    Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
-    Route::get('/settings/privileges/create', [SettingsController::class, 'privilegeCreate'])->name('settings.privileges.create');
-    Route::get('/settings/privileges/{id}/edit', [SettingsController::class, 'privilegeEdit'])->name('settings.privileges.edit');
+        // User accounts + privileges (moved here from the Entities module).
+        // NOTE: /settings/privileges/create must stay before the {id}/edit route.
+        Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
+        Route::get('/settings/privileges/create', [SettingsController::class, 'privilegeCreate'])->name('settings.privileges.create');
+        Route::post('/settings/privileges', [SettingsController::class, 'privilegeStore'])->name('settings.privileges.store');
+        Route::get('/settings/privileges/{id}/edit', [SettingsController::class, 'privilegeEdit'])->name('settings.privileges.edit');
+        Route::put('/settings/privileges/{id}', [SettingsController::class, 'privilegeUpdate'])->name('settings.privileges.update');
+        Route::post('/settings/privileges/{id}/toggle-status', [SettingsController::class, 'privilegeToggleStatus'])->name('settings.privileges.toggle-status');
+        Route::delete('/settings/privileges/{id}', [SettingsController::class, 'privilegeDestroy'])->name('settings.privileges.destroy');
 
-    Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
+        Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
+    });
 
-  // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
+    // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
     // @TODO: once the Quotation/RFQ models + migrations exist, pass the real quotation in:
     // Route::get('/quotation/{id}', [QuotationController::class, 'show'])->name('quotation.show');
     Route::get('/quotation/{id}', function ($id) {
