@@ -46,6 +46,14 @@ class EntityTest extends TestCase
             ->assertSee('Triple Tact');
     }
 
+    public function test_suppliers_tab_can_be_loaded_directly(): void
+    {
+        $this->actingAs($this->admin())
+            ->get('/entities?tab=suppliers')
+            ->assertOk()
+            ->assertSee('data-active-tab="suppliers"', false);
+    }
+
     public function test_procuring_entity_can_be_created_from_real_form(): void
     {
         $response = $this->actingAs($this->admin())
@@ -58,7 +66,7 @@ class EntityTest extends TestCase
                 'email' => 'procurement@pgh.gov.ph',
             ]);
 
-        $response->assertRedirect(route('entities'));
+        $response->assertRedirect(route('entities', ['tab' => 'entities']));
         $response->assertSessionHas('status');
         $this->assertDatabaseHas('procuring_entities', [
             'name' => 'PGH Manila',
@@ -77,7 +85,7 @@ class EntityTest extends TestCase
                 'email' => 'orders@greencorepharma.ph',
             ]);
 
-        $response->assertRedirect(route('entities'));
+        $response->assertRedirect(route('entities', ['tab' => 'suppliers']));
         $response->assertSessionHas('status');
         $this->assertDatabaseHas('suppliers', [
             'name' => 'GreenCore Pharmaceuticals',
@@ -117,7 +125,8 @@ class EntityTest extends TestCase
             ->get(route('entities.edit', ['type' => 'supplier', 'id' => $supplier->id]))
             ->assertOk()
             ->assertSee('value="'.$supplier->name.'"', false)
-            ->assertSee('value="'.$supplier->email.'"', false);
+            ->assertSee('value="'.$supplier->email.'"', false)
+            ->assertSee(route('entities', ['tab' => 'suppliers']), false);
     }
 
     public function test_procuring_entity_can_be_updated(): void
@@ -136,7 +145,7 @@ class EntityTest extends TestCase
                 'contact_no' => '032-123-4567',
                 'email' => 'doh.region7@gov.ph',
             ])
-            ->assertRedirect(route('entities'));
+            ->assertRedirect(route('entities', ['tab' => 'entities']));
 
         $this->assertDatabaseHas('procuring_entities', [
             'id' => $entity->id,
@@ -153,10 +162,48 @@ class EntityTest extends TestCase
 
         $this->actingAs($this->admin())
             ->delete(route('entities.destroy', ['type' => 'procuring_entity', 'id' => $entity->id]))
-            ->assertRedirect(route('entities'));
+            ->assertRedirect(route('entities', ['tab' => 'entities']));
 
         $this->assertSoftDeleted('procuring_entities', [
             'id' => $entity->id,
+        ]);
+    }
+
+    public function test_supplier_can_be_updated(): void
+    {
+        $supplier = Supplier::create([
+            'name' => 'GreenCore Pharmaceuticals',
+            'address' => 'Quezon City, Metro Manila',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->put(route('entities.update', ['type' => 'supplier', 'id' => $supplier->id]), [
+                'name' => 'GreenCore Pharmaceuticals Updated',
+                'address' => 'Makati City',
+                'contact_person' => 'P. Domingo',
+                'contact_no' => '02-8123-4455',
+                'email' => 'orders@greencorepharma.ph',
+            ])
+            ->assertRedirect(route('entities', ['tab' => 'suppliers']));
+
+        $this->assertDatabaseHas('suppliers', [
+            'id' => $supplier->id,
+            'name' => 'GreenCore Pharmaceuticals Updated',
+        ]);
+    }
+
+    public function test_supplier_can_be_deleted(): void
+    {
+        $supplier = Supplier::create([
+            'name' => 'GreenCore Pharmaceuticals',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->delete(route('entities.destroy', ['type' => 'supplier', 'id' => $supplier->id]))
+            ->assertRedirect(route('entities', ['tab' => 'suppliers']));
+
+        $this->assertSoftDeleted('suppliers', [
+            'id' => $supplier->id,
         ]);
     }
 }

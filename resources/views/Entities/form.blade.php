@@ -46,6 +46,7 @@
         $typeLabel = $config['title'].' FORM';
         $formTitle = ($isEdit ? 'EDIT ' : 'ADD ').$config['title'];
         $saveLabel = ($isEdit ? 'Save ' : 'Add ').$config['singular'];
+        $returnTab = $type === 'supplier' ? 'suppliers' : 'entities';
 
         $formColumns = [];
         foreach ($config['fields'] as $field) {
@@ -108,7 +109,7 @@
         </div>
 
         <div class="flex items-center justify-end gap-3 mt-8 pt-5 border-t border-gray-100">
-            <a href="{{ route('entities') }}"
+            <a href="{{ route('entities', ['tab' => $returnTab]) }}"
                class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

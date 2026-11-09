@@ -5,6 +5,10 @@
 
 @section('content')
 
+    @php
+        $activeTab = request('tab') === 'suppliers' ? 'suppliers' : 'entities';
+    @endphp
+
     @if (session('status'))
         <div class="mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
             <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -15,19 +19,19 @@
     @endif
 
     {{-- Tabs --}}
-    <div class="flex flex-wrap items-center gap-2 mb-6" role="tablist" aria-label="Entity records">
-        <button type="button" role="tab" aria-selected="true" data-tab="entities"
-                class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors bg-[#2a7a94] text-white border-[#2a7a94] shadow-sm">
+    <div class="flex flex-wrap items-center gap-2 mb-6" role="tablist" aria-label="Entity records" data-active-tab="{{ $activeTab }}">
+        <button type="button" role="tab" aria-selected="{{ $activeTab === 'entities' ? 'true' : 'false' }}" data-tab="entities"
+                class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors {{ $activeTab === 'entities' ? 'bg-[#2a7a94] text-white border-[#2a7a94] shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
             Procuring Entities
         </button>
-        <button type="button" role="tab" aria-selected="false" data-tab="suppliers"
-                class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors bg-white text-gray-700 border-gray-300 hover:bg-gray-50">
+        <button type="button" role="tab" aria-selected="{{ $activeTab === 'suppliers' ? 'true' : 'false' }}" data-tab="suppliers"
+                class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors {{ $activeTab === 'suppliers' ? 'bg-[#2a7a94] text-white border-[#2a7a94] shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
             Suppliers
         </button>
     </div>
 
     {{-- PROCURING ENTITIES TAB --}}
-    <div class="tab-panel" id="tab-panel-entities" data-panel="entities">
+    <div class="tab-panel{{ $activeTab === 'entities' ? '' : ' hidden' }}" id="tab-panel-entities" data-panel="entities">
         {{-- Toolbar --}}
         <div class="mb-4 flex items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-1">
@@ -117,7 +121,7 @@
     </div>
 
     {{-- SUPPLIERS TAB --}}
-    <div class="tab-panel hidden" id="tab-panel-suppliers" data-panel="suppliers">
+    <div class="tab-panel{{ $activeTab === 'suppliers' ? '' : ' hidden' }}" id="tab-panel-suppliers" data-panel="suppliers">
         {{-- Toolbar --}}
         <div class="mb-4 flex items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-1">
@@ -214,22 +218,31 @@
             const ACTIVE_TAB_CLASSES = ['bg-[#2a7a94]', 'text-white', 'border-[#2a7a94]', 'shadow-sm'];
             const INACTIVE_TAB_CLASSES = ['bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-50'];
 
+            function selectTab(tab) {
+                document.querySelectorAll('.tab-btn').forEach(function (button) {
+                    ACTIVE_TAB_CLASSES.forEach(function (c) { button.classList.remove(c); });
+                    INACTIVE_TAB_CLASSES.forEach(function (c) { button.classList.add(c); });
+                    button.setAttribute('aria-selected', button.dataset.tab === tab ? 'true' : 'false');
+                });
+
+                const selectedButton = document.querySelector('.tab-btn[data-tab="' + tab + '"]');
+                if (selectedButton) {
+                    ACTIVE_TAB_CLASSES.forEach(function (c) { selectedButton.classList.add(c); });
+                    INACTIVE_TAB_CLASSES.forEach(function (c) { selectedButton.classList.remove(c); });
+                }
+
+                document.querySelectorAll('.tab-panel').forEach(function (panel) {
+                    panel.classList.toggle('hidden', panel.dataset.panel !== tab);
+                });
+
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', tab);
+                window.history.replaceState(window.history.state, '', url);
+            }
+
             document.querySelectorAll('.tab-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
-                    const tab = btn.dataset.tab;
-
-                    document.querySelectorAll('.tab-btn').forEach(function (b) {
-                        ACTIVE_TAB_CLASSES.forEach(function (c) { b.classList.remove(c); });
-                        INACTIVE_TAB_CLASSES.forEach(function (c) { b.classList.add(c); });
-                        b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
-                    });
-
-                    ACTIVE_TAB_CLASSES.forEach(function (c) { btn.classList.add(c); });
-                    INACTIVE_TAB_CLASSES.forEach(function (c) { btn.classList.remove(c); });
-
-                    document.querySelectorAll('.tab-panel').forEach(function (panel) {
-                        panel.classList.toggle('hidden', panel.dataset.panel !== tab);
-                    });
+                    selectTab(btn.dataset.tab);
                 });
             });
 

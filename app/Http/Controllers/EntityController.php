@@ -83,7 +83,7 @@ class EntityController extends Controller
         }
 
         return redirect()
-            ->route('entities')
+            ->route('entities', ['tab' => $this->indexTab($type)])
             ->with('status', $label.' created successfully.');
     }
 
@@ -127,7 +127,7 @@ class EntityController extends Controller
         }
 
         return redirect()
-            ->route('entities')
+            ->route('entities', ['tab' => $this->indexTab($type)])
             ->with('status', $label.' updated successfully.');
     }
 
@@ -144,7 +144,7 @@ class EntityController extends Controller
         $label = $type === 'procuring_entity' ? 'Procuring Entity' : 'Supplier';
 
         return redirect()
-            ->route('entities')
+            ->route('entities', ['tab' => $this->indexTab($type)])
             ->with('status', $label.' deleted successfully.');
     }
 
@@ -183,6 +183,14 @@ class EntityController extends Controller
             'contact_no' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
         ];
+    }
+
+    /**
+     * Map the entity type to the matching entities index tab.
+     */
+    private function indexTab(string $type): string
+    {
+        return $type === 'supplier' ? 'suppliers' : 'entities';
     }
 
     /**
