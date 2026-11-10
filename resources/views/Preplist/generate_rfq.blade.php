@@ -37,7 +37,7 @@
     <div class="flex h-full min-h-0 flex-col">
     {{-- Page heading --}}
     <div class="shrink-0 mb-6">
-        <h2 class="text-2xl font-bold text-gray-900">Generate quotation - {{ $prepList->name }}</h2>
+        <h2 class="text-2xl font-bold text-gray-900">Generate RFQ - {{ $prepList->name }}</h2>
         <p class="text-sm text-gray-500 mt-1">Choose which suppliers to ask for each item</p>
     </div>
 
@@ -123,13 +123,13 @@
         @endforelse
     </div>
 
-    {{-- Quotation files to generate — one row per supplier with at least one checked item.
+    {{-- RFQ files to generate — one row per supplier with at least one checked item.
          The checkbox toggles file generation; the supplier name opens the preview modal.
          NOTE: the checkbox and the supplier name are separate sibling elements with their
          own click handlers (never wrapped in a single <label>), so neither triggers the
          other's behavior. --}}
     <div class="shrink-0 rounded-lg border border-gray-200 bg-white p-5 mt-6 shadow-sm">
-        <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Quotation files to generate</p>
+        <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">RFQ files to generate</p>
         <div class="divide-y divide-gray-100 rounded-lg border border-gray-200 overflow-hidden bg-white">
             @foreach($suppliers as $supplier)
                 <div class="gen-row flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 {{ isset($initialGenSuppliers[$supplier['name']]) ? '' : 'hidden' }}"
@@ -200,7 +200,7 @@
     <input type="hidden" id="generateRfqToken" value="{{ csrf_token() }}">
     <script>
         // ------------------------------------------------------------------
-        // Chip toggling, the dynamic "Quotation files to generate" list, the
+        // Chip toggling, the dynamic "RFQ files to generate" list, the
         // supplier preview modal, and the Excel export endpoint. The export
         // posts the checked supplier / item selections to the server, which
         // re-reads every item from the prep list and streams back one .xlsx
@@ -253,7 +253,7 @@
             });
 
             // ------------------------------------------------------------------
-            // "Quotation files to generate" — shows one row per supplier that has
+            // "RFQ files to generate" — shows one row per supplier that has
             // at least one checked item. Each row's checkbox remembers the user's
             // explicit choice; newly-appearing suppliers default to a checked row.
             // ------------------------------------------------------------------
@@ -369,7 +369,7 @@
 
             // ------------------------------------------------------------------
             // Generate File — produces an Excel workbook for every supplier
-            // checked in "Quotation files to generate". Each workbook contains
+            // checked in "RFQ files to generate". Each workbook contains
             // ONLY that supplier's checked items, read back from the database.
             //
             // Quantities are deliberately NOT included: suppliers only receive
@@ -412,7 +412,7 @@
                 });
 
                 if (payload.length === 0) {
-                    window.alert('Tick at least one supplier in "Quotation files to generate" first.');
+                    window.alert('Tick at least one supplier in "RFQ files to generate" first.');
                     return;
                 }
 
@@ -432,7 +432,7 @@
                     .then(function (response) {
                         if (!response.ok) {
                             return response.text().then(function (body) {
-                                let message = 'Unable to generate the quotation files.';
+                                let message = 'Unable to generate the RFQ files.';
                                 try {
                                     const data = JSON.parse(body);
                                     if (data && data.message) {
@@ -463,7 +463,7 @@
                         URL.revokeObjectURL(url);
                     })
                     .catch(function (error) {
-                        window.alert(error && error.message ? error.message : 'Unable to generate the quotation files.');
+                        window.alert(error && error.message ? error.message : 'Unable to generate the RFQ files.');
                     })
                     .finally(function () {
                         generateFileBtn.disabled = false;

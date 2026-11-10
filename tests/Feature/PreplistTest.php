@@ -11,10 +11,12 @@ use App\Models\PreplistItemSource;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
+use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Models\User;
 use Database\Seeders\AdminUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PreplistTest extends TestCase
@@ -442,7 +444,7 @@ class PreplistTest extends TestCase
         $this->actingAs($user)
             ->get(route('preplist.generate-rfq', ['preplist' => $preplist->id]))
             ->assertOk()
-            ->assertSee('Generate quotation - '.$preplist->name)
+            ->assertSee('Generate RFQ - '.$preplist->name)
             ->assertSee($item->name)
             ->assertSee('50 Box total')
             ->assertSee('&ge; 12 months remaining at delivery', false)
@@ -538,6 +540,8 @@ class PreplistTest extends TestCase
 
     public function test_generate_rfq_excel_returns_single_xlsx_for_one_supplier(): void
     {
+        Storage::fake('local');
+
         $user = $this->admin();
         $entity = $this->entity();
         $project = $this->project($user, $entity);
@@ -570,6 +574,16 @@ class PreplistTest extends TestCase
 
         $this->assertValidXlsx($response->getContent());
 
+        $quotation = Quotation::query()->firstOrFail();
+
+        $this->assertSame($preplist->id, $quotation->preplist_id);
+        $this->assertSame($supplier->id, $quotation->supplier_id);
+        $this->assertNotNull($quotation->generated_at);
+        $this->assertMatchesRegularExpression('/^RFQ-\d{4}-\d{4}$/', $quotation->rfq_number);
+        $this->assertNull($quotation->document_path);
+        $this->assertNull($quotation->document_name);
+        $this->assertNull($quotation->document_size);
+
         $xml = $this->sheetXmlFromXlsx($response->getContent());
 
         $this->assertStringContainsString('REQUEST FOR QUOTATION', $xml);
@@ -581,6 +595,8 @@ class PreplistTest extends TestCase
 
     public function test_generate_rfq_excel_zips_one_workbook_per_supplier(): void
     {
+        Storage::fake('local');
+
         $user = $this->admin();
         $entity = $this->entity();
         $project = $this->project($user, $entity);
@@ -618,6 +634,16 @@ class PreplistTest extends TestCase
         $response->assertHeader('Content-Type', 'application/zip');
         $this->assertStringContainsString('.zip', $response->headers->get('Content-Disposition'));
 
+        $this->assertDatabaseCount('quotations', 2);
+        $this->assertDatabaseHas('quotations', [
+            'supplier_id' => $firstSupplier->id,
+            'document_path' => null,
+        ]);
+        $this->assertDatabaseHas('quotations', [
+            'supplier_id' => $secondSupplier->id,
+            'document_path' => null,
+        ]);
+
         $workbooks = $this->unzipWorkbooks($response->getContent());
 
         $this->assertCount(2, $workbooks);
@@ -635,6 +661,49 @@ class PreplistTest extends TestCase
 
         $this->assertStringContainsString('BetaItemBeta', $secondSheet);
         $this->assertStringNotContainsString('AlphaItemAlpha', $secondSheet);
+    }
+
+    public function test_generate_rfq_excel_updates_existing_quotation_instead_of_duplicating(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $payload = [
+            'files' => [
+                ['supplier' => $supplier->name, 'items' => [$preplistItem->id]],
+            ],
+        ];
+
+        $this->actingAs($user)->postJson(
+            route('preplist.generate-rfq.excel', ['preplist' => $preplist->id]),
+            $payload,
+        )->assertOk();
+
+        $firstRfqNumber = Quotation::where('supplier_id', $supplier->id)->value('rfq_number');
+
+        $this->actingAs($user)->postJson(
+            route('preplist.generate-rfq.excel', ['preplist' => $preplist->id]),
+            $payload,
+        )->assertOk();
+
+        $this->assertDatabaseCount('quotations', 1);
+        $this->assertSame(
+            $firstRfqNumber,
+            Quotation::where('supplier_id', $supplier->id)->value('rfq_number'),
+        );
     }
 
     public function test_generate_rfq_excel_rejects_items_from_another_prep_list(): void

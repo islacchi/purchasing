@@ -153,7 +153,7 @@
     <div class="flex h-full min-h-0 flex-col">
 
         {{-- Back --}}
-        <a href="{{ route('quotation.show', ['id' => $quotation['id']]) }}"
+        <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
            class="mb-5 inline-flex shrink-0 items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94]">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
@@ -170,7 +170,7 @@
                 </div>
                 <p class="mt-1 text-xs text-gray-500">
                     From quotation
-                    <a href="{{ route('quotation.show', ['id' => $quotation['id']]) }}"
+                    <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
                        class="font-medium text-[#2a7a94] hover:underline">{{ $quotation['reference_no'] }}</a>
                     · {{ $quotation['prep_list'] }}
                 </p>
@@ -399,7 +399,7 @@
                                 <div class="flex items-start justify-between gap-4">
                                     <dt class="text-xs text-gray-500">Quotation</dt>
                                     <dd class="text-right">
-                                        <a href="{{ route('quotation.show', ['id' => $quotation['id']]) }}"
+                                        <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
                                            class="font-medium text-[#2a7a94] hover:underline">{{ $quotation['reference_no'] }}</a>
                                     </dd>
                                 </div>
@@ -444,7 +444,7 @@
                                 Generate purchase order
                             </button>
 
-                            <a href="{{ route('quotation.show', ['id' => $quotation['id']]) }}"
+                            <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
                                class="mt-2 flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                                 Cancel
                             </a>

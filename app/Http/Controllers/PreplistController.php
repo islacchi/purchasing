@@ -7,6 +7,7 @@ use App\Models\Preplist;
 use App\Models\PreplistItem;
 use App\Models\Project;
 use App\Models\ProjectItem;
+use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\RfqQuotationWorkbook;
 use Illuminate\Http\Request;
@@ -255,8 +256,42 @@ class PreplistController extends Controller
             $workbooks[] = [
                 'filename' => $this->quotationFilename($preplist, $supplier),
                 'content' => RfqQuotationWorkbook::build($preplist, $supplier, $items),
+                'supplier' => $supplier,
             ];
         }
+
+        // Persist one quotation record per supplier so the Quotation module
+        // can track responses from the moment the RFQ is generated. Reusing
+        // the same prep list + supplier pair updates the existing record
+        // instead of piling up duplicates. The generated workbook itself is
+        // delivered as a download here; the Quotation detail page stores the
+        // supplier's completed file once it is uploaded there separately.
+        DB::transaction(function () use ($preplist, $request, &$workbooks) {
+            foreach ($workbooks as &$workbook) {
+                $supplier = $workbook['supplier'];
+
+                $existing = Quotation::query()
+                    ->where('preplist_id', $preplist->id)
+                    ->where('supplier_id', $supplier->id)
+                    ->first();
+
+                $payload = [
+                    'generated_at' => now(),
+                ];
+
+                if ($existing) {
+                    $existing->update($payload);
+                } else {
+                    Quotation::query()->create(array_merge($payload, [
+                        'preplist_id' => $preplist->id,
+                        'supplier_id' => $supplier->id,
+                        'created_by' => $request->user()->id,
+                        'rfq_number' => $this->nextRfqNumber(),
+                    ]));
+                }
+            }
+            unset($workbook);
+        });
 
         if (count($workbooks) === 1) {
             return response($workbooks[0]['content'], 200, [
@@ -375,6 +410,33 @@ class PreplistController extends Controller
         }
 
         return $base.'.'.$extension;
+    }
+
+    /**
+     * Generate the next quotation RFQ number for the current year.
+     */
+    private function nextRfqNumber(): string
+    {
+        $year = (int) now()->year;
+
+        $sequence = NumberSequence::query()
+            ->where('key', 'rfq')
+            ->where('year', $year)
+            ->lockForUpdate()
+            ->first();
+
+        if ($sequence === null) {
+            $sequence = NumberSequence::query()->create([
+                'key' => 'rfq',
+                'year' => $year,
+                'last_number' => 0,
+            ]);
+        }
+
+        $sequence->last_number++;
+        $sequence->save();
+
+        return sprintf('RFQ-%d-%04d', $year, $sequence->last_number);
     }
 
     /**

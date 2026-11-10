@@ -7,146 +7,30 @@
 @endsection
 
 @section('content')
-    {{-- @TODO: Replace the hardcoded records below with a real query, e.g.
-         $quotation = Quotation::with(['supplier', 'prepList', 'document', 'items.allocations.sourceProject'])
-             ->findOrFail($id);
-         and compute "items quoted" / total from the relations instead of the array. --}}
     @php
-        $quotations = [
-            1 => [
-                'id' => 1,
-                'supplier' => 'Triple Tact',
-                'prep_list' => 'July Region VII batch',
-                'reference_no' => '#2026-0090',
-                'document' => null,
-                'items' => [
-                    [
-                        'name' => 'Amoxicillin 500mg, box of 100',
-                        'requested' => 100,
-                        'unit' => 'box',
-                        'unit_price' => null,
-                        'min_remaining_months' => 12,
-                        'offered_shelf_life_months' => null,
-                        'allocations' => [
-                            ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 50],
-                            ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 50],
-                        ],
-                    ],
-                    [
-                        'name' => 'Surgical gloves, box of 50 pairs',
-                        'requested' => 40,
-                        'unit' => 'box',
-                        'unit_price' => null,
-                        'min_remaining_months' => 24,
-                        'offered_shelf_life_months' => null,
-                        'allocations' => [
-                            ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 40],
-                        ],
-                    ],
-                ],
-            ],
-            2 => [
-                'id' => 2,
-                'supplier' => 'GreenCore Pharmaceuticals',
-                'prep_list' => 'July Region VII batch',
-                'reference_no' => '#2026-0090',
-                'document' => [
-                    'name' => 'greencore_quotation_july2026.pdf',
-                    'size' => '240 KB',
-                ],
-                'items' => [
-                    [
-                        'name' => 'Amoxicillin 500mg, box of 100',
-                        'requested' => 100,
-                        'unit' => 'box',
-                        'unit_price' => 305.00,
-                        'min_remaining_months' => 12,
-                        'offered_shelf_life_months' => 9,
-                        'allocations' => [
-                            ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 50],
-                            ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 50],
-                        ],
-                    ],
-                    [
-                        'name' => 'Surgical gloves, box of 50 pairs',
-                        'requested' => 40,
-                        'unit' => 'box',
-                        'unit_price' => null,
-                        'min_remaining_months' => 24,
-                        'offered_shelf_life_months' => null,
-                        'allocations' => [
-                            ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 40],
-                        ],
-                    ],
-                ],
-            ],
-            3 => [
-                'id' => 3,
-                'supplier' => 'MedSource Inc.',
-                'prep_list' => 'Lab reagents – PGH',
-                'reference_no' => '#2026-0089',
-                'document' => [
-                    'name' => 'medsource_quotation_july2026.pdf',
-                    'size' => '318 KB',
-                ],
-                'items' => [
-                    [
-                        'name' => 'Sodium chloride 0.9% 500mL, box of 24',
-                        'requested' => 60,
-                        'unit' => 'box',
-                        'unit_price' => 850.00,
-                        'min_remaining_months' => 12,
-                        'offered_shelf_life_months' => 12,
-                        'allocations' => [
-                            ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 30],
-                            ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 30],
-                        ],
-                    ],
-                    [
-                        'name' => 'Sterile gloves, box of 50 pairs',
-                        'requested' => 40,
-                        'unit' => 'box',
-                        'unit_price' => 310.00,
-                        'min_remaining_months' => 24,
-                        'offered_shelf_life_months' => 30,
-                        'allocations' => [
-                            ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 40],
-                        ],
-                    ],
-                    [
-                        'name' => 'Microscope slides, box of 100',
-                        'requested' => 25,
-                        'unit' => 'box',
-                        'unit_price' => 220.00,
-                        'min_remaining_months' => 0,
-                        'offered_shelf_life_months' => null,
-                        'allocations' => [
-                            ['project' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038', 'qty' => 15],
-                            ['project' => 'Pharma supplies Q3', 'reference' => 'RFQ-2026-0042', 'qty' => 10],
-                        ],
-                    ],
-                ],
-            ],
-        ];
+        $preplist = $quotation->preplist;
+        $supplier = $quotation->supplier;
 
-        $quotation = $quotations[$id ?? 2] ?? $quotations[2];
+        $totalItems = $items->count();
 
-        $totalItems = count($quotation['items']);
-        $itemsQuoted = collect($quotation['items'])
-            ->filter(fn ($item) => $item['unit_price'] !== null)
+        $itemsQuoted = $items
+            ->filter(fn ($item) => $quotationItems->get((int) $item['key'])?->unit_price !== null)
             ->count();
-        $quotedTotal = collect($quotation['items'])
-            ->filter(fn ($item) => $item['unit_price'] !== null)
-            ->sum(fn ($item) => $item['unit_price'] * $item['requested']);
+
+        $quotedTotal = $items
+            ->filter(fn ($item) => $quotationItems->get((int) $item['key'])?->unit_price !== null)
+            ->sum(fn ($item) => (float) $quotationItems->get((int) $item['key'])->unit_price * $item['requested']);
 
         // Offers whose shelf life is below the required minimum. A cheap
         // short-dated quote should not win silently, so these are flagged.
-        $shortDatedCount = collect($quotation['items'])
-            ->filter(function ($item) {
+        $shortDatedCount = $items
+            ->filter(function ($item) use ($quotationItems) {
+                $quotedItem = $quotationItems->get((int) $item['key']);
                 $required = $item['min_remaining_months'] ?? 0;
-                $offered = $item['offered_shelf_life_months'] ?? null;
+                $offered = $quotedItem?->offered_shelf_life_months;
 
-                return $item['unit_price'] !== null
+                return $quotedItem !== null
+                    && $quotedItem->unit_price !== null
                     && $required > 0
                     && $offered !== null
                     && $offered < $required;
@@ -159,7 +43,21 @@
             ? 'text-gray-400'
             : ($itemsQuoted >= $totalItems ? 'text-green-600' : 'text-amber-500');
 
-        $peso = fn ($amount) => '₱ ' . number_format((float) $amount, 2);
+        $formatDocumentSize = function (?int $bytes): ?string {
+            if (! $bytes) {
+                return null;
+            }
+
+            if ($bytes < 1024 * 1024) {
+                return number_format($bytes / 1024, 0).' KB';
+            }
+
+            return number_format($bytes / (1024 * 1024), 1).' MB';
+        };
+
+        $peso = fn ($amount) => '₱ '.number_format((float) $amount, 2);
+
+        $documentSize = $formatDocumentSize($quotation->document_size);
     @endphp
 
     <div class="flex h-full min-h-0 flex-col">
@@ -167,12 +65,15 @@
         <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
-                    <h2 class="text-xl font-bold text-gray-900">{{ $quotation['supplier'] }}</h2>
+                    <h2 class="text-xl font-bold text-gray-900">{{ $supplier?->name ?? 'Supplier removed' }}</h2>
                     <p class="mt-1 text-xs text-gray-500">
-                        {{ $quotation['prep_list'] }}
+                        {{ $preplist->name }}
                         <span class="mx-1 text-gray-300">&middot;</span>
-                        {{ $quotation['reference_no'] }}
+                        {{ $preplist->reference_no }}
                     </p>
+                    @if ($quotation->rfq_number)
+                        <p class="mt-0.5 text-xs text-gray-400">{{ $quotation->rfq_number }}</p>
+                    @endif
 
                     <div class="mt-4">
                         <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Items quoted</p>
@@ -211,7 +112,28 @@
             Supplier's quotation document
         </p>
 
-        @if ($quotation['document'])
+        @if (session('status'))
+            <div class="mb-4 flex shrink-0 items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+                </svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
+
+        @if ($errors->has('document'))
+            <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ $errors->first('document') }}
+            </div>
+        @endif
+
+        {{-- The file chooser lives in this hidden form; the buttons below open it and submit on selection. --}}
+        <form id="supplierQuotationForm" method="POST" action="{{ route('quotation.store-document', ['quotation' => $quotation->id]) }}" enctype="multipart/form-data" class="hidden">
+            @csrf
+            <input id="supplierQuotationFile" type="file" name="document" accept=".xlsx" required onchange="this.form.requestSubmit()">
+        </form>
+
+        @if ($quotation->document_path)
             <div class="mb-6 flex shrink-0 items-center justify-between gap-4 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
                 <div class="flex min-w-0 items-center gap-3">
                     <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-red-50">
@@ -220,20 +142,27 @@
                         </svg>
                     </span>
                     <div class="min-w-0">
-                        <p class="truncate text-sm font-semibold text-gray-900">{{ $quotation['document']['name'] }}</p>
-                        <p class="text-xs text-gray-500">{{ $quotation['document']['size'] }}</p>
+                        <p class="truncate text-sm font-semibold text-gray-900">{{ $quotation->document_name }}</p>
+                        @if ($documentSize)
+                            <p class="text-xs text-gray-500">{{ $documentSize }}</p>
+                        @endif
                     </div>
                 </div>
 
-                {{-- @TODO: Point this at the stored file URL and use a controller download response. --}}
-                <a href="#"
-                   class="flex flex-shrink-0 items-center gap-1.5 text-sm font-medium text-[#2a7a94] hover:underline"
-                   aria-label="Download {{ $quotation['document']['name'] }}">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                    </svg>
-                    Download
-                </a>
+                <div class="flex shrink-0 items-center gap-3">
+                    <label for="supplierQuotationFile"
+                           class="cursor-pointer text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94] hover:underline">
+                        Replace
+                    </label>
+                    <a href="{{ route('quotation.download', ['quotation' => $quotation->id]) }}"
+                       class="flex items-center gap-1.5 text-sm font-medium text-[#2a7a94] hover:underline"
+                       aria-label="Download {{ $quotation->document_name }}">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                        </svg>
+                        Download
+                    </a>
+                </div>
             </div>
         @else
             <div class="mb-6 flex shrink-0 items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-3">
@@ -242,7 +171,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.5 13.5 5 5m0-5-5 5"/>
                 </svg>
-                <p class="text-sm text-gray-500">No document attached</p>
+                <p class="text-sm text-gray-500">No supplier quotation submitted yet. Use “Submit quotation” to upload the supplier’s completed file.</p>
             </div>
         @endif
 
@@ -250,11 +179,12 @@
         <p class="mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Item breakdown</p>
 
         <div class="min-h-[240px] flex-1 space-y-4 overflow-y-auto pr-1">
-            @foreach ($quotation['items'] as $item)
+            @forelse ($items as $item)
                 @php
-                    $isQuoted = $item['unit_price'] !== null;
+                    $quotedItem = $quotationItems->get((int) $item['key']);
+                    $isQuoted = $quotedItem?->unit_price !== null;
                     $requiredShelf = $item['min_remaining_months'] ?? 0;
-                    $offeredShelf = $item['offered_shelf_life_months'] ?? null;
+                    $offeredShelf = $quotedItem?->offered_shelf_life_months;
                     $isShortDated = $isQuoted
                         && $requiredShelf > 0
                         && $offeredShelf !== null
@@ -288,10 +218,10 @@
                         <div class="flex-shrink-0 text-right">
                             @if ($isQuoted)
                                 <p class="text-sm font-bold text-gray-900">
-                                    {{ $peso($item['unit_price']) }} / {{ $item['unit'] }}
+                                    {{ $peso($quotedItem->unit_price) }} / {{ $item['unit'] }}
                                 </p>
                                 <p class="mt-1 text-xs text-gray-500">
-                                    {{ $peso($item['unit_price'] * $item['requested']) }} subtotal
+                                    {{ $peso($quotedItem->unit_price * $item['requested']) }} subtotal
                                 </p>
                                 @if ($requiredShelf > 0)
                                     <p class="mt-1 text-xs {{ $isShortDated ? 'font-semibold text-amber-600' : 'text-gray-500' }}">
@@ -325,13 +255,18 @@
                                     </p>
                                 </div>
                                 <p class="flex-shrink-0 text-sm font-medium text-gray-900">
-                                    {{ $allocation['qty'] }} {{ $item['unit'] }}
+                                    {{ $allocation['qty'] }} {{ $allocation['unit'] }}
                                 </p>
                             </div>
                         @endforeach
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+                    <h3 class="text-base font-semibold text-gray-900">No items in this prep list</h3>
+                    <p class="mt-1 text-sm text-gray-500">This quotation has no items to track.</p>
+                </div>
+            @endforelse
         </div>
 
         {{-- Grand total for quoted items only --}}
@@ -353,20 +288,22 @@
             </a>
 
             <div class="flex flex-wrap items-center gap-3">
-                @if ($status === 'Quoted')
-                    {{-- @TODO: Point this at route('quotation.edit', ['id' => $quotation['id']]) once the edit route exists. --}}
-                    <a href="#"
-                       class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <form method="POST"
+                      action="{{ route('quotation.destroy', ['quotation' => $quotation->id]) }}"
+                      onsubmit="return confirm('Delete this quotation? This cannot be undone.');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                            class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
                         </svg>
                         Remove quotation
-                    </a>
+                    </button>
+                </form>
 
-                    {{-- "Proceed to PO" opens the PO preparation screen prefilled
-                         with this quotation's quoted items; quantities are set
-                         there, not in the RFQ. --}}
-                    <a href="{{ route('purchase-order.create', ['rfq' => $quotation['id']]) }}"
+                @if ($status === 'Quoted')
+                    <a href="{{ route('purchase-order.create', ['rfq' => $quotation->id]) }}"
                        class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3h-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
@@ -374,14 +311,13 @@
                         Proceed to PO
                     </a>
                 @else
-                    {{-- @TODO: Point this at route('quotation.edit', ['id' => $quotation['id']]) once the edit route exists. --}}
-                    <a href="#"
-                       class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
+                    <label for="supplierQuotationFile"
+                           class="flex cursor-pointer items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 7.5 12 3m0 0L7.5 7.5M12 3v13.5"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                         </svg>
                         Submit quotation
-                    </a>
+                    </label>
                 @endif
             </div>
         </div>

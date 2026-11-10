@@ -14,42 +14,14 @@
             <p class="text-xs text-gray-500">Supplier responses to sent RFQs</p>
         </div>
 
-        {{-- @TODO: Add search and filter controls here, following the same pattern used on the Projects and Entities index pages. --}}
-
-        {{-- @TODO: Replace the hardcoded array below with a real query, e.g.
-             $quotations = Rfq::with(['prepList', 'suppliers'])->latest()->get();
-             and compute "items quoted" from the supplier's quoted items against the prep list's total items. --}}
-        @php
-            $quotations = [
-                [
-                    'id' => 1,
-                    'prep_list' => 'July Region VII batch',
-                    'ref' => '#2026-0090',
-                    'supplier' => 'Triple Tact',
-                    'quoted' => 0,
-                    'total' => 2,
-                    'status' => 'Awaiting quote',
-                ],
-                [
-                    'id' => 2,
-                    'prep_list' => 'July Region VII batch',
-                    'ref' => '#2026-0090',
-                    'supplier' => 'GreenCore Pharmaceuticals',
-                    'quoted' => 1,
-                    'total' => 2,
-                    'status' => 'Quoted',
-                ],
-                [
-                    'id' => 3,
-                    'prep_list' => 'Lab reagents – PGH',
-                    'ref' => '#2026-0089',
-                    'supplier' => 'MedSource Inc.',
-                    'quoted' => 3,
-                    'total' => 3,
-                    'status' => 'Quoted',
-                ],
-            ];
-        @endphp
+        @if (session('status'))
+            <div class="mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+                </svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
 
         {{-- Quotation tracker --}}
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -67,7 +39,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @foreach ($quotations as $quotation)
+                        @forelse ($quotations as $quotation)
                             @php
                                 $isFullyQuoted = $quotation['total'] > 0 && $quotation['quoted'] >= $quotation['total'];
                                 $isPartiallyQuoted = $quotation['quoted'] > 0 && ! $isFullyQuoted;
@@ -80,7 +52,7 @@
                                 $openMenuUp = $loop->remaining < 2;
                             @endphp
                             <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
-                                data-href="{{ route('quotation.show', ['id' => $quotation['id']]) }}">
+                                data-href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}">
                                 <td class="whitespace-nowrap px-6 py-4">
                                     <p class="font-semibold text-gray-900">{{ $quotation['prep_list'] }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">{{ $quotation['ref'] }}</p>
@@ -122,8 +94,7 @@
                                         <div data-quotation-menu
                                              role="menu"
                                              class="absolute right-0 z-50 hidden w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg {{ $openMenuUp ? 'bottom-full mb-2' : 'top-full mt-2' }}">
-                                            {{-- @TODO: Point the Edit link at route('quotation.edit', $quotation['id']) once that route exists. --}}
-                                            <a href="{{ route('quotation.show', ['id' => $quotation['id']]) }}" role="menuitem"
+                                            <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}" role="menuitem"
                                                class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50">
                                                 <svg class="h-4 w-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
@@ -136,7 +107,13 @@
                                     </div>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">
+                                    No quotations yet. Quotations are created when you generate the RFQ files from a prep list.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

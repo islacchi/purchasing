@@ -16,6 +16,7 @@ use App\Http\Controllers\EntityController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PreplistController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -80,7 +81,7 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         ->whereNumber('preplist')
         ->name('preplist.generate-rfq.excel');
 
-    Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
+    Route::get('/quotation', [QuotationController::class, 'index'])->name('quotation');
     // Entity profile page — one view rendered two ways based on {type}.
     Route::get('/entities/{type}/{id}', [EntityController::class, 'show'])->whereIn('type', ['procuring_entity', 'supplier'])->whereNumber('id')->name('entities.show');
     Route::get('/entities', [EntityController::class, 'index'])->name('entities');
@@ -118,12 +119,18 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
     });
 
-    // Quotation detail (dummy data for now — the view uses $id to pick a hardcoded record).
-    // @TODO: once the Quotation/RFQ models + migrations exist, pass the real quotation in:
-    // Route::get('/quotation/{id}', [QuotationController::class, 'show'])->name('quotation.show');
-    Route::get('/quotation/{id}', function ($id) {
-        return view('Quotation.show', ['id' => $id]);
-    })->name('quotation.show');
+    Route::get('/quotation/{quotation}', [QuotationController::class, 'show'])
+        ->whereNumber('quotation')
+        ->name('quotation.show');
+    Route::post('/quotation/{quotation}/document', [QuotationController::class, 'storeDocument'])
+        ->whereNumber('quotation')
+        ->name('quotation.store-document');
+    Route::get('/quotation/{quotation}/download', [QuotationController::class, 'download'])
+        ->whereNumber('quotation')
+        ->name('quotation.download');
+    Route::delete('/quotation/{quotation}', [QuotationController::class, 'destroy'])
+        ->whereNumber('quotation')
+        ->name('quotation.destroy');
 
     // Purchase orders generated from awarded quotations.
     // @TODO: once the PurchaseOrder model + migrations exist, swap for:
