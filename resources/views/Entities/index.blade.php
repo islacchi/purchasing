@@ -9,15 +9,6 @@
         $activeTab = request('tab') === 'suppliers' ? 'suppliers' : 'entities';
     @endphp
 
-    @if (session('status'))
-        <div class="flash-message mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700" role="status">
-            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
-            </svg>
-            <span>{{ session('status') }}</span>
-        </div>
-    @endif
-
     {{-- Tabs --}}
     <div class="flex flex-wrap items-center gap-2 mb-6" role="tablist" aria-label="Entity records" data-active-tab="{{ $activeTab }}">
         <button type="button" role="tab" aria-selected="{{ $activeTab === 'entities' ? 'true' : 'false' }}" data-tab="entities"

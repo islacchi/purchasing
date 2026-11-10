@@ -9,15 +9,6 @@
     @section('content')
     {{-- Flex column: the toolbar stays fixed while the content holder scrolls --}}
     <div class="flex h-full min-h-0 flex-col">
-        @if (session('status'))
-            <div class="mb-4 flex shrink-0 items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
-                </svg>
-                <span>{{ session('status') }}</span>
-            </div>
-        @endif
-
         {{-- Search, view options and actions bar --}}
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-4 flex-1 min-w-0">

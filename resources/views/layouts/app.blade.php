@@ -32,6 +32,27 @@
         html:not(.sidebar-expanded) .user-caret { display: none; }
         html.sidebar-expanded .sidebar-user { padding-right: 12px; }
         html.sidebar-expanded .sidebar-user .label { max-width: 130px; }
+
+        /*
+         * Success flash overlay.
+         * Transparent, non-blocking layer pinned to the exact rectangle the
+         * old inline success banner used to occupy: content top (header
+         * 5rem + main padding 2rem) and the content column's side padding.
+         * Because it is fixed, showing/hiding it never shifts the page.
+         */
+        .flash-success-overlay {
+            position: fixed;
+            top: 7rem;
+            left: calc(5rem + 2rem);
+            right: 2rem;
+            z-index: 60;
+            pointer-events: none;
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 300ms ease, transform 300ms ease;
+        }
+        html.sidebar-expanded .flash-success-overlay { left: calc(16rem + 2rem); }
+        .flash-success-overlay.is-hiding { opacity: 0; transform: translateY(-4px); }
     </style>
 </head>
 
@@ -250,6 +271,7 @@
 
             {{-- Content --}}
             <main class="flex-1 overflow-y-auto bg-gray-100 p-8">
+                @include('partials.flash-success')
                 @yield('content')
             </main>
         </div>
@@ -287,13 +309,11 @@
         </div>
     </div>
 <script>
-    // Auto-dismiss flash success messages after a few seconds.
-    document.querySelectorAll('.flash-message').forEach(function (el) {
-        el.style.transition = 'opacity 300ms ease, transform 300ms ease';
+    // Success flash overlay: fade out, then remove after a few seconds.
+    // Overlays that start hidden (e.g. the PO create banner) manage their own timing.
+    document.querySelectorAll('.flash-success-overlay:not(.hidden)').forEach(function (el) {
         setTimeout(function () {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(-4px)';
-            el.style.pointerEvents = 'none';
+            el.classList.add('is-hiding');
             setTimeout(function () { el.remove(); }, 350);
         }, 4000);
     });
