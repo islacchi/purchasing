@@ -86,14 +86,15 @@
         }
     @endphp
 
+    <div class="flex h-full min-h-0 flex-col">
     {{-- Page heading --}}
-    <div class="mb-6">
+    <div class="shrink-0 mb-6">
         <h2 class="text-2xl font-bold text-gray-900">Generate quotation - {{ $prepList->name }}</h2>
         <p class="text-sm text-gray-500 mt-1">Choose which suppliers to ask for each item</p>
     </div>
 
     {{-- Quick select — one chip per supplier; toggling one checks that supplier on every item --}}
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+    <div class="shrink-0 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
         <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">
             Quick select - request the whole prep list from a supplier
         </p>
@@ -116,13 +117,13 @@
     </div>
 
     {{-- Divider --}}
-    <div class="flex items-center gap-4 my-6">
+    <div class="flex shrink-0 items-center gap-4 my-6">
         <div class="flex-1 border-t border-gray-200"></div>
         <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">or choose per item</span>
         <div class="flex-1 border-t border-gray-200"></div>
     </div>
-    {{-- Per-item sections — one box per prep list item --}}
-    <div class="space-y-4">
+    {{-- Per-item sections (item list scrolls here) — one box per prep list item --}}
+    <div class="min-h-[180px] flex-1 space-y-4 overflow-y-auto pr-1">
         @foreach($items as $item)
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-100">
@@ -171,7 +172,7 @@
          NOTE: the checkbox and the supplier name are separate sibling elements with their
          own click handlers (never wrapped in a single <label>), so neither triggers the
          other's behavior. --}}
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5 mt-6">
+    <div class="shrink-0 rounded-lg border border-gray-200 bg-white p-5 mt-6 shadow-sm">
         <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Quotation files to generate</p>
         <div class="divide-y divide-gray-100 rounded-lg border border-gray-200 overflow-hidden bg-white">
             @foreach($suppliers as $supplier)
@@ -222,7 +223,7 @@
     </div>
 
     {{-- Footer actions --}}
-    <div class="flex items-center justify-end gap-3 mt-8">
+    <div class="flex shrink-0 items-center justify-end gap-3 mt-6">
         <a href="{{ route('preplist') }}"
            class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -238,6 +239,7 @@
             Generate File
         </button>
     </div>
+    </div><!-- /flex column -->
     <script>
         // ------------------------------------------------------------------
         // Frontend-only logic: chip toggling, the dynamic "Quotation files to

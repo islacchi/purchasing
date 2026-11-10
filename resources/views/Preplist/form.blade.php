@@ -101,15 +101,16 @@
     @endphp
 
     {{-- Page heading --}}
-    <h2 class="text-2xl font-bold text-gray-900 mb-6">{{ $isEdit ? 'Edit prep list' : 'Add prep list' }}</h2>
+    <div class="flex h-full min-h-0 flex-col">
+    <h2 class="shrink-0 text-2xl font-bold text-gray-900 mb-6">{{ $isEdit ? 'Edit prep list' : 'Add prep list' }}</h2>
 
     {{-- @TODO: wire up a real form action once routes/controller exist
          (Edit will also need @method('PUT')) --}}
-    <form action="#" method="POST" class="space-y-8">
+    <form action="#" method="POST" class="flex flex-1 min-h-0 flex-col space-y-6">
         @csrf
 
         {{-- Prep list name --}}
-        <div class="max-w-2xl">
+        <div class="shrink-0 max-w-2xl">
             <label for="prepListName" class="block text-sm font-medium text-gray-800 mb-1.5">Prep list name</label>
             <input id="prepListName" type="text" name="name"
                    value="{{ $prepList['name'] ?? '' }}"
@@ -117,8 +118,8 @@
                    class="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
         </div>
 
-        {{-- Project groups --}}
-        <div class="space-y-6">
+        {{-- Project groups (item list scrolls here) --}}
+        <div class="min-h-[220px] flex-1 space-y-6 overflow-y-auto pr-1">
             @foreach($projects as $project)
                 <div class="project-card bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                     {{-- Card header: checkbox + project name + RFQ reference --}}
@@ -168,7 +169,7 @@
         </div>
 
         {{-- Footer row: summary (left) + actions (right) --}}
-        <div class="flex items-center justify-between gap-4 pt-2">
+        <div class="flex shrink-0 items-center justify-between gap-4 pt-2">
             <p class="text-sm text-gray-500" id="summaryText">
                 {{ $projectCount }} {{ $projectCount === 1 ? 'project' : 'projects' }} &bull; {{ $selectedCount }} {{ $selectedCount === 1 ? 'item' : 'items' }} selected
             </p>
@@ -191,6 +192,7 @@
             </div>
         </div>
     </form>
+    </div><!-- /flex column -->
 
     {{-- Kept inside the content section so it runs after the form exists. --}}
       <script>

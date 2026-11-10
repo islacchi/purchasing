@@ -120,7 +120,7 @@
         {{-- Items Table (Right Column) — scrolls vertically --}}
         <div class="min-h-0 lg:col-span-3">
             <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
-                <div class="min-h-0 flex-1 overflow-y-auto overflow-x-auto">
+                <div class="min-h-[240px] flex-1 overflow-y-auto overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-gray-100 border-b border-gray-300 sticky top-0 z-10">
                             <tr>

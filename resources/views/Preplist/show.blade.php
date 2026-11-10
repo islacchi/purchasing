@@ -7,6 +7,7 @@
 @endsection
 
 @section('content')
+    <div class="flex h-full min-h-0 flex-col">
 
     @php
         // Dummy data for frontend development.
@@ -50,7 +51,7 @@
     @endphp
 
     {{-- Top row: heading + edit button --}}
-    <div class="flex items-start justify-between gap-4 mb-6">
+    <div class="flex shrink-0 items-start justify-between gap-4 mb-6">
         <div>
             <h2 class="text-2xl font-bold text-gray-900">{{ $preplist['name'] }}</h2>
             <p class="text-sm text-gray-500 mt-1">{{ $preplist['reference_no'] }}</p>
@@ -65,10 +66,10 @@
     </div>
 
     {{-- Main two-column layout --}}
-    <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+    <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
 
         {{-- LEFT COLUMN --}}
-        <div class="space-y-6">
+        <div class="min-h-0 space-y-6">
             {{-- Info boxes (2x2 grid) --}}
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
@@ -113,10 +114,10 @@
             </div>
         </div>
 
-        {{-- RIGHT COLUMN --}}
-        <div>
-            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Items</p>
-            <div class="space-y-4">
+        {{-- RIGHT COLUMN — item list scrolls here --}}
+        <div class="flex min-h-0 flex-col">
+            <p class="shrink-0 mb-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Items</p>
+            <div class="min-h-[220px] flex-1 space-y-4 overflow-y-auto pr-1">
                 @foreach($itemGroups as $group)
                     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                         {{-- Item header --}}
@@ -143,7 +144,7 @@
     </div>
 
     {{-- Bottom action buttons --}}
-    <div class="flex items-center justify-end gap-3 mt-8">
+    <div class="flex shrink-0 items-center justify-end gap-3 mt-6">
         <button class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -163,5 +164,6 @@
             Generate RFQ for supplier
         </a>
     </div>
+    </div><!-- /flex column -->
 
 @endsection

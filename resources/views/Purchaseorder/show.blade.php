@@ -218,11 +218,11 @@
             ->implode('');
     @endphp
 
-    <div class="pb-16">
+    <div class="flex h-full min-h-0 flex-col">
 
         {{-- Back --}}
         <a href="{{ route('purchase-order') }}"
-           class="mb-5 inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94]">
+           class="mb-5 inline-flex shrink-0 items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94]">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
             </svg>
@@ -230,7 +230,7 @@
         </a>
 
         {{-- Heading --}}
-        <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div class="mb-6 flex shrink-0 flex-wrap items-start justify-between gap-4">
             <div>
                 <div class="flex flex-wrap items-center gap-3">
                     <h2 class="text-xl font-bold text-gray-900">{{ $po['number'] }}</h2>
@@ -278,7 +278,7 @@
 
         {{-- Status progress / cancelled banner --}}
         @if ($isCancelled)
-            <div class="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-4">
+            <div class="mb-6 flex shrink-0 items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-4">
                 <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
                 </svg>
@@ -288,7 +288,7 @@
                 </div>
             </div>
         @else
-            <div class="mb-6 rounded-lg border border-gray-200 bg-white px-6 py-5 shadow-sm">
+            <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white px-6 py-5 shadow-sm">
                 <ol id="poStatusTracker" class="flex flex-wrap items-center gap-y-3">
                     @foreach ($stages as $index => $stage)
                         @php
@@ -317,7 +317,7 @@
         @endif
 
         {{-- Supplier and delivery --}}
-        <div class="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div class="mb-6 grid shrink-0 grid-cols-1 gap-6 md:grid-cols-2">
 
             <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
                 <div class="border-b border-gray-200 px-6 py-4">
@@ -383,7 +383,7 @@
         </div>
 
         {{-- Items ordered --}}
-        <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Items ordered</h3>
                 <div class="flex flex-wrap items-center gap-2">
@@ -396,9 +396,9 @@
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="max-h-[320px] min-h-[180px] overflow-auto">
                 <table class="w-full min-w-[940px] text-sm">
-                    <thead>
+                    <thead class="sticky top-0 z-10">
                         <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                             <th scope="col" class="w-12 px-6 py-3 text-center">#</th>
                             <th scope="col" class="px-6 py-3">Item</th>
@@ -461,7 +461,7 @@
                 </table>
             </div>
 
-            <div class="border-t border-gray-100 px-6 py-4">
+            <div class="shrink-0 border-t border-gray-100 px-6 py-4">
                 <p class="text-xs text-gray-500">
                     {{-- @TODO: Replace with the PO note field once the model exists. --}}
                     {{ $po['notes'] }}
@@ -473,7 +473,7 @@
         </div>
 
         {{-- Footer actions --}}
-        <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <div class="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-3">
             <a href="{{ route('purchase-order') }}"
                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

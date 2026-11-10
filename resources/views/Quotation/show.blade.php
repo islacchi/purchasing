@@ -162,9 +162,9 @@
         $peso = fn ($amount) => '₱ ' . number_format((float) $amount, 2);
     @endphp
 
-    <div class="pb-12">
+    <div class="flex h-full min-h-0 flex-col">
         {{-- Supplier / prep list summary --}}
-        <div class="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
                     <h2 class="text-xl font-bold text-gray-900">{{ $quotation['supplier'] }}</h2>
@@ -191,7 +191,7 @@
 
         @if ($shortDatedCount > 0)
             {{-- Shelf-life warning: this supplier offered stock shorter than required. --}}
-            <div class="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <div class="mb-6 flex shrink-0 items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
                 <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
                 </svg>
@@ -207,12 +207,12 @@
         @endif
 
         {{-- Supplier's quotation document --}}
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+        <p class="mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
             Supplier's quotation document
         </p>
 
         @if ($quotation['document'])
-            <div class="mb-6 flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+            <div class="mb-6 flex shrink-0 items-center justify-between gap-4 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
                 <div class="flex min-w-0 items-center gap-3">
                     <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-red-50">
                         <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -236,7 +236,7 @@
                 </a>
             </div>
         @else
-            <div class="mb-6 flex items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-3">
+            <div class="mb-6 flex shrink-0 items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-3">
                 <svg class="h-5 w-5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v4a1 1 0 0 0 1 1h4"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/>
@@ -247,9 +247,9 @@
         @endif
 
         {{-- Item breakdown --}}
-        <p class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Item breakdown</p>
+        <p class="mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Item breakdown</p>
 
-        <div class="space-y-4">
+        <div class="min-h-[240px] flex-1 space-y-4 overflow-y-auto pr-1">
             @foreach ($quotation['items'] as $item)
                 @php
                     $isQuoted = $item['unit_price'] !== null;
@@ -336,14 +336,14 @@
 
         {{-- Grand total for quoted items only --}}
         @if ($quotedTotal > 0)
-            <div class="mt-3 flex items-center justify-end gap-2 text-sm">
+            <div class="mt-3 flex shrink-0 items-center justify-end gap-2 text-sm">
                 <span class="font-bold text-gray-900">Total quoted so far:</span>
                 <span class="font-bold text-gray-900">{{ $peso($quotedTotal) }}</span>
             </div>
         @endif
 
         {{-- Footer actions --}}
-        <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <div class="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-3">
             <a href="{{ route('quotation') }}"
                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
