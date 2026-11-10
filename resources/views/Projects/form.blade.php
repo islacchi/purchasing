@@ -48,13 +48,6 @@
 
     <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
 
-<<<<<<< Updated upstream
-    {{-- @TODO: wire this up to a real store/update route + controller method once --}}
-    {{-- database integration is in place (currently the form posts to '#'). --}}
-    <form action="#" method="POST" class="space-y-8">
-        @csrf
-<!-- Comment -->
-=======
     @if ($errors->any())
         <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <ul class="list-disc space-y-1 pl-5">
@@ -72,7 +65,6 @@
         @endif
         {{-- Content holder: project details stay static; only the items table scrolls --}}
         <div class="flex flex-1 min-h-0 flex-col space-y-6 overflow-hidden rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
->>>>>>> Stashed changes
         {{-- Project fields --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
             <div class="space-y-5">
