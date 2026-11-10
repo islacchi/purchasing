@@ -110,10 +110,11 @@ class QuotationWorkbookParser
             $cells = self::rowCells($row, $sharedStrings);
 
             if (
-                isset($cells['A'], $cells['B'], $cells['G'])
+                isset($cells['A'], $cells['B'], $cells['F'], $cells['H'])
                 && trim((string) $cells['A']) === 'No.'
                 && trim((string) $cells['B']) === 'Item Description'
-                && trim((string) $cells['G']) === 'Suppliers Remarks'
+                && trim((string) $cells['F']) === 'Unit Price (PHP)'
+                && trim((string) $cells['H']) === 'Suppliers Remarks'
             ) {
                 return (int) $row['r'];
             }
