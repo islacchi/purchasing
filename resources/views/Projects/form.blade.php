@@ -217,14 +217,13 @@
 
             <div class="flex shrink-0 items-center gap-3 mt-3">
                 <button type="button" id="addItemBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
                     Add item
                 </button>
-                <button type="button" id="deleteItemBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <button type="button" id="deleteItemBtn" class="hidden flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
@@ -267,6 +266,40 @@
         const addBtn = document.getElementById('addItemBtn');
         const deleteBtn = document.getElementById('deleteItemBtn');
 
+        // Show the delete button only when at least one item checkbox is ticked.
+        function syncDeleteButton() {
+            const anyChecked = rowsContainer.querySelectorAll('.item-select:checked').length > 0;
+            deleteBtn.classList.toggle('hidden', !anyChecked);
+        }
+
+        // Only allow adding another row when the last row is completely filled.
+        function isRowFilled(row) {
+            if (!row) return false;
+            const fields = row.querySelectorAll('input, select');
+            for (let i = 0; i < fields.length; i++) {
+                const field = fields[i];
+                if (field.classList.contains('item-select')) continue; // tick box is not completeness
+                if (String(field.value).trim() === '') return false;
+            }
+            return true;
+        }
+
+        function syncAddButton() {
+            const rows = rowsContainer.querySelectorAll('.item-row');
+            const filled = isRowFilled(rows[rows.length - 1]);
+            addBtn.disabled = !filled;
+            addBtn.title = filled ? 'Add item' : 'Fill in the last row first';
+        }
+
+        rowsContainer.addEventListener('input', syncAddButton);
+        rowsContainer.addEventListener('change', syncAddButton);
+
+        rowsContainer.addEventListener('change', function (e) {
+            if (e.target.classList && e.target.classList.contains('item-select')) {
+                syncDeleteButton();
+            }
+        });
+
         addBtn.addEventListener('click', function () {
             const rows = rowsContainer.querySelectorAll('.item-row');
             const newIndex = rows.length;
@@ -284,6 +317,8 @@
             template.querySelector('.item-select').checked = false;
 
             rowsContainer.appendChild(template);
+            syncDeleteButton();
+            syncAddButton();
         });
 
         deleteBtn.addEventListener('click', function () {
@@ -293,7 +328,12 @@
                     row.remove();
                 }
             });
+            syncDeleteButton();
+            syncAddButton();
         });
+
+        syncDeleteButton();
+        syncAddButton();
     })();
 </script>
 @endpush
