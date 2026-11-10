@@ -3,33 +3,33 @@
 @section('page-title', 'PROJECTS')
 @section('title', 'Projects - Purchasing')
 
-{{-- @TODO: When integrating database, replace hard-coded $projects with:
-   $projects = App\Models\Project::with(['status', 'items'])->latest()->get();
---}}
-
-{{-- @TODO: Pass projects from controller: return view('Projects.index', compact('projects')); --}}
-
-{{-- @TODO: When database is integrated, wire up the search filter and decide whether --}}
-{{-- the search/add-project bar should live here or in @section('header-actions'). --}}
-
 @section('header-actions')
 @endsection
 
     @section('content')
     {{-- Flex column: the toolbar stays fixed while the content holder scrolls --}}
     <div class="flex h-full min-h-0 flex-col">
+        @if (session('status'))
+            <div class="mb-4 flex shrink-0 items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+                </svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
+
         {{-- Search, view options and actions bar --}}
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-4 flex-1 min-w-0">
-            <div class="relative max-w-xl w-full">
+            <form method="GET" action="{{ route('projects') }}" class="relative max-w-xl w-full">
                 <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
                     </svg>
                 </span>
-                <input type="text" placeholder="Search by project name / title..."
+                <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search by project name / title..."
                        class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
-            </div>
+            </form>
 
             {{-- View options dropdown: Content (default), Details, List --}}
             <div id="projectsViewWrap" class="relative">
@@ -91,50 +91,7 @@
         </a>
     </div>
 
-    {{-- Hard-coded project data for frontend development --}}
     @php
-        $projects = [
-            [
-                'name' => 'Purchase of pharma supplies',
-                'code' => 'DOH Region VII - RF-2026-0042',
-                'entity' => 'DOH Region VII',
-                'reference_no' => 'RF-2026-0042',
-                'amount_awarded' => null,
-                'date_awarded' => null,
-                'notes' => 'Quarterly procurement of pharmaceutical supplies for regional health facilities.',
-                'status' => 'Not started',
-                'status_color' => 'gray',
-                'progress' => 0,
-                'total' => 6,
-            ],
-            [
-                'name' => 'Purchase of pharma supplies',
-                'code' => 'DOH Region VII - RF-2026-0042',
-                'entity' => 'DOH Region VII',
-                'reference_no' => 'RF-2026-0042',
-                'amount_awarded' => 482000.00,
-                'date_awarded' => 'July 3, 2026',
-                'notes' => 'Quarterly procurement of pharmaceutical supplies for regional health facilities.',
-                'status' => 'In progress',
-                'status_color' => 'blue',
-                'progress' => 3,
-                'total' => 6,
-            ],
-            [
-                'name' => 'Purchase of pharma supplies',
-                'code' => 'DOH Region VII - RF-2026-0042',
-                'entity' => 'DOH Region VII',
-                'reference_no' => 'RF-2026-0042',
-                'amount_awarded' => 365500.00,
-                'date_awarded' => 'June 20, 2026',
-                'notes' => 'Quarterly procurement of pharmaceutical supplies for regional health facilities.',
-                'status' => 'In progress',
-                'status_color' => 'green',
-                'progress' => 2,
-                'total' => 6,
-            ],
-        ];
-
         $statusPillClasses = [
             'gray'  => 'bg-gray-100 text-gray-700',
             'blue'  => 'bg-blue-100 text-blue-700',
@@ -147,10 +104,10 @@
 
     {{-- ============================== CONTENT VIEW (default) ============================== --}}
     <div id="view-content" class="space-y-4">
-        @foreach($projects as $index => $project)
+        @forelse($projects as $project)
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
                 <div class="flex items-start gap-4">
-                    <a href="{{ route('projects.show', ['id' => $index + 1]) }}" class="flex items-start gap-4 flex-1 min-w-0">
+                    <a href="{{ route('projects.show', ['project' => $project->id]) }}" class="flex items-start gap-4 flex-1 min-w-0">
                         <div class="flex-shrink-0 w-12 h-12 bg-[#0e5266] rounded-lg flex items-center justify-center">
                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
@@ -159,20 +116,20 @@
 
                         <div class="flex-1 min-w-0">
                             <h3 class="text-lg font-semibold text-gray-900 truncate">
-                                {{ $project['name'] }}
+                                {{ $project->title }}
                             </h3>
                             <p class="text-sm text-gray-500 mt-1">
-                                {{ $project['code'] }}
+                                {{ $project->procuringEntity?->name ?? 'No entity' }} - {{ $project->reference_no }}
                             </p>
                         </div>
                     </a>
 
                     <div class="flex-shrink-0 flex items-center gap-2">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$project['status_color']] }}">
-                            {{ $project['status'] }}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$project->statusColor()] }}">
+                            {{ $project->statusLabel() }}
                         </span>
 
-                        <a href="{{ route('projects.edit', ['id' => $index + 1]) }}"
+                        <a href="{{ route('projects.edit', ['project' => $project->id]) }}"
                            class="p-2 text-gray-400 hover:text-[#2a7a94] hover:bg-gray-100 rounded-lg transition-colors"
                            title="Edit project">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,42 +141,53 @@
 
                 <div class="mt-4 ml-16">
                     <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
-                        <span>{{ $project['progress'] }} / {{ $project['total'] }} items fulfilled</span>
+                        <span>{{ $project->fulfilledItemCount() }} / {{ $project->totalItemCount() }} items fulfilled</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-[#2a7a94] h-2 rounded-full" style="width: {{ ($project['progress'] / $project['total']) * 100 }}%"></div>
+                        <div class="bg-[#2a7a94] h-2 rounded-full" style="width: {{ $project->progressPercentage() }}%"></div>
                     </div>
                 </div>
             </div>
-        @endforeach
+        @empty
+            <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+                <h3 class="text-base font-semibold text-gray-900">No projects yet</h3>
+                <p class="mt-1 text-sm text-gray-500">Create a project to start tracking its procurement details.</p>
+                <a href="{{ route('projects.create') }}" class="mt-4 inline-flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80]">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add project
+                </a>
+            </div>
+        @endforelse
     </div>
 
     {{-- ============================== DETAILS VIEW ============================== --}}
     <div id="view-details" class="hidden space-y-5">
-        @foreach($projects as $index => $project)
+        @forelse($projects as $project)
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     {{-- Title block --}}
                     <div class="flex items-start gap-4 min-w-0">
-                        <a href="{{ route('projects.show', ['id' => $index + 1]) }}" class="flex items-start gap-4 min-w-0">
+                        <a href="{{ route('projects.show', ['project' => $project->id]) }}" class="flex items-start gap-4 min-w-0">
                             <div class="flex-shrink-0 w-12 h-12 bg-[#0e5266] rounded-lg flex items-center justify-center">
                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                 </svg>
                             </div>
                             <div class="min-w-0">
-                                <h3 class="text-lg font-semibold text-gray-900 truncate">{{ $project['name'] }}</h3>
-                                <p class="text-sm text-gray-500 mt-0.5">{{ $project['code'] }}</p>
+                                <h3 class="text-lg font-semibold text-gray-900 truncate">{{ $project->title }}</h3>
+                                <p class="text-sm text-gray-500 mt-0.5">{{ $project->procuringEntity?->name ?? 'No entity' }} - {{ $project->reference_no }}</p>
                             </div>
                         </a>
                     </div>
 
                     {{-- Status + edit --}}
                     <div class="flex flex-shrink-0 items-center gap-2">
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$project['status_color']] }}">
-                            {{ $project['status'] }}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$project->statusColor()] }}">
+                            {{ $project->statusLabel() }}
                         </span>
-                        <a href="{{ route('projects.edit', ['id' => $index + 1]) }}"
+                        <a href="{{ route('projects.edit', ['project' => $project->id]) }}"
                            class="p-2 text-gray-400 hover:text-[#2a7a94] hover:bg-gray-100 rounded-lg transition-colors"
                            title="Edit project">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -233,40 +201,45 @@
                 <dl class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4 border-t border-gray-100 pt-4">
                     <div>
                         <dt class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Entity</dt>
-                        <dd class="mt-1 text-sm font-medium text-gray-800 truncate">{{ $project['entity'] }}</dd>
+                        <dd class="mt-1 text-sm font-medium text-gray-800 truncate">{{ $project->procuringEntity?->name ?? '—' }}</dd>
                     </div>
                     <div>
                         <dt class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Reference no.</dt>
-                        <dd class="mt-1 text-sm font-medium text-gray-800 truncate">{{ $project['reference_no'] }}</dd>
+                        <dd class="mt-1 text-sm font-medium text-gray-800 truncate">{{ $project->reference_no }}</dd>
                     </div>
                     <div>
                         <dt class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Amount awarded</dt>
                         <dd class="mt-1 text-sm font-medium text-gray-800">
-                            {{ $project['amount_awarded'] !== null ? '₱ ' . number_format($project['amount_awarded'], 2) : '—' }}
+                            {{ $project->amount_awarded !== null ? '₱ ' . number_format((float) $project->amount_awarded, 2) : '—' }}
                         </dd>
                     </div>
                     <div>
                         <dt class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Date awarded</dt>
-                        <dd class="mt-1 text-sm font-medium text-gray-800">{{ $project['date_awarded'] ?? '—' }}</dd>
+                        <dd class="mt-1 text-sm font-medium text-gray-800">{{ $project->date_awarded?->format('F j, Y') ?? '—' }}</dd>
                     </div>
                 </dl>
 
-                @if(! empty($project['notes']))
-                    <p class="mt-4 text-sm text-gray-500 truncate" title="{{ $project['notes'] }}">{{ $project['notes'] }}</p>
+                @if(filled($project->notes))
+                    <p class="mt-4 text-sm text-gray-500 truncate" title="{{ $project->notes }}">{{ $project->notes }}</p>
                 @endif
 
                 {{-- Progress --}}
                 <div class="mt-4">
                     <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
-                        <span>{{ $project['progress'] }} / {{ $project['total'] }} items fulfilled</span>
-                        <span>{{ $project['total'] > 0 ? round(($project['progress'] / $project['total']) * 100) : 0 }}%</span>
+                        <span>{{ $project->fulfilledItemCount() }} / {{ $project->totalItemCount() }} items fulfilled</span>
+                        <span>{{ round($project->progressPercentage()) }}%</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-[#2a7a94] h-2 rounded-full" style="width: {{ $project['total'] > 0 ? ($project['progress'] / $project['total']) * 100 : 0 }}%"></div>
+                        <div class="bg-[#2a7a94] h-2 rounded-full" style="width: {{ $project->progressPercentage() }}%"></div>
                     </div>
                 </div>
             </div>
-        @endforeach
+        @empty
+            <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+                <h3 class="text-base font-semibold text-gray-900">No projects yet</h3>
+                <p class="mt-1 text-sm text-gray-500">Create a project to start tracking its procurement details.</p>
+            </div>
+        @endforelse
     </div>
 
     {{-- ============================== LIST VIEW ============================== --}}
@@ -276,7 +249,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference no.</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
@@ -285,31 +258,31 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @foreach($projects as $index => $project)
-                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer" data-href="{{ route('projects.show', ['id' => $index + 1]) }}">
+                    @forelse($projects as $project)
+                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer" data-href="{{ route('projects.show', ['project' => $project->id]) }}">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="text-sm font-semibold text-gray-900">{{ $project['name'] }}</span>
+                                <span class="text-sm font-semibold text-gray-900">{{ $project->title }}</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $project['reference_no'] }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $project['entity'] }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $project->reference_no }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $project->procuringEntity?->name ?? '—' }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$project['status_color']] }}">
-                                    {{ $project['status'] }}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$project->statusColor()] }}">
+                                    {{ $project->statusLabel() }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm text-gray-700">{{ $project['progress'] }}/{{ $project['total'] }}</span>
+                                    <span class="text-sm text-gray-700">{{ $project->fulfilledItemCount() }}/{{ $project->totalItemCount() }}</span>
                                     <div class="w-24 bg-gray-200 rounded-full h-1.5">
-                                        <div class="bg-[#2a7a94] h-1.5 rounded-full" style="width: {{ $project['total'] > 0 ? ($project['progress'] / $project['total']) * 100 : 0 }}%"></div>
+                                        <div class="bg-[#2a7a94] h-1.5 rounded-full" style="width: {{ $project->progressPercentage() }}%"></div>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                {{ $project['amount_awarded'] !== null ? '₱ ' . number_format($project['amount_awarded'], 2) : '—' }}
+                                {{ $project->amount_awarded !== null ? '₱ ' . number_format((float) $project->amount_awarded, 2) : '—' }}
                             </td>
                             <td class="px-6 py-4 text-center whitespace-nowrap">
-                                <a href="{{ route('projects.edit', ['id' => $index + 1]) }}"
+                                <a href="{{ route('projects.edit', ['project' => $project->id]) }}"
                                    class="inline-flex p-2 text-gray-400 hover:text-[#2a7a94] hover:bg-gray-100 rounded-lg transition-colors"
                                    title="Edit project">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -318,7 +291,13 @@
                                 </a>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500">
+                                No projects yet. Use “Add project” to create the first one.
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

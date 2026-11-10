@@ -14,6 +14,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EntityController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,20 +30,25 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Authenticated routes — these require a valid authenticated session.
 Route::middleware(['auth', 'session.active'])->group(function () {
-    Route::get('/projects', [PageController::class, 'show'])->defaults('page', 'Projects.index')->name('projects');
-    Route::get('/projects/create', function () {
-        return view('Projects.form');
-    })->name('projects.create');
-    Route::get('/projects/{id}', function ($id) {
-        return view('Projects.show'); // show.blade.php currently ignores $id — hardcoded data only
-    })->name('projects.show');
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects');
 
-    // @TODO: once Project model + migrations exist, swap the closure for a real
-    // controller method and pass the actual project in:
-    // Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
-    Route::get('/projects/{id}/edit', function ($id) {
-        return view('Projects.form', compact('id')); // pass $id so form can switch to edit mode
-    })->name('projects.edit');
+    // /projects/create must stay before /projects/{project} so "create" is
+    // matched as a literal path instead of being captured as a project id.
+    Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
+    Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+
+    Route::get('/projects/{project}', [ProjectController::class, 'show'])
+        ->whereNumber('project')
+        ->name('projects.show');
+    Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])
+        ->whereNumber('project')
+        ->name('projects.edit');
+    Route::put('/projects/{project}', [ProjectController::class, 'update'])
+        ->whereNumber('project')
+        ->name('projects.update');
+    Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])
+        ->whereNumber('project')
+        ->name('projects.destroy');
 
     Route::get('/preplist', [PageController::class, 'show'])->defaults('page', 'Preplist.index')->name('preplist');
 

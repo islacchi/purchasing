@@ -9,73 +9,60 @@
 @section('content')
     <div class="flex h-full min-h-0 flex-col">
 
-    {{-- Dummy data for frontend development.
-         @TODO: When the database is integrated, replace the dummy $project / $items
-         arrays below with real queries once the Project model and migrations exist,
-         e.g. $project = Project::with('items')->findOrFail($id);
-    --}}
+    @if (session('status'))
+        <div class="mb-4 flex shrink-0 items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+            </svg>
+            <span>{{ session('status') }}</span>
+        </div>
+    @endif
 
     @php
-        // Dummy data for frontend development
-        $project = [
-            'name' => 'PROJECT A - Pharma supplies Q3',
-            'entity' => 'DOH REGION V',
-            'reference_no' => 'RFQ-2026-0042',
-            'mode_of_procurement' => 'Small value',
-            'amount_awarded' => 482000.00,
-            'date_awarded' => 'July 3, 2026',
-            'delivery_period' => 'Aug 1 - Aug 15, 2026',
-            'notes' => 'Quarterly procurement of pharmaceutical supplies for regional health facilities.',
-            'status' => 'In-progress',
-            'progress' => '3/5 items fulfilled',
+        $totalItems = $project->totalItemCount();
+        $fulfilledItems = $project->fulfilledItemCount();
+        $status = $project->statusLabel();
+        $statusColor = $project->statusColor();
+
+        $statusPillClasses = [
+            'gray' => 'bg-gray-100 text-gray-700',
+            'blue' => 'bg-blue-100 text-blue-700',
+            'green' => 'bg-green-100 text-green-700',
         ];
 
-        $items = [
-            [
-                'description' => 'Mefenamic Capsule - 500mg',
-                'quantity' => 50,
-                'unit' => 'Box',
-                'unit_cost' => 320.00,
-                'quoted_price' => 305.00,
-                'total' => 15250.00,
-                'status' => 'Fulfilled',
-                'status_color' => 'green',
-            ],
-            [
-                'description' => 'Amoxicillin 250mg suspension',
-                'quantity' => 50,
-                'unit' => 'Box',
-                'unit_cost' => 320.00,
-                'quoted_price' => 305.00,
-                'total' => 15250.00,
-                'status' => 'Pending',
-                'status_color' => 'gray',
-            ],
-            [
-                'description' => 'Amoxicillin 250mg suspension',
-                'quantity' => 50,
-                'unit' => 'Box',
-                'unit_cost' => 320.00,
-                'quoted_price' => 305.00,
-                'total' => 15250.00,
-                'status' => 'Waived',
-                'status_color' => 'orange',
-            ],
+        $modeLabels = [
+            'shopping' => 'Shopping',
+            'small_value' => 'Small value',
+            'competitive_bidding' => 'Competitive bidding',
+            'direct_contracting' => 'Direct contracting',
         ];
+
+        $modeLabel = $modeLabels[$project->mode_of_procurement]
+            ?? ucfirst(str_replace('_', ' ', $project->mode_of_procurement));
+
+        $deliveryPeriod = $project->delivery_days !== null
+            ? $project->delivery_days.' days'
+            : '—';
+
+        if ($project->delivery_due_date !== null) {
+            $deliveryPeriod .= ' (due '.$project->delivery_due_date->format('M j, Y').')';
+        }
+
+        $progressLabel = $totalItems > 0
+            ? $fulfilledItems.' / '.$totalItems.' items fulfilled'
+            : 'No items recorded yet';
     @endphp
 
     {{-- Project Header --}}
     <div class="flex shrink-0 items-start justify-between mb-6">
         <div>
-            <h2 class="text-xl font-semibold text-gray-900">{{ $project['name'] }}</h2>
-            <p class="text-sm text-gray-500 mt-1">{{ $project['progress'] }}</p>
+            <h2 class="text-xl font-semibold text-gray-900">{{ $project->title }}</h2>
+            <p class="text-sm text-gray-500 mt-1">{{ $progressLabel }}</p>
         </div>
         <div>
-            @if($project['status'] === 'In-progress')
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                    {{ $project['status'] }}
-                </span>
-            @endif
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$statusColor] }}">
+                {{ $status }}
+            </span>
         </div>
     </div>
 
@@ -87,31 +74,33 @@
                 <div>
                     <div class="p-4 border-b border-gray-200">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Entity</label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $project['entity'] }}</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ $project->procuringEntity?->name ?? '—' }}</p>
                     </div>
                     <div class="p-4 border-b border-gray-200">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Reference no.</label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $project['reference_no'] }}</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ $project->reference_no }}</p>
                     </div>
                     <div class="p-4 border-b border-gray-200">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Mode of procurement</label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $project['mode_of_procurement'] }}</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ $modeLabel }}</p>
                     </div>
                     <div class="p-4 border-b border-gray-200">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Amount awarded</label>
-                        <p class="text-sm font-semibold text-gray-900">₱ {{ number_format($project['amount_awarded'], 2) }}</p>
+                        <p class="text-sm font-semibold text-gray-900">
+                            {{ $project->amount_awarded !== null ? '₱ ' . number_format((float) $project->amount_awarded, 2) : '—' }}
+                        </p>
                     </div>
                     <div class="p-4 border-b border-gray-200">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Date awarded</label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $project['date_awarded'] }}</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ $project->date_awarded?->format('F j, Y') ?? '—' }}</p>
                     </div>
                     <div class="p-4">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Delivery period</label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $project['delivery_period'] }}</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ $deliveryPeriod }}</p>
                     </div>
-                    <div class="p-4">
+                    <div class="p-4 border-t border-gray-200">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Notes</label>
-                        <p class="text-sm text-gray-900">{{ $project['notes'] }}</p>
+                        <p class="text-sm text-gray-900">{{ $project->notes ?: '—' }}</p>
                     </div>
                 </div>
             </div>
@@ -134,31 +123,41 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @foreach ($items as $item)
+                            @forelse ($project->items as $projectItem)
+                                @php
+                                    $unitPrice = $projectItem->awarded_unit_price ?? $projectItem->unit_cost;
+                                    $lineTotal = $projectItem->quantity * (float) $unitPrice;
+                                    $fulfillmentStatus = $projectItem->fulfillment_status ?: 'pending';
+
+                                    $itemStatus = ucfirst(str_replace('_', ' ', $fulfillmentStatus));
+                                    $itemStatusClasses = match ($fulfillmentStatus) {
+                                        'fulfilled' => 'bg-green-100 text-green-700',
+                                        'waived' => 'bg-orange-100 text-orange-700',
+                                        default => 'bg-gray-100 text-gray-700',
+                                    };
+                                @endphp
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $item['description'] }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ $item['quantity'] }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $item['unit'] }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format($item['unit_cost'], 2) }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format($item['quoted_price'], 2) }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format($item['total'], 2) }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->name ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ $projectItem->quantity }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">
+                                        {{ $projectItem->awarded_unit_price !== null ? '₱ ' . number_format((float) $projectItem->awarded_unit_price, 2) : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format($lineTotal, 2) }}</td>
                                     <td class="px-4 py-3 text-center">
-                                        @if($item['status_color'] === 'green')
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                                {{ $item['status'] }}
-                                            </span>
-                                        @elseif($item['status_color'] === 'gray')
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                                {{ $item['status'] }}
-                                            </span>
-                                        @elseif($item['status_color'] === 'orange')
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                                                {{ $item['status'] }}
-                                            </span>
-                                        @endif
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $itemStatusClasses }}">
+                                            {{ $itemStatus }}
+                                        </span>
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="px-4 py-12 text-center text-sm text-gray-500">
+                                        No items recorded for this project yet.
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -167,19 +166,20 @@
     </div>
 
     {{-- Action Buttons --}}
-
-    {{-- @TODO: wire the Delete and Edit actions below to their controller routes
-           and methods once the Projects controller methods exist. --}}
-
     <div class="mt-4 flex shrink-0 items-center justify-end gap-3">
-        <a href="{{ route('projects') }}"
-           class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-            Delete project
-        </a>
-        <a href="{{ route('projects.edit', ['id' => 1]) }}"
+        <form method="POST" action="{{ route('projects.destroy', ['project' => $project->id]) }}"
+              onsubmit="return confirm('Delete this project? This action cannot be undone from the list.');">
+            @csrf
+            @method('DELETE')
+            <button type="submit"
+                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Delete project
+            </button>
+        </form>
+        <a href="{{ route('projects.edit', ['project' => $project->id]) }}"
            class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>

@@ -1,16 +1,7 @@
 @extends('layouts.app')
 
 @section('page-title', 'PROJECTS')
-@section('title', 'Add Project - Purchasing')
-
-{{-- This view serves both Add and Edit.
-     The @section('title') is set statically to "Add Project" above; the in-page
-     heading and submit label switch on $isEdit inside the content.
-     @TODO: When database is integrated, replace the dummy $project/$items
-     arrays with real Eloquent queries instead of branching on $id:
-     - Add:  $project stays empty, $items has one blank row
-     - Edit: $project = Project::with('items')->findOrFail($id)
---}}
+@section('title', isset($project) && $project ? 'Edit Project - Purchasing' : 'Add Project - Purchasing')
 
 @section('header-actions')
 @endsection
@@ -18,104 +9,106 @@
 @section('content')
 
     @php
-        // Determine if we're in edit mode based on the route parameter
-        $isEdit = isset($id) && $id !== null;
+        // The same view serves both Add and Edit. Edit receives a persisted
+        // Project model; Add receives null.
+        $isEdit = isset($project) && $project !== null;
+        $entities = $entities ?? collect();
 
-        if ($isEdit) {
-            // Pre-filled dummy data for edit mode
-            $project = [
-                'title' => 'Purchase of pharma supplies',
-                'entity' => 'DOH Region VII',
-                'reference_no' => 'DOH Region VII - RF-2026-0042',
-                'notes' => 'Quarterly procurement of pharmaceutical supplies for regional health facilities.',
-                'amount_awarded' => 482000.00,
-                'delivery_period' => '30',
-                'date_awarded' => '2026-07-03',
-                'mode_of_procurement' => 'small_value',
-            ];
+        $selectedEntityId = (string) old('procuring_entity_id', $project?->procuring_entity_id ?? '');
+        $title = old('title', $project?->title ?? '');
+        $referenceNo = old('reference_no', $project?->reference_no ?? '');
+        $amountAwarded = old('amount_awarded', $project?->amount_awarded ?? '');
+        $deliveryDays = (string) old('delivery_days', $project?->delivery_days ?? '');
+        $dateAwarded = old('date_awarded', $project?->date_awarded?->format('Y-m-d') ?? '');
+        $modeOfProcurement = old('mode_of_procurement', $project?->mode_of_procurement ?? '');
+        $notes = old('notes', $project?->notes ?? '');
 
-            $items = [
-                [
-                    'description' => 'Mefenamic Capsule - 500mg',
-                    'category' => 'drugs and medicines',
-                    'unit' => 'Box',
-                    'quantity' => 50,
-                    'unit_cost' => 320.00,
-                    'quoted_price' => 305.00,
-                ],
-                [
-                    'description' => 'Amoxicillin 250mg suspension',
-                    'category' => 'drugs and medicines',
-                    'unit' => 'Box',
-                    'quantity' => 50,
-                    'unit_cost' => 320.00,
-                    'quoted_price' => 305.00,
-                ],
-                [
-                    'description' => 'Paracetamol 500mg tablet',
-                    'category' => 'drugs and medicines',
-                    'unit' => 'Box',
-                    'quantity' => 100,
-                    'unit_cost' => 150.00,
-                    'quoted_price' => 140.00,
-                ],
-            ];
-        } else {
-            // Empty data for create mode
-            $project = [
-                'title' => '',
-                'entity' => '',
-                'reference_no' => '',
-                'notes' => '',
-                'amount_awarded' => '',
-                'delivery_period' => '',
-                'date_awarded' => '',
-                'mode_of_procurement' => '',
-            ];
+        $items = old('items');
 
-            $items = [
-                ['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
-            ];
+        if ($items === null) {
+            if ($isEdit && $project->items->isNotEmpty()) {
+                $items = $project->items
+                    ->map(fn ($projectItem) => [
+                        'description' => $projectItem->item?->name ?? '',
+                        'category' => $projectItem->item?->category?->name ?? '',
+                        'unit' => $projectItem->item?->unit ?? '',
+                        'quantity' => $projectItem->quantity,
+                        'unit_cost' => $projectItem->unit_cost,
+                        'quoted_price' => $projectItem->awarded_unit_price,
+                    ])
+                    ->values()
+                    ->all();
+            } else {
+                $items = [
+                    ['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
+                ];
+            }
         }
     @endphp
 
     <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
 
+<<<<<<< Updated upstream
     {{-- @TODO: wire this up to a real store/update route + controller method once --}}
     {{-- database integration is in place (currently the form posts to '#'). --}}
     <form action="#" method="POST" class="space-y-8">
         @csrf
 <!-- Comment -->
+=======
+    @if ($errors->any())
+        <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <ul class="list-disc space-y-1 pl-5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form action="{{ $isEdit ? route('projects.update', ['project' => $project->id]) : route('projects.store') }}" method="POST" class="flex flex-1 min-h-0 flex-col">
+        @csrf
+        @if ($isEdit)
+            @method('PUT')
+        @endif
+        {{-- Content holder: project details stay static; only the items table scrolls --}}
+        <div class="flex flex-1 min-h-0 flex-col space-y-6 overflow-hidden rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
+>>>>>>> Stashed changes
         {{-- Project fields --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
             <div class="space-y-5">
                 <div>
                     <label class="block text-sm font-medium text-gray-800 mb-1.5">Title</label>
-                    <input type="text" name="title" value="{{ $project['title'] }}"
+                    <input type="text" name="title" value="{{ $title }}"
                            class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                    @error('title')
+                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-800 mb-1.5">Reference no.</label>
-                    <input type="text" name="reference_no" value="{{ $project['reference_no'] }}"
+                    <input type="text" name="reference_no" value="{{ $referenceNo }}"
                            class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                    @error('reference_no')
+                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-800 mb-1.5">Amount awarded</label>
-                        <input type="number" step="0.01" name="amount_awarded" value="{{ $project['amount_awarded'] }}"
+                        <input type="number" step="0.01" name="amount_awarded" value="{{ $amountAwarded }}"
                                class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-800 mb-1.5">Delivery period</label>
-                        <select name="delivery_period"
+                        <select name="delivery_days"
                                 class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                            <option value="" {{ $project['delivery_period'] === '' ? 'selected' : '' }}>Select...</option>
-                            <option value="7" {{ $project['delivery_period'] === '7' ? 'selected' : '' }}>7 days</option>
-                            <option value="15" {{ $project['delivery_period'] === '15' ? 'selected' : '' }}>15 days</option>
-                            <option value="30" {{ $project['delivery_period'] === '30' ? 'selected' : '' }}>30 days</option>
-                            <option value="45" {{ $project['delivery_period'] === '45' ? 'selected' : '' }}>45 days</option>
+                            <option value="" {{ $deliveryDays === '' ? 'selected' : '' }}>Select...</option>
+                            <option value="7" {{ $deliveryDays === '7' ? 'selected' : '' }}>7 days</option>
+                            <option value="15" {{ $deliveryDays === '15' ? 'selected' : '' }}>15 days</option>
+                            <option value="30" {{ $deliveryDays === '30' ? 'selected' : '' }}>30 days</option>
+                            <option value="45" {{ $deliveryDays === '45' ? 'selected' : '' }}>45 days</option>
                         </select>
                     </div>
                 </div>
@@ -124,7 +117,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-800 mb-1.5">Date awarded</label>
                         <div class="relative">
-                            <input type="date" name="date_awarded" value="{{ $project['date_awarded'] }}"
+                            <input type="date" name="date_awarded" value="{{ $dateAwarded }}"
                                    class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
                             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                 <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,11 +130,11 @@
                         <label class="block text-sm font-medium text-gray-800 mb-1.5">Mode of procurement</label>
                         <select name="mode_of_procurement"
                                 class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                            <option value="" {{ $project['mode_of_procurement'] === '' ? 'selected' : '' }}>Select...</option>
-                            <option value="shopping" {{ $project['mode_of_procurement'] === 'shopping' ? 'selected' : '' }}>Shopping</option>
-                            <option value="small_value" {{ $project['mode_of_procurement'] === 'small_value' ? 'selected' : '' }}>Small value</option>
-                            <option value="competitive_bidding" {{ $project['mode_of_procurement'] === 'competitive_bidding' ? 'selected' : '' }}>Competitive bidding</option>
-                            <option value="direct_contracting" {{ $project['mode_of_procurement'] === 'direct_contracting' ? 'selected' : '' }}>Direct contracting</option>
+                            <option value="" {{ $modeOfProcurement === '' ? 'selected' : '' }}>Select...</option>
+                            <option value="shopping" {{ $modeOfProcurement === 'shopping' ? 'selected' : '' }}>Shopping</option>
+                            <option value="small_value" {{ $modeOfProcurement === 'small_value' ? 'selected' : '' }}>Small value</option>
+                            <option value="competitive_bidding" {{ $modeOfProcurement === 'competitive_bidding' ? 'selected' : '' }}>Competitive bidding</option>
+                            <option value="direct_contracting" {{ $modeOfProcurement === 'direct_contracting' ? 'selected' : '' }}>Direct contracting</option>
                         </select>
                     </div>
                 </div>
@@ -150,14 +143,30 @@
             <div class="space-y-5">
                 <div>
                     <label class="block text-sm font-medium text-gray-800 mb-1.5">Entity</label>
-                    <input type="text" name="entity" value="{{ $project['entity'] }}"
-                           class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                    <select name="procuring_entity_id"
+                            class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                        <option value="">Select entity...</option>
+                        @foreach ($entities as $entity)
+                            <option value="{{ $entity->id }}" {{ $selectedEntityId === (string) $entity->id ? 'selected' : '' }}>
+                                {{ $entity->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('procuring_entity_id')
+                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    @enderror
+                    @if ($entities->isEmpty())
+                        <p class="mt-1 text-xs text-gray-500">
+                            No procuring entities yet.
+                            <a href="{{ route('entities.create', ['type' => 'procuring_entity']) }}" class="font-medium text-[#2a7a94] hover:underline">Add one first</a>.
+                        </p>
+                    @endif
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-800 mb-1.5">Notes</label>
                     <textarea name="notes" rows="10"
-                              class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ $project['notes'] }}</textarea>
+                              class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ $notes }}</textarea>
                 </div>
             </div>
         </div>
@@ -179,7 +188,7 @@
                 @foreach ($items as $i => $item)
                     <div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2">
                         <div>
-                            <input type="text" name="items[{{ $i }}][description]" value="{{ $item['description'] }}"
+                            <input type="text" name="items[{{ $i }}][description]" value="{{ $item['description'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div>
@@ -190,19 +199,19 @@
                             </select>
                         </div>
                         <div>
-                            <input type="text" name="items[{{ $i }}][unit]" value="{{ $item['unit'] }}"
+                            <input type="text" name="items[{{ $i }}][unit]" value="{{ $item['unit'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div>
-                            <input type="number" name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] }}"
+                            <input type="number" name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div>
-                            <input type="number" step="0.01" name="items[{{ $i }}][unit_cost]" value="{{ $item['unit_cost'] }}"
+                            <input type="number" step="0.01" name="items[{{ $i }}][unit_cost]" value="{{ $item['unit_cost'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div>
-                            <input type="number" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] }}"
+                            <input type="number" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
                         <div class="checkbox-cell pb-2 hidden">
@@ -286,9 +295,8 @@
 
 @push('scripts')
 <script>
-    // @TODO: Frontend-only item row handling. Once DB is integrated, item index
-    // numbering (items[N]) still needs to stay sequential when rows are removed,
-    // or switch to Livewire's wire:model array binding instead of raw DOM cloning.
+    // Item row handling. Keys may become non-sequential when rows are removed;
+    // the controller filters untouched rows before validating the items array.
     (function () {
         const rowsContainer = document.getElementById('itemRows');
         const addBtn = document.getElementById('addItemBtn');
