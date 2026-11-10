@@ -4,18 +4,27 @@
 @section('title', 'Preplist - Purchasing')
 
 @section('content')
+    @if (session('status'))
+        <div class="mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+            </svg>
+            <span>{{ session('status') }}</span>
+        </div>
+    @endif
+
     {{-- Search and actions bar --}}
     <div class="mb-6 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4 flex-1">
-            <div class="relative max-w-xl w-full">
+            <form method="GET" action="{{ route('preplist') }}" class="relative max-w-xl w-full">
                 <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
                     </svg>
                 </span>
-                <input type="text" placeholder="Search by prep list name / created by..."
+                <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search by prep list name / created by..."
                        class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
-            </div>
+            </form>
         </div>
 
         {{-- + Compile prep list button (top right, below the nav bar) --}}
@@ -27,51 +36,6 @@
             <span class="font-medium">Compile prep list</span>
         </a>
     </div>
-    {{-- Hard-coded prep list data for frontend development --}}
-    @php
-        $preplists = [
-            [
-                'id'          => 1,
-                'name'        => 'Q3 Medical Supplies',
-                'created_by'  => 'Juan Dela Cruz',
-                'date_created'=> '2026-07-15',
-                'projects'    => ['DOH Region VII', 'PGH Manila'],
-                'items'       => 24,
-            ],
-            [
-                'id'          => 2,
-                'name'        => 'Laboratory Reagents Batch 1',
-                'created_by'  => 'Maria Santos',
-                'date_created'=> '2026-07-12',
-                'projects'    => ['PGH Manila'],
-                'items'       => 58,
-            ],
-            [
-                'id'          => 3,
-                'name'        => 'Office Equipment FY2026',
-                'created_by'  => 'Carlos Reyes',
-                'date_created'=> '2026-07-08',
-                'projects'    => ['DOH Region VII', 'Dept of Finance'],
-                'items'       => 12,
-            ],
-            [
-                'id'          => 4,
-                'name'        => 'Pharma Supplies Q4',
-                'created_by'  => 'Juan Dela Cruz',
-                'date_created'=> '2026-07-03',
-                'projects'    => ['DOH Region VII'],
-                'items'       => 40,
-            ],
-            [
-                'id'          => 5,
-                'name'        => 'IT Hardware Refresh',
-                'created_by'  => 'Ana Cruz',
-                'date_created'=> '2026-06-28',
-                'projects'    => ['PGH Manila', 'Dept of Finance'],
-                'items'       => 17,
-            ],
-        ];
-    @endphp
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
@@ -87,32 +51,37 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
-                    @foreach($preplists as $preplist)
+                    @forelse($preplists as $preplist)
+                        @php
+                            $sourceProjects = $preplist->sourceProjects();
+                        @endphp
                         <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
-                                        data-href="{{ route('preplist.show', ['id' => $preplist['id']]) }}">
+                            data-href="{{ route('preplist.show', ['preplist' => $preplist->id]) }}">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {{ $preplist['name'] }}
+                                {{ $preplist->name }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                {{ $preplist['created_by'] }}
+                                {{ $preplist->creator?->name ?? '—' }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ \Carbon\Carbon::parse($preplist['date_created'])->format('M d, Y') }}
+                                {{ $preplist->created_at?->format('M d, Y') ?? '—' }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-700">
                                 <div class="relative group inline-block">
                                     <span class="cursor-pointer font-medium text-gray-900 underline decoration-dotted decoration-gray-300 underline-offset-2">
-                                        {{ count($preplist['projects']) }}
+                                        {{ $sourceProjects->count() }}
                                     </span>
-                                    <div class="hidden group-hover:block pointer-events-none absolute left-0 bottom-full mb-2 w-max max-w-xs bg-gray-900 text-white text-xs rounded-md shadow-lg px-3 py-2 z-20">
-                                        @foreach($preplist['projects'] as $project)
-                                            <div class="whitespace-nowrap py-0.5">{{ $project }}</div>
-                                        @endforeach
-                                    </div>
+                                    @if($sourceProjects->isNotEmpty())
+                                        <div class="hidden group-hover:block pointer-events-none absolute left-0 bottom-full mb-2 w-max max-w-xs bg-gray-900 text-white text-xs rounded-md shadow-lg px-3 py-2 z-20">
+                                            @foreach($sourceProjects as $project)
+                                                <div class="whitespace-nowrap py-0.5">{{ $project->title }}</div>
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-center">
-                                {{ $preplist['items'] }}
+                                {{ $preplist->items->count() }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                 <div class="relative inline-block text-left">
@@ -124,23 +93,36 @@
                                         </svg>
                                     </button>
                                     <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1">
-                                        <button class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
+                                        <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
+                                           class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                           title="Edit">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
                                             <span>Edit</span>
-                                        </button>
-                                        <button class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50" title="Delete">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                            </svg>
-                                            <span>Delete</span>
-                                        </button>
+                                        </a>
+                                        <form method="POST" action="{{ route('preplist.destroy', ['preplist' => $preplist->id]) }}"
+                                              onsubmit="return confirm('Delete this prep list?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50" title="Delete">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                                <span>Delete</span>
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">
+                                No prep lists yet. Use “Compile prep list” to create the first one.
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

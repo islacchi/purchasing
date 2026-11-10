@@ -9,118 +9,91 @@
 @section('content')
 
     @php
-        // This single view serves both Edit and Add (compile) modes.
-        //   - Edit: $prepList is set     → heading "Edit prep list", Save changes.
-        //   - Add:  $prepList is NOT set → heading "Add prep list", Compile prep list.
-        // Quantities are read-only in both modes (no reduce / waive here).
-        //
-        // @TODO: once models + migrations exist, replace the hardcoded arrays
-        // below with real Eloquent queries:
-        //   - Edit: $prepList = Preplist::with(['projects', 'items'])->findOrFail($id)
-        //   - Add:  pull available source projects with their items.
+        // This single view serves both Edit and Compile modes.
+        //   - Edit:    $prepList is set     -> heading "Edit prep list", Save changes.
+        //   - Compile: $prepList is null    -> heading "Add prep list", Compile prep list.
         $isEdit = isset($prepList) && $prepList !== null;
+        $projects = $projects ?? collect();
+        $selectedSources = $selectedSources ?? [];
 
-        if ($isEdit) {
-            // EDIT MODE: dummy data
-            $projects = [
-                [
-                    'id'   => 1,
-                    'name' => 'Pharma supplies Q3',
-                    'reference' => 'RFQ 2026-0042',
-                    'checked' => true,
-                    'items' => [
-                        // shelf_life = minimum months of shelf life remaining at
-                        // delivery. 0 / null means non-perishable.
-                        // @TODO: default from the Item master once it exists.
-                        ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true, 'qty' => 40, 'unit' => 'box', 'shelf_life' => 12],
-                        ['name' => 'Amoxicillin 500mg, box of 100',       'checked' => true, 'qty' => 25, 'unit' => 'box', 'shelf_life' => 12],
-                    ],
-                ],
-                [
-                    'id'   => 2,
-                    'name' => 'Laboratory reagents',
-                    'reference' => 'RFQ 2026-0038',
-                    'checked' => true,
-                    'items' => [
-                        ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true,  'qty' => 30, 'unit' => 'box', 'shelf_life' => 12],
-                        ['name' => 'Surgical gloves, box of 50 pairs',    'checked' => false, 'qty' => 40, 'unit' => 'box', 'shelf_life' => 36],
-                    ],
-                ],
-            ];
-        } else {
-            // ADD (compile) MODE: dummy data
-            $projects = [
-                [
-                    'id'   => 1,
-                    'name' => 'Pharma supplies Q3',
-                    'reference' => 'RFQ 2026-0042',
-                    'checked' => true,
-                    'items' => [
-                        ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true, 'qty' => 40, 'unit' => 'box', 'shelf_life' => 12],
-                        ['name' => 'Amoxicillin 500mg, box of 100',       'checked' => true, 'qty' => 40, 'unit' => 'box', 'shelf_life' => 12],
-                    ],
-                ],
-                [
-                    'id'   => 2,
-                    'name' => 'Laboratory reagents',
-                    'reference' => 'RFQ 2026-0038',
-                    'checked' => true,
-                    'items' => [
-                        ['name' => 'Mefenamic capsule 500mg, box of 100', 'checked' => true,  'qty' => 40, 'unit' => 'box', 'shelf_life' => 12],
-                        ['name' => 'Acetaminophen 500mg, box of 100',     'checked' => false, 'qty' => 40, 'unit' => 'box', 'shelf_life' => 12],
-                    ],
-                ],
-                [
-                    'id'   => 3,
-                    'name' => 'PPE bulk order',
-                    'reference' => 'RFQ 2026-0031',
-                    'checked' => false, // project entirely unselected
-                    'items' => [
-                        ['name' => 'Disposable masks, box of 50', 'checked' => false, 'qty' => 40, 'unit' => 'box', 'shelf_life' => 36],
-                    ],
-                ],
-            ];
-        }
+        $selectedSourceIds = old('sources', array_keys($selectedSources));
+        $selectedSourceIds = array_map(
+            fn ($id) => (string) $id,
+            is_array($selectedSourceIds) ? $selectedSourceIds : [],
+        );
 
-        // Initial summary: projects with at least one checked item, and checked items.
-        // @TODO: recompute from DB once Eloquent is wired up.
         $selectedCount = 0;
-        $projectCount  = 0;
+        $projectCount = 0;
+
         foreach ($projects as $project) {
-            $projectSelected = 0;
-            foreach ($project['items'] as $item) {
-                if ($item['checked']) {
-                    $projectSelected++;
-                }
-            }
+            $projectSelected = $project->items
+                ->filter(fn ($projectItem) => in_array((string) $projectItem->id, $selectedSourceIds, true))
+                ->count();
+
             $selectedCount += $projectSelected;
+
             if ($projectSelected > 0) {
                 $projectCount++;
             }
         }
     @endphp
 
-    {{-- Page heading --}}
     <div class="flex h-full min-h-0 flex-col">
     <h2 class="shrink-0 text-2xl font-bold text-gray-900 mb-6">{{ $isEdit ? 'Edit prep list' : 'Add prep list' }}</h2>
 
-    {{-- @TODO: wire up a real form action once routes/controller exist
-         (Edit will also need @method('PUT')) --}}
-    <form action="#" method="POST" class="flex flex-1 min-h-0 flex-col space-y-6">
-        @csrf
+    @if ($errors->any())
+        <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <ul class="list-disc space-y-1 pl-5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
-        {{-- Prep list name --}}
-        <div class="shrink-0 max-w-2xl">
-            <label for="prepListName" class="block text-sm font-medium text-gray-800 mb-1.5">Prep list name</label>
-            <input id="prepListName" type="text" name="name"
-                   value="{{ $prepList['name'] ?? '' }}"
-                   placeholder="{{ $isEdit ? '' : 'PURCHASE OF PHARMA SUPPLIES' }}"
-                   class="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
+    <form action="{{ $isEdit ? route('preplist.update', ['preplist' => $prepList->id]) : route('preplist.store') }}" method="POST" class="flex flex-1 min-h-0 flex-col space-y-6">
+        @csrf
+        @if ($isEdit)
+            @method('PUT')
+        @endif
+
+        {{-- Prep list name + notes --}}
+        <div class="shrink-0 max-w-2xl space-y-4">
+            <div>
+                <label for="prepListName" class="block text-sm font-medium text-gray-800 mb-1.5">Prep list name</label>
+                <input id="prepListName" type="text" name="name"
+                       value="{{ old('name', $prepList?->name ?? '') }}"
+                       placeholder="{{ $isEdit ? '' : 'PURCHASE OF PHARMA SUPPLIES' }}"
+                       class="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                <p class="mt-1 text-xs text-gray-500">
+                    @if($isEdit)
+                        Reference no. <span class="font-medium text-gray-700">{{ $prepList->reference_no }}</span>
+                    @else
+                        A reference number will be generated automatically when the prep list is compiled.
+                    @endif
+                </p>
+            </div>
+
+            <div>
+                <label for="prepListNotes" class="block text-sm font-medium text-gray-800 mb-1.5">Notes <span class="font-normal text-gray-400">(optional)</span></label>
+                <textarea id="prepListNotes" name="notes" rows="3"
+                          placeholder="Add notes here..."
+                          class="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ old('notes', $prepList?->notes ?? '') }}</textarea>
+            </div>
         </div>
 
         {{-- Project groups (item list scrolls here) --}}
         <div class="min-h-[220px] flex-1 space-y-6 overflow-y-auto pr-1">
-            @foreach($projects as $project)
+            @forelse($projects as $project)
+                @php
+                    $selectedProjectItems = $project->items
+                        ->filter(fn ($projectItem) => in_array((string) $projectItem->id, $selectedSourceIds, true))
+                        ->count();
+
+                    $allProjectItemsSelected = $project->items->isNotEmpty()
+                        && $selectedProjectItems === $project->items->count();
+                @endphp
+
                 <div class="project-card bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                     {{-- Card header: checkbox + project name + RFQ reference --}}
                     <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -128,31 +101,47 @@
                             <input type="checkbox"
                                    class="project-check w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
                                    title="Select all items in this project"
-                                   {{ collect($project['items'])->every(fn ($i) => $i['checked']) ? 'checked' : '' }}>
-                            <span class="font-bold text-gray-900">{{ $project['name'] }}</span>
+                                   {{ $allProjectItemsSelected ? 'checked' : '' }}>
+                            <span class="font-bold text-gray-900">{{ $project->title }}</span>
                         </label>
-                        <span class="text-sm text-gray-400 font-medium">{{ $project['reference'] }}</span>
+                        <span class="text-sm text-gray-400 font-medium">
+                            {{ $project->procuringEntity?->name ? $project->procuringEntity->name.' - ' : '' }}{{ $project->reference_no }}
+                        </span>
                     </div>
 
-                    {{-- Item rows (same markup in Edit and Add) --}}
+                    {{-- Item rows --}}
                     <div class="divide-y divide-gray-100">
-                        @foreach($project['items'] as $item)
+                        @foreach($project->items as $projectItem)
+                            @php
+                                $isSelected = in_array((string) $projectItem->id, $selectedSourceIds, true);
+                                $selectedPreplistItem = $selectedSources[$projectItem->id] ?? null;
+                                $shelfLife = old(
+                                    'shelf_life.'.$projectItem->id,
+                                    $selectedPreplistItem?->min_shelf_life_months
+                                        ?? $projectItem->item?->default_min_shelf_life_months
+                                        ?? 0,
+                                );
+                            @endphp
+
                             <div class="item-row flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-gray-50">
                                 <div class="flex items-start gap-3">
                                     <input type="checkbox"
+                                           name="sources[]"
+                                           value="{{ $projectItem->id }}"
                                            class="item-check mt-0.5 w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
-                                           {{ $item['checked'] ? 'checked' : '' }}>
+                                           {{ $isSelected ? 'checked' : '' }}>
                                     <div class="min-w-0">
-                                        <span class="text-sm text-gray-700">{{ $item['name'] }}</span>
+                                        <span class="text-sm text-gray-700">{{ $projectItem->item?->name ?? 'Item' }}</span>
 
                                         {{-- Shelf life required at delivery (per item) --}}
                                         <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
                                             <label class="text-[11px] font-medium text-gray-500">Min. shelf life at delivery</label>
-                                            <input type="number" min="0" step="1"
-                                                   value="{{ $item['shelf_life'] ?? 0 }}"
+                                            <input type="number" min="0" max="1200" step="1"
+                                                   name="shelf_life[{{ $projectItem->id }}]"
+                                                   value="{{ $shelfLife }}"
                                                    class="shelf-life-input w-16 px-2 py-0.5 rounded-md border border-gray-300 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300"
                                                    title="Minimum months of shelf life remaining at delivery"
-                                                   aria-label="Minimum shelf life at delivery in months for {{ $item['name'] }}">
+                                                   aria-label="Minimum shelf life at delivery in months for {{ $projectItem->item?->name ?? 'item' }}">
                                             <span class="text-[11px] text-gray-500">months</span>
                                             <span class="text-[11px] text-gray-400">&middot; 0 = non-perishable</span>
                                         </div>
@@ -160,12 +149,22 @@
                                 </div>
 
                                 {{-- Read-only quantity --}}
-                                <span class="text-sm font-medium text-gray-900 whitespace-nowrap">{{ $item['qty'] }} {{ $item['unit'] }}</span>
+                                <span class="text-sm font-medium text-gray-900 whitespace-nowrap">
+                                    {{ $projectItem->quantity }} {{ $projectItem->item?->unit ?? '' }}
+                                </span>
                             </div>
                         @endforeach
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+                    <h3 class="text-base font-semibold text-gray-900">No project items available</h3>
+                    <p class="mt-1 text-sm text-gray-500">Add items to a project before compiling a prep list.</p>
+                    <a href="{{ route('projects.create') }}" class="mt-4 inline-flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80]">
+                        Add project
+                    </a>
+                </div>
+            @endforelse
         </div>
 
         {{-- Footer row: summary (left) + actions (right) --}}
@@ -196,8 +195,7 @@
 
     {{-- Kept inside the content section so it runs after the form exists. --}}
       <script>
-        // Frontend-only selection handling.
-        // @TODO: replace with Livewire wire:model bindings once models + controller exist.
+        // Selection handling for project headers, item checkboxes, and the summary.
         (function () {
             const summaryEl = document.getElementById('summaryText');
 

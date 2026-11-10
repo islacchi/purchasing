@@ -14,6 +14,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EntityController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\PreplistController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -50,36 +51,32 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         ->whereNumber('project')
         ->name('projects.destroy');
 
-    Route::get('/preplist', [PageController::class, 'show'])->defaults('page', 'Preplist.index')->name('preplist');
+    Route::get('/preplist', [PreplistController::class, 'index'])->name('preplist');
 
-    // @TODO: once the Preplist model + migrations exist, swap the closure for a real
-    // controller method and pass the actual preplist in:
-    // Route::get('/preplist/{id}', [PreplistController::class, 'show']);
-    //
-    // NOTE: /preplist/create must be declared BEFORE /preplist/{id} so "create"
-    // is matched as a literal path, not captured by the {id} wildcard.
-    Route::get('/preplist/create', function () {
-        return view('Preplist.form'); // no $prepList → renders Add mode
-    })->name('preplist.create');
+    // /preplist/create must be declared BEFORE /preplist/{preplist} so "create"
+    // is matched as a literal path, not captured by the {preplist} wildcard.
+    Route::get('/preplist/create', [PreplistController::class, 'create'])->name('preplist.create');
+    Route::post('/preplist', [PreplistController::class, 'store'])->name('preplist.store');
 
-    // @TODO: once models + migrations exist, pass the actual $prepList in:
-    // Route::get('/preplist/{id}', [PreplistController::class, 'show']);
-    Route::get('/preplist/{id}', function ($id) {
-        return view('Preplist.show'); // show.blade.php currently ignores $id — hardcoded data only
-    })->name('preplist.show');
+    Route::get('/preplist/{preplist}', [PreplistController::class, 'show'])
+        ->whereNumber('preplist')
+        ->name('preplist.show');
+    Route::get('/preplist/{preplist}/edit', [PreplistController::class, 'edit'])
+        ->whereNumber('preplist')
+        ->name('preplist.edit');
+    Route::put('/preplist/{preplist}', [PreplistController::class, 'update'])
+        ->whereNumber('preplist')
+        ->name('preplist.update');
+    Route::patch('/preplist/{preplist}/notes', [PreplistController::class, 'updateNotes'])
+        ->whereNumber('preplist')
+        ->name('preplist.notes');
+    Route::delete('/preplist/{preplist}', [PreplistController::class, 'destroy'])
+        ->whereNumber('preplist')
+        ->name('preplist.destroy');
+    Route::get('/preplist/{preplist}/generate-rfq', [PreplistController::class, 'generateRfq'])
+        ->whereNumber('preplist')
+        ->name('preplist.generate-rfq');
 
-    // Edit (reuses Preplist/form.blade.php, which also serves Add).
-    // @TODO: once models + migrations exist, pass the real preplist in:
-    // Route::get('/preplist/{id}/edit', [PreplistController::class, 'edit'])->name('preplist.edit');
-    Route::get('/preplist/{id}/edit', function ($id) {
-        return view('Preplist.form', ['prepList' => ['id' => $id, 'name' => 'PURCHASE OF PHARMA SUPPLIES']]);
-    })->name('preplist.edit');
-    // Generate quotation page (dummy data for now).
-    // @TODO: once models + migrations exist, pass the real prep list in:
-    // Route::get('/quotation/generate/{prepList}', [QuotationController::class, 'generate']);
-    Route::get('/quotation/generate', function () {
-        return view('Preplist.generate_rfq'); // view uses hardcoded dummy data
-    })->name('quotation.generate');
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
     // Entity profile page — one view rendered two ways based on {type}.
     Route::get('/entities/{type}/{id}', [EntityController::class, 'show'])->whereIn('type', ['procuring_entity', 'supplier'])->whereNumber('id')->name('entities.show');

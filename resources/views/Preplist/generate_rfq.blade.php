@@ -18,73 +18,8 @@
     </style>
 
 
-    @php
-        // ------------------------------------------------------------------
-        // Dummy data for frontend development (no DB integration yet).
-        //
-        // @TODO: Replace the hardcoded prep list / items / suppliers below with
-        // real Eloquent queries once the preplist + supplier DB tables exist,
-        // e.g.:
-        //   $prepList  = Preplist::with('items')->findOrFail($id);
-        //   $items     = $prepList->items;
-        //   $suppliers = Supplier::query()->get();
-        // ------------------------------------------------------------------
-
-        // @TODO: replace with Preplist::findOrFail($id); the heading below
-        // renders $prepList->name.
-        $prepList = (object) [
-            'id'   => 1,
-            'name' => 'July Region VII batch',
-        ];
-
-        // @TODO: replace with Preplist::find($id)->items; each item carries its
-        // own distinct total quantity — do not reuse one total for every item.
-        // shelf_life = minimum months of shelf life remaining at delivery
-        // (0 / null = non-perishable). This is a quality requirement, not a
-        // quantity, so it is safe to show suppliers on the generated RFQ.
-        $items = [
-            [
-                'key'   => 'amoxicillin',
-                'name'  => 'Amoxicillin 500mg, box of 100',
-                'total' => 100,
-                'unit'  => 'box',
-                'shelf_life' => 12,
-            ],
-            [
-                'key'   => 'surgical-gloves',
-                'name'  => 'Surgical gloves, box 50 pairs',
-                'total' => 40,
-                'unit'  => 'box',
-                'shelf_life' => 24,
-            ],
-        ];
-
-        // @TODO: replace with Supplier::query()->get() (mirrors the Entities module).
-        $suppliers = [
-            ['name' => 'Triple Tact'],
-            ['name' => 'GreenCore Pharmaceuticals'],
-            ['name' => 'MedSource Inc.'],
-        ];
-
-        // Initial per-item chip state (dummy). Triple Tact and GreenCore are
-        // checked on every item; MedSource is unchecked everywhere.
-        // @TODO: seed from the real preplist item / supplier state once Eloquent exists.
-        $initialItemSelections = [
-            'amoxicillin'     => ['Triple Tact' => true, 'GreenCore Pharmaceuticals' => true, 'MedSource Inc.' => false],
-            'surgical-gloves' => ['Triple Tact' => true, 'GreenCore Pharmaceuticals' => true, 'MedSource Inc.' => false],
-        ];
-
-        // Suppliers that start with at least one checked item — their rows are visible
-        // (and by default checked) in "Quotation files to generate".
-        $initialGenSuppliers = [];
-        foreach ($items as $item) {
-            foreach ($suppliers as $supplier) {
-                if (!empty($initialItemSelections[$item['key']][$supplier['name']])) {
-                    $initialGenSuppliers[$supplier['name']] = true;
-                }
-            }
-        }
-    @endphp
+    {{-- The prep list, its item totals, suppliers, and initial selection state
+         are supplied by PreplistController@generateRfq. --}}
 
     <div class="flex h-full min-h-0 flex-col">
     {{-- Page heading --}}
@@ -114,6 +49,9 @@
                 </label>
             @endforeach
         </div>
+        @if($suppliers->isEmpty())
+            <p class="text-sm text-gray-500">No suppliers found. Add suppliers from the Entities module first.</p>
+        @endif
     </div>
 
     {{-- Divider --}}
@@ -124,7 +62,7 @@
     </div>
     {{-- Per-item sections (item list scrolls here) — one box per prep list item --}}
     <div class="min-h-[180px] flex-1 space-y-4 overflow-y-auto pr-1">
-        @foreach($items as $item)
+        @forelse($items as $item)
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-100">
                     <div class="min-w-0">
@@ -149,7 +87,7 @@
                                        class="item-supplier-check sr-only"
                                        data-supplier="{{ $supplier['name'] }}"
                                        data-item-key="{{ $item['key'] }}"
-                                       {{ $initialItemSelections[$item['key']][$supplier['name']] ? 'checked' : '' }}
+                                       {{ ($initialItemSelections[$item['key']][$supplier['name']] ?? false) ? 'checked' : '' }}
                                        title="Ask {{ $supplier['name'] }} for {{ $item['name'] }}">
                                 <svg class="chip-box w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                     <rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2"/>
@@ -164,7 +102,12 @@
                     </div>
                 </div>
             </div>
-        @endforeach
+        @empty
+            <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+                <h3 class="text-base font-semibold text-gray-900">No items to request</h3>
+                <p class="mt-1 text-sm text-gray-500">This prep list has no compiled items yet. Edit the prep list to add project items first.</p>
+            </div>
+        @endforelse
     </div>
 
     {{-- Quotation files to generate — one row per supplier with at least one checked item.
@@ -224,7 +167,7 @@
 
     {{-- Footer actions --}}
     <div class="flex shrink-0 items-center justify-end gap-3 mt-6">
-        <a href="{{ route('preplist') }}"
+        <a href="{{ route('preplist.show', ['preplist' => $prepList->id]) }}"
            class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>

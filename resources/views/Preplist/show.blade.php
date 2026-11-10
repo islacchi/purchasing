@@ -9,54 +9,41 @@
 @section('content')
     <div class="flex h-full min-h-0 flex-col">
 
+    @if (session('status'))
+        <div class="mb-4 flex shrink-0 items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+            </svg>
+            <span>{{ session('status') }}</span>
+        </div>
+    @endif
+
     @php
-        // Dummy data for frontend development.
-        // TODO: Replace with real Eloquent queries once the preplist DB tables exist,
-        // e.g. $preplist = Preplist::with(['projects', 'items.sources'])->find($id);
+        $sourceProjects = $preplist->sourceProjects();
 
-        $preplist = [
-            'id'              => 1,
-            'name'            => 'July Region VII batch',
-            'reference_no'    => '#2026-0090',
-            'created_by'      => 'J. Santos',
-            'projects_count'  => 2,
-            'date_created'    => 'July 12, 2026',
-            'total_items'     => 2,
-        ];
+        $itemGroups = $preplist->items->map(function ($preplistItem) {
+            $unit = $preplistItem->item?->unit ?? '';
 
-        // TODO: Replace with Preplist::find($id)->projects->pluck('id', 'name', 'reference_no')
-        $sourceProjects = [
-            ['id' => 1, 'name' => 'Pharma supplies Q3',  'reference' => 'RFQ-2026-0042'],
-            ['id' => 2, 'name' => 'Laboratory reagents', 'reference' => 'RFQ-2026-0038'],
-        ];
-
-        // TODO: Replace with Preplist::find($id)->items and group their line items per source project.
-        $itemGroups = [
-            [
-                'name'    => "AMOXICILLIN 500, Box of 100's",
-                'total'   => '100 BOXES TOTAL',
-                'sources' => [
-                    ['project' => 'Pharma supplies Q3',  'qty' => '50 Box'],
-                    ['project' => 'Laboratory reagents', 'qty' => '50 Box'],
-                ],
-            ],
-            [
-                'name'    => 'Surgical gloves, box of 50 pairs',
-                'total'   => '40 BOXES TOTAL',
-                'sources' => [
-                    ['project' => 'Pharma supplies Q3', 'qty' => '40 Box'],
-                ],
-            ],
-        ];
+            return [
+                'name' => $preplistItem->item?->name ?? 'Item',
+                'total' => $preplistItem->totalQuantity().' '.($unit !== '' ? $unit : 'unit').' total',
+                'sources' => $preplistItem->sources->map(function ($source) use ($unit) {
+                    return [
+                        'project' => $source->projectItem?->project?->title ?? 'Project removed',
+                        'qty' => $source->qty.' '.$unit,
+                    ];
+                }),
+            ];
+        });
     @endphp
 
     {{-- Top row: heading + edit button --}}
     <div class="flex shrink-0 items-start justify-between gap-4 mb-6">
         <div>
-            <h2 class="text-2xl font-bold text-gray-900">{{ $preplist['name'] }}</h2>
-            <p class="text-sm text-gray-500 mt-1">{{ $preplist['reference_no'] }}</p>
+            <h2 class="text-2xl font-bold text-gray-900">{{ $preplist->name }}</h2>
+            <p class="text-sm text-gray-500 mt-1">{{ $preplist->reference_no }}</p>
         </div>
-        <a href="{{ route('preplist.edit', ['id' => $preplist['id']]) }}"
+        <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
            class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -74,42 +61,54 @@
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
                     <p class="text-[11px] italic text-gray-400">Created by</p>
-                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist['created_by'] }}</p>
+                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist->creator?->name ?? '—' }}</p>
                 </div>
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
                     <p class="text-[11px] italic text-gray-400">Projects</p>
-                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist['projects_count'] }}</p>
+                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $sourceProjects->count() }}</p>
                 </div>
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
                     <p class="text-[11px] italic text-gray-400">Date Created</p>
-                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist['date_created'] }}</p>
+                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist->created_at?->format('M d, Y') ?? '—' }}</p>
                 </div>
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
                     <p class="text-[11px] italic text-gray-400">Total Items</p>
-                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist['total_items'] }}</p>
+                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist->items->count() }}</p>
                 </div>
             </div>
 
             {{-- Notes --}}
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div class="p-4">
+                <form method="POST" action="{{ route('preplist.notes', ['preplist' => $preplist->id]) }}" class="p-4">
+                    @csrf
+                    @method('PATCH')
                     <label for="notes" class="block text-xs font-medium text-gray-500 mb-1">Notes:</label>
-                    <textarea id="notes" rows="4" placeholder="Add notes here..."
-                              class="w-full px-3 py-2 rounded-md border border-gray-200 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 resize-none"></textarea>
-                </div>
+                    <textarea id="notes" name="notes" rows="4" placeholder="Add notes here..."
+                              class="w-full px-3 py-2 rounded-md border border-gray-200 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 resize-none">{{ old('notes', $preplist->notes) }}</textarea>
+                    <div class="mt-2 flex justify-end">
+                        <button type="submit"
+                                class="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                            Save notes
+                        </button>
+                    </div>
+                </form>
             </div>
 
             {{-- Source projects --}}
             <div>
                 <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Source Projects</p>
                 <div class="space-y-3">
-                    @foreach($sourceProjects as $project)
-                        <a href="{{ route('projects.show', ['id' => $project['id']]) }}"
+                    @forelse($sourceProjects as $project)
+                        <a href="{{ route('projects.show', ['project' => $project->id]) }}"
                            class="block bg-white rounded-lg border border-gray-200 shadow-sm p-4 hover:border-[#2a7a94] hover:shadow-md transition-all cursor-pointer">
-                            <p class="text-sm font-bold text-gray-900">{{ $project['name'] }}</p>
-                            <p class="text-xs text-gray-400 mt-1">{{ $project['reference'] }}</p>
+                            <p class="text-sm font-bold text-gray-900">{{ $project->title }}</p>
+                            <p class="text-xs text-gray-400 mt-1">{{ $project->reference_no }}</p>
                         </a>
-                    @endforeach
+                    @empty
+                        <p class="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                            No source projects recorded.
+                        </p>
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -118,7 +117,7 @@
         <div class="flex min-h-0 flex-col">
             <p class="shrink-0 mb-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Items</p>
             <div class="min-h-[220px] flex-1 space-y-4 overflow-y-auto pr-1">
-                @foreach($itemGroups as $group)
+                @forelse($itemGroups as $group)
                     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                         {{-- Item header --}}
                         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -137,7 +136,11 @@
                             @endforeach
                         </div>
                     </div>
-                @endforeach
+                @empty
+                    <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+                        <p class="text-sm text-gray-500">No items recorded for this prep list.</p>
+                    </div>
+                @endforelse
             </div>
         </div>
 
@@ -145,19 +148,26 @@
 
     {{-- Bottom action buttons --}}
     <div class="flex shrink-0 items-center justify-end gap-3 mt-6">
-        <button class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-            Delete prep list
-        </button>
+        <form method="POST" action="{{ route('preplist.destroy', ['preplist' => $preplist->id]) }}"
+              onsubmit="return confirm('Delete this prep list?');">
+            @csrf
+            @method('DELETE')
+            <button type="submit"
+                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Delete prep list
+            </button>
+        </form>
         <button class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
             Export to Excel
         </button>
-        <a href="{{ route('quotation.generate') }}" class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
+        <a href="{{ route('preplist.generate-rfq', ['preplist' => $preplist->id]) }}"
+           class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
             </svg>
