@@ -123,22 +123,14 @@
         @endforelse
     </div>
 
-<<<<<<< Updated upstream
     {{-- RFQ files to generate — one row per supplier with at least one checked item.
-=======
-    {{--RFQ files to generate — one row per supplier with at least one checked item.
->>>>>>> Stashed changes
          The checkbox toggles file generation; the supplier name opens the preview modal.
          NOTE: the checkbox and the supplier name are separate sibling elements with their
          own click handlers (never wrapped in a single <label>), so neither triggers the
          other's behavior. --}}
     <div class="shrink-0 rounded-lg border border-gray-200 bg-white p-5 mt-6 shadow-sm">
         <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">RFQ files to generate</p>
-<<<<<<< Updated upstream
         <div class="divide-y divide-gray-100 rounded-lg border border-gray-200 overflow-hidden bg-white">
-=======
-        <div class="flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
->>>>>>> Stashed changes
             @foreach($suppliers as $supplier)
                 <div class="gen-row flex items-center gap-2 rounded-lg border border-gray-200 bg-white pl-3 pr-2 py-2 shadow-sm transition-colors hover:bg-gray-100 {{ isset($initialGenSuppliers[$supplier['name']]) ? '' : 'hidden' }}"
                      data-supplier="{{ $supplier['name'] }}">
