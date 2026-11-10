@@ -46,7 +46,8 @@
         }
     @endphp
 
-    <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
+    <div class="flex h-full min-h-0 flex-col">
+    <h2 class="shrink-0 text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
 
     @if ($errors->any())
         <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -66,8 +67,8 @@
         {{-- Content holder: project details stay static; only the items table scrolls --}}
         <div class="flex flex-1 min-h-0 flex-col space-y-6 overflow-hidden rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
         {{-- Project fields --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
-            <div class="space-y-5">
+        <div class="grid shrink-0 grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+            <div class="space-y-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-800 mb-1.5">Title</label>
                     <input type="text" name="title" value="{{ $title }}"
@@ -107,7 +108,7 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-800 mb-1.5">Date awarded</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Date awarded</label>
                         <div class="relative">
                             <input type="date" name="date_awarded" value="{{ $dateAwarded }}"
                                    class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
@@ -119,7 +120,7 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-800 mb-1.5">Mode of procurement</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Mode of procurement</label>
                         <select name="mode_of_procurement"
                                 class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
                             <option value="" {{ $modeOfProcurement === '' ? 'selected' : '' }}>Select...</option>
@@ -132,7 +133,7 @@
                 </div>
             </div>
 
-            <div class="space-y-5">
+            <div class="space-y-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-800 mb-1.5">Entity</label>
                     <select name="procuring_entity_id"
@@ -164,11 +165,11 @@
         </div>
 
         {{-- Items --}}
-        <div>
-            <label class="block text-sm font-medium text-gray-800 mb-2">Items</label>
+        <div class="flex min-h-0 flex-1 flex-col">
+            <label class="shrink-0 block text-sm font-medium text-gray-800 mb-2">Items</label>
 
-                <div id="itemRows" class="border border-gray-300 rounded-lg overflow-hidden">
-                <div class="grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
+                <div id="itemRows" class="flex-1 min-h-0 overflow-y-auto border border-gray-300 rounded-lg">
+                <div class="sticky top-0 z-10 grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
                     <div class="text-xs font-semibold text-gray-700">Description</div>
                     <div class="text-xs font-semibold text-gray-700">Category</div>
                     <div class="text-xs font-semibold text-gray-700">Unit</div>
@@ -213,7 +214,7 @@
                 @endforeach
             </div>
 
-            <div class="flex items-center gap-3 mt-3">
+            <div class="flex shrink-0 items-center gap-3 mt-3">
                 <button type="button" id="addItemBtn"
                         class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,7 +266,7 @@
         </div>
 
         {{-- Form actions --}}
-        <div class="flex items-center justify-end gap-3 pt-2">
+        <div class="flex shrink-0 items-center justify-end gap-3 pt-2">
             <a href="{{ route('projects') }}"
                class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,6 +283,7 @@
             </button>
         </div>
     </form>
+    </div>
 
 @endsection
 
