@@ -7,6 +7,16 @@
 @endsection
 
 @section('content')
+    <style>
+        /* Selected project items keep the brand highlight. The hover rule in
+           Tailwind would otherwise turn a selected row gray, so the selected
+           state explicitly overrides it. */
+        .item-row.is-selected { background-color: rgba(42, 122, 148, 0.08); }
+        .item-row.is-selected:hover { background-color: rgba(42, 122, 148, 0.14); }
+        .item-row.is-selected .item-name,
+        .item-row.is-selected .item-quantity { color: #0e5266; }
+        .item-row.is-selected .item-name { font-weight: 500; }
+    </style>
 
     @php
         // This single view serves both Edit and Compile modes.
@@ -99,7 +109,7 @@
                     <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                         <label class="flex items-center gap-3 cursor-pointer select-none">
                             <input type="checkbox"
-                                   class="project-check w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
+                                   class="project-check w-4 h-4 rounded border-gray-300 accent-[#2a7a94] text-[#2a7a94] focus:ring-teal-300"
                                    title="Select all items in this project"
                                    {{ $allProjectItemsSelected ? 'checked' : '' }}>
                             <span class="font-bold text-gray-900">{{ $project->title }}</span>
@@ -123,15 +133,15 @@
                                 );
                             @endphp
 
-                            <div class="item-row flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-gray-50">
+                            <div class="item-row flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-gray-50 {{ $isSelected ? 'is-selected' : '' }}">
                                 <div class="flex items-start gap-3">
                                     <input type="checkbox"
                                            name="sources[]"
                                            value="{{ $projectItem->id }}"
-                                           class="item-check mt-0.5 w-4 h-4 rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
+                                           class="item-check mt-0.5 w-4 h-4 rounded border-gray-300 accent-[#2a7a94] text-[#2a7a94] focus:ring-teal-300"
                                            {{ $isSelected ? 'checked' : '' }}>
                                     <div class="min-w-0">
-                                        <span class="text-sm text-gray-700">{{ $projectItem->item?->name ?? 'Item' }}</span>
+                                        <span class="item-name text-sm text-gray-700">{{ $projectItem->item?->name ?? 'Item' }}</span>
 
                                         {{-- Shelf life required at delivery (per item) --}}
                                         <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -149,7 +159,7 @@
                                 </div>
 
                                 {{-- Read-only quantity --}}
-                                <span class="text-sm font-medium text-gray-900 whitespace-nowrap">
+                                <span class="item-quantity text-sm font-medium text-gray-900 whitespace-nowrap">
                                     {{ $projectItem->quantity }} {{ $projectItem->item?->unit ?? '' }}
                                 </span>
                             </div>
@@ -199,6 +209,15 @@
         (function () {
             const summaryEl = document.getElementById('summaryText');
 
+            // Keeps the row highlight in step with its checkbox. Selected rows
+            // get the brand tint; unselected rows fall back to the hover style.
+            function applyItemState(itemCheck) {
+                const row = itemCheck.closest('.item-row');
+                if (row) {
+                    row.classList.toggle('is-selected', itemCheck.checked);
+                }
+            }
+
             // Keeps a project's header checkbox in step with its items:
             // all checked → checked, none → unchecked, some → indeterminate (dash).
             function syncProjectCheck(card) {
@@ -228,6 +247,7 @@
                     const card = projectCheck.closest('.project-card');
                     card.querySelectorAll('.item-check').forEach(function (itemCheck) {
                         itemCheck.checked = projectCheck.checked;
+                        applyItemState(itemCheck);
                     });
                     syncProjectCheck(card);
                     syncSummary();
@@ -237,12 +257,14 @@
             // Item checkbox updates its header, so the two can never disagree.
             document.querySelectorAll('.item-check').forEach(function (itemCheck) {
                 itemCheck.addEventListener('change', function () {
+                    applyItemState(itemCheck);
                     syncProjectCheck(itemCheck.closest('.project-card'));
                     syncSummary();
                 });
             });
 
             // Correct any mismatch on first load.
+            document.querySelectorAll('.item-check').forEach(applyItemState);
             document.querySelectorAll('.project-card').forEach(syncProjectCheck);
             syncSummary();
         })();

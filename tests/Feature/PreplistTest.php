@@ -263,6 +263,7 @@ class PreplistTest extends TestCase
             ->assertSee('value="'.$preplist->name.'"', false)
             ->assertSee('value="'.$projectItem->id.'"', false)
             ->assertSee('value="9"', false)
+            ->assertSee('is-selected', false)
             ->assertSee($preplist->reference_no);
     }
 
