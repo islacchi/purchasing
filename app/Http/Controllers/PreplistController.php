@@ -8,8 +8,12 @@ use App\Models\PreplistItem;
 use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Models\Supplier;
+use App\Support\RfqQuotationWorkbook;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use ZipArchive;
 
 class PreplistController extends Controller
 {
@@ -190,6 +194,105 @@ class PreplistController extends Controller
     }
 
     /**
+     * Build and download the supplier quotation workbooks for the selected
+     * prep list items.
+     *
+     * The request carries the supplier names to generate for and, per supplier,
+     * the prep list item ids that were checked. Quantities are deliberately
+     * not included in the generated files; the client-side selection is only
+     * used to decide which rows to emit, while names and shelf-life
+     * requirements are always read from the database.
+     */
+    public function generateRfqExcel(Request $request, Preplist $preplist)
+    {
+        $validated = $request->validate([
+            'files' => ['required', 'array', 'min:1'],
+            'files.*.supplier' => ['required', 'string', 'max:255'],
+            'files.*.items' => ['required', 'array', 'min:1'],
+            'files.*.items.*' => ['integer'],
+        ], [
+            'files.required' => 'Select at least one supplier to generate files.',
+            'files.*.items.required' => 'Select at least one item for each supplier whose files should be generated.',
+            'files.*.items.min' => 'Select at least one item for each supplier whose files should be generated.',
+        ]);
+
+        $preplist->load(['items.item']);
+
+        $itemsById = $preplist->items->keyBy('id');
+        $supplierNames = collect($validated['files'])->pluck('supplier')->unique()->values();
+
+        $suppliers = Supplier::query()
+            ->whereIn('name', $supplierNames)
+            ->get()
+            ->keyBy('name');
+
+        if ($suppliers->count() !== $supplierNames->count()) {
+            throw ValidationException::withMessages([
+                'files' => 'One or more selected suppliers no longer exist.',
+            ]);
+        }
+
+        foreach ($validated['files'] as $file) {
+            $invalidItem = collect($file['items'])
+                ->first(fn ($id) => ! $itemsById->has((int) $id));
+
+            if ($invalidItem !== null) {
+                throw ValidationException::withMessages([
+                    'files' => 'One or more selected items no longer exist on this prep list.',
+                ]);
+            }
+        }
+
+        $workbooks = [];
+
+        foreach ($validated['files'] as $file) {
+            $supplier = $suppliers->get($file['supplier']);
+            $items = collect($file['items'])
+                ->map(fn ($id) => $itemsById->get((int) $id))
+                ->filter()
+                ->values();
+
+            $workbooks[] = [
+                'filename' => $this->quotationFilename($preplist, $supplier),
+                'content' => RfqQuotationWorkbook::build($preplist, $supplier, $items),
+            ];
+        }
+
+        if (count($workbooks) === 1) {
+            return response($workbooks[0]['content'], 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="'.$workbooks[0]['filename'].'"',
+            ]);
+        }
+
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'rfq_zip_').'.zip';
+
+        $zip = new ZipArchive;
+
+        if ($zip->open($temporaryPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException('Unable to create the RFQ ZIP archive.');
+        }
+
+        foreach ($workbooks as $workbook) {
+            $zip->addFromString($workbook['filename'], $workbook['content']);
+        }
+
+        $zip->close();
+
+        $contents = file_get_contents($temporaryPath);
+        unlink($temporaryPath);
+
+        if ($contents === false) {
+            throw new \RuntimeException('Unable to read the RFQ ZIP archive.');
+        }
+
+        return response($contents, 200, [
+            'Content-Type' => 'application/zip',
+            'Content-Disposition' => 'attachment; filename="'.$this->quotationFilename($preplist, null, 'zip').'"',
+        ]);
+    }
+
+    /**
      * Available projects that have item rows to compile.
      */
     private function projectsWithItems()
@@ -258,6 +361,20 @@ class PreplistController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Build the download filename for a quotation workbook or ZIP archive.
+     */
+    private function quotationFilename(Preplist $preplist, ?Supplier $supplier, string $extension = 'xlsx'): string
+    {
+        $base = 'RFQ-'.$preplist->reference_no;
+
+        if ($supplier !== null) {
+            $base .= '-'.Str::slug($supplier->name);
+        }
+
+        return $base.'.'.$extension;
     }
 
     /**

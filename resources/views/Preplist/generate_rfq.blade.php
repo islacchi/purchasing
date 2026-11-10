@@ -196,16 +196,21 @@
         </button>
     </div>
     </div><!-- /flex column -->
+    {{-- Hidden token for the "Generate File" fetch request. --}}
+    <input type="hidden" id="generateRfqToken" value="{{ csrf_token() }}">
     <script>
         // ------------------------------------------------------------------
-        // Frontend-only logic: chip toggling, the dynamic "Quotation files to
-        // generate" list, the supplier preview modal, and a stub for the actual
-        // PDF + Excel generation.
-        // @TODO: once models + controller exist, persist the per-item supplier
-        // choices and wire the generation below to real endpoints.
+        // Chip toggling, the dynamic "Quotation files to generate" list, the
+        // supplier preview modal, and the Excel export endpoint. The export
+        // posts the checked supplier / item selections to the server, which
+        // re-reads every item from the prep list and streams back one .xlsx
+        // per supplier (or a ZIP archive containing one workbook per supplier).
         // ------------------------------------------------------------------
         (function () {
             'use strict';
+
+            const GENERATE_URL = @json(route('preplist.generate-rfq.excel', ['preplist' => $prepList->id]));
+            const PREP_LIST_REFERENCE = @json($prepList->reference_no);
 
             // Item metadata lookup, keyed by each per-item chip's data-item-key.
             const ITEM_DATA_BY_KEY = {};
@@ -363,9 +368,9 @@
             });
 
             // ------------------------------------------------------------------
-            // Generate File — ONE click produces BOTH a PDF and an Excel file for
-            // every supplier checked in "Quotation files to generate". There is
-            // no separate PDF button and no separate Excel button.
+            // Generate File — produces an Excel workbook for every supplier
+            // checked in "Quotation files to generate". Each workbook contains
+            // ONLY that supplier's checked items, read back from the database.
             //
             // Quantities are deliberately NOT included: suppliers only receive
             // the item list and quote a unit price. Our requested quantities
@@ -375,33 +380,95 @@
             // condition (">= X months remaining at delivery"), because
             // suppliers must quote against the real requirement.
             //
-            // @TODO: replace this stub with the real generation logic. It must
-            // emit ONE pair of files (PDF + Excel) PER checked supplier, each
-            // containing ONLY that supplier's checked items.
+            // One supplier selected → a single .xlsx download. Multiple
+            // suppliers → a ZIP archive containing one .xlsx per supplier.
             // ------------------------------------------------------------------
-            document.getElementById('generateFileBtn').addEventListener('click', function () {
+            const generateFileBtn = document.getElementById('generateFileBtn');
+            const generateFileBtnLabel = generateFileBtn.innerHTML;
+            const csrfToken = document.getElementById('generateRfqToken').value;
+
+            function filenameFromDisposition(header, fallback) {
+                if (!header) return fallback;
+                const match = header.match(/filename="?([^";]+)"?/i);
+                return match ? match[1] : fallback;
+            }
+
+            generateFileBtn.addEventListener('click', function () {
                 const payload = [];
 
                 document.querySelectorAll('.gen-row:not(.hidden) .gen-check:checked').forEach(function (cb) {
                     const row = cb.closest('.gen-row');
                     const supplier = row.dataset.supplier;
-                    const items = [];
+                    const itemIds = [];
 
                     document.querySelectorAll('.item-supplier-check[data-supplier="' + CSS.escape(supplier) + '"]:checked').forEach(function (itemCb) {
-                        const item = ITEM_DATA_BY_KEY[itemCb.dataset.itemKey];
-                        if (item) {
-                            items.push({
-                                name: item.name,
-                                min_remaining_months: item.shelf_life || 0,
-                            });
+                        const id = Number.parseInt(itemCb.dataset.itemKey, 10);
+                        if (!Number.isNaN(id)) {
+                            itemIds.push(id);
                         }
                     });
 
-                    payload.push({ supplier: supplier, items: items });
+                    payload.push({ supplier: supplier, items: itemIds });
                 });
 
-                console.log('Generate File clicked — checked suppliers:', payload);
-                // @TODO: PDF + Excel generation goes here (one file pair per checked supplier).
+                if (payload.length === 0) {
+                    window.alert('Tick at least one supplier in "Quotation files to generate" first.');
+                    return;
+                }
+
+                generateFileBtn.disabled = true;
+                generateFileBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Generating…';
+
+                fetch(GENERATE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/octet-stream',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ files: payload }),
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            return response.text().then(function (body) {
+                                let message = 'Unable to generate the quotation files.';
+                                try {
+                                    const data = JSON.parse(body);
+                                    if (data && data.message) {
+                                        message = data.message;
+                                    }
+                                } catch (ignored) {
+                                    // Not a JSON error body — keep the generic message.
+                                }
+                                throw new Error(message);
+                            });
+                        }
+
+                        const fallback = 'RFQ-' + PREP_LIST_REFERENCE + (payload.length > 1 ? '.zip' : '.xlsx');
+                        const filename = filenameFromDisposition(response.headers.get('Content-Disposition'), fallback);
+
+                        return response.blob().then(function (blob) {
+                            return { blob: blob, filename: filename };
+                        });
+                    })
+                    .then(function (result) {
+                        const url = URL.createObjectURL(result.blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = result.filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        URL.revokeObjectURL(url);
+                    })
+                    .catch(function (error) {
+                        window.alert(error && error.message ? error.message : 'Unable to generate the quotation files.');
+                    })
+                    .finally(function () {
+                        generateFileBtn.disabled = false;
+                        generateFileBtn.innerHTML = generateFileBtnLabel;
+                    });
             });
 
             // Initial render.

@@ -468,6 +468,230 @@ class PreplistTest extends TestCase
             ->assertSee('No items to request');
     }
 
+    private function assertValidXlsx(string $binary): void
+    {
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'rfq_validate_test_');
+        file_put_contents($temporaryPath, $binary);
+
+        $zip = new \ZipArchive;
+        $this->assertSame(true, $zip->open($temporaryPath));
+
+        $parts = [
+            '[Content_Types].xml',
+            '_rels/.rels',
+            'xl/workbook.xml',
+            'xl/_rels/workbook.xml.rels',
+            'xl/styles.xml',
+            'xl/worksheets/sheet1.xml',
+        ];
+
+        foreach ($parts as $part) {
+            $xml = $zip->getFromName($part);
+            $this->assertNotFalse($xml, 'Missing XLSX part: '.$part);
+            $this->assertNotFalse(simplexml_load_string($xml), 'Malformed XML in XLSX part: '.$part);
+        }
+
+        $zip->close();
+        unlink($temporaryPath);
+    }
+
+    private function sheetXmlFromXlsx(string $binary): string
+    {
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'rfq_xlsx_test_');
+        file_put_contents($temporaryPath, $binary);
+
+        $zip = new \ZipArchive;
+        $this->assertSame(true, $zip->open($temporaryPath));
+
+        $xml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        unlink($temporaryPath);
+
+        $this->assertNotFalse($xml);
+
+        return $xml;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function unzipWorkbooks(string $binary): array
+    {
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'rfq_zip_test_').'.zip';
+        file_put_contents($temporaryPath, $binary);
+
+        $zip = new \ZipArchive;
+        $this->assertSame(true, $zip->open($temporaryPath));
+
+        $files = [];
+
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $name = $zip->getNameIndex($index);
+            $files[$name] = $zip->getFromIndex($index);
+        }
+
+        $zip->close();
+        unlink($temporaryPath);
+
+        return $files;
+    }
+
+    public function test_generate_rfq_excel_returns_single_xlsx_for_one_supplier(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'AlphaItemAlpha']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 321]);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $response = $this->actingAs($user)->postJson(
+            route('preplist.generate-rfq.excel', ['preplist' => $preplist->id]),
+            [
+                'files' => [
+                    ['supplier' => $supplier->name, 'items' => [$preplistItem->id]],
+                ],
+            ],
+        );
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $disposition = $response->headers->get('Content-Disposition');
+        $this->assertStringContainsString('RFQ-'.$preplist->reference_no.'-triple-tact.xlsx', $disposition);
+
+        $this->assertValidXlsx($response->getContent());
+
+        $xml = $this->sheetXmlFromXlsx($response->getContent());
+
+        $this->assertStringContainsString('REQUEST FOR QUOTATION', $xml);
+        $this->assertStringContainsString($supplier->name, $xml);
+        $this->assertStringContainsString('AlphaItemAlpha', $xml);
+        $this->assertStringContainsString('≥ 9 months', $xml);
+        $this->assertStringNotContainsString('321', $xml);
+    }
+
+    public function test_generate_rfq_excel_zips_one_workbook_per_supplier(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+
+        $firstItem = $this->item(['name' => 'AlphaItemAlpha']);
+        $secondItem = $this->item(['name' => 'BetaItemBeta', 'category' => 'supplies and equipments']);
+
+        $firstSource = $this->projectItem($project, $firstItem);
+        $secondSource = $this->projectItem($project, $secondItem);
+
+        $firstSupplier = Supplier::create(['name' => 'Triple Tact']);
+        $secondSupplier = Supplier::create(['name' => 'GreenCore Pharmaceuticals']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$firstSource->id, $secondSource->id],
+            'shelf_life' => [$firstSource->id => 6, $secondSource->id => 12],
+        ]);
+
+        $items = PreplistItem::query()->orderBy('item_id')->get()->keyBy('item_id');
+        $firstPreplistItem = $items[$firstItem->id];
+        $secondPreplistItem = $items[$secondItem->id];
+
+        $response = $this->actingAs($user)->postJson(
+            route('preplist.generate-rfq.excel', ['preplist' => $preplist->id]),
+            [
+                'files' => [
+                    ['supplier' => $firstSupplier->name, 'items' => [$firstPreplistItem->id]],
+                    ['supplier' => $secondSupplier->name, 'items' => [$secondPreplistItem->id]],
+                ],
+            ],
+        );
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/zip');
+        $this->assertStringContainsString('.zip', $response->headers->get('Content-Disposition'));
+
+        $workbooks = $this->unzipWorkbooks($response->getContent());
+
+        $this->assertCount(2, $workbooks);
+        $this->assertArrayHasKey('RFQ-'.$preplist->reference_no.'-triple-tact.xlsx', $workbooks);
+        $this->assertArrayHasKey('RFQ-'.$preplist->reference_no.'-greencore-pharmaceuticals.xlsx', $workbooks);
+
+        $this->assertValidXlsx($workbooks['RFQ-'.$preplist->reference_no.'-triple-tact.xlsx']);
+        $this->assertValidXlsx($workbooks['RFQ-'.$preplist->reference_no.'-greencore-pharmaceuticals.xlsx']);
+
+        $firstSheet = $this->sheetXmlFromXlsx($workbooks['RFQ-'.$preplist->reference_no.'-triple-tact.xlsx']);
+        $secondSheet = $this->sheetXmlFromXlsx($workbooks['RFQ-'.$preplist->reference_no.'-greencore-pharmaceuticals.xlsx']);
+
+        $this->assertStringContainsString('AlphaItemAlpha', $firstSheet);
+        $this->assertStringNotContainsString('BetaItemBeta', $firstSheet);
+
+        $this->assertStringContainsString('BetaItemBeta', $secondSheet);
+        $this->assertStringNotContainsString('AlphaItemAlpha', $secondSheet);
+    }
+
+    public function test_generate_rfq_excel_rejects_items_from_another_prep_list(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $this->compile($user, [
+            'name' => 'First prep list',
+            'sources' => [$projectItem->id],
+        ]);
+        $secondPreplist = $this->compile($user, [
+            'name' => 'Second prep list',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $secondItem = PreplistItem::query()
+            ->where('preplist_id', $secondPreplist->id)
+            ->firstOrFail();
+
+        $firstPreplist = Preplist::query()
+            ->where('id', '!=', $secondPreplist->id)
+            ->firstOrFail();
+
+        $this->actingAs($user)->postJson(
+            route('preplist.generate-rfq.excel', ['preplist' => $firstPreplist->id]),
+            [
+                'files' => [
+                    ['supplier' => $supplier->name, 'items' => [$secondItem->id]],
+                ],
+            ],
+        )->assertStatus(422);
+    }
+
+    public function test_generate_rfq_excel_requires_a_selection(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $this->actingAs($user)->postJson(
+            route('preplist.generate-rfq.excel', ['preplist' => $preplist->id]),
+            ['files' => []],
+        )->assertStatus(422);
+    }
+
     public function test_unknown_preplist_returns_not_found(): void
     {
         $user = $this->admin();

@@ -76,6 +76,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
     Route::get('/preplist/{preplist}/generate-rfq', [PreplistController::class, 'generateRfq'])
         ->whereNumber('preplist')
         ->name('preplist.generate-rfq');
+    Route::post('/preplist/{preplist}/generate-rfq', [PreplistController::class, 'generateRfqExcel'])
+        ->whereNumber('preplist')
+        ->name('preplist.generate-rfq.excel');
 
     Route::get('/quotation', [PageController::class, 'show'])->defaults('page', 'Quotation.index')->name('quotation');
     // Entity profile page — one view rendered two ways based on {type}.
