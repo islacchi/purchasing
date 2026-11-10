@@ -108,7 +108,8 @@ class PreplistTest extends TestCase
             ->assertSee($preplist->name)
             ->assertSee(route('preplist.show', ['preplist' => $preplist->id]), false)
             ->assertSee($user->name)
-            ->assertSee($project->title);
+            ->assertSee($project->title)
+            ->assertSee($preplist->created_at->format('M d, Y g:i A'));
     }
 
     public function test_preplist_index_can_be_searched_by_name_or_reference(): void
@@ -339,7 +340,8 @@ class PreplistTest extends TestCase
             ->assertSee($preplist->reference_no)
             ->assertSee($item->name)
             ->assertSee($project->title)
-            ->assertSee('50 Box total');
+            ->assertSee('50 Box total')
+            ->assertSee($preplist->created_at->format('M d, Y g:i A'));
     }
 
     public function test_preplist_notes_can_be_updated_from_the_detail_page(): void
@@ -474,7 +476,7 @@ class PreplistTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_preplist_models_are_not_using_phantom_timestamps(): void
+    public function test_preplist_records_created_timestamp(): void
     {
         $user = $this->admin();
         $entity = $this->entity();
@@ -485,13 +487,18 @@ class PreplistTest extends TestCase
         $preplist = $this->compile($user, [
             'name' => 'July Region VII batch',
             'sources' => [$projectItem->id],
+        ])->fresh();
+
+        $this->assertTrue($preplist->usesTimestamps());
+        $this->assertNotNull($preplist->created_at);
+        $this->assertNotNull($preplist->updated_at);
+
+        $this->assertDatabaseHas('preplists', [
+            'id' => $preplist->id,
+            'created_at' => $preplist->created_at->toDateTimeString(),
         ]);
 
-        $preplistItem = PreplistItem::firstOrFail();
-        $source = PreplistItemSource::firstOrFail();
-
-        $this->assertFalse($preplist->usesTimestamps());
-        $this->assertFalse($preplistItem->usesTimestamps());
-        $this->assertFalse($source->usesTimestamps());
+        $this->assertFalse(PreplistItem::firstOrFail()->usesTimestamps());
+        $this->assertFalse(PreplistItemSource::firstOrFail()->usesTimestamps());
     }
 }

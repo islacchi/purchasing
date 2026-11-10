@@ -64,7 +64,7 @@
                                 {{ $preplist->creator?->name ?? '—' }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ $preplist->created_at?->format('M d, Y') ?? '—' }}
+                                {{ $preplist->created_at?->format('M d, Y g:i A') ?? '—' }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-700">
                                 <div class="relative group inline-block">

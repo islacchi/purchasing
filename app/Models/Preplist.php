@@ -13,13 +13,6 @@ class Preplist extends Model
     use SoftDeletes;
 
     /**
-     * The model does not use created_at / updated_at columns.
-     *
-     * @var bool
-     */
-    public $timestamps = false;
-
-    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

@@ -69,7 +69,7 @@
                 </div>
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
                     <p class="text-[11px] italic text-gray-400">Date Created</p>
-                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist->created_at?->format('M d, Y') ?? '—' }}</p>
+                    <p class="text-sm font-bold text-gray-900 mt-1">{{ $preplist->created_at?->format('M d, Y g:i A') ?? '—' }}</p>
                 </div>
                 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
                     <p class="text-[11px] italic text-gray-400">Total Items</p>
