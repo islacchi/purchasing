@@ -7,6 +7,7 @@
 @endsection
 
 @section('content')
+    <div class="flex h-full min-h-0 flex-col">
 
     {{-- Dummy data for frontend development.
          @TODO: When the database is integrated, replace the dummy $project / $items
@@ -64,7 +65,7 @@
     @endphp
 
     {{-- Project Header --}}
-    <div class="flex items-start justify-between mb-6">
+    <div class="flex shrink-0 items-start justify-between mb-6">
         <div>
             <h2 class="text-xl font-semibold text-gray-900">{{ $project['name'] }}</h2>
             <p class="text-sm text-gray-500 mt-1">{{ $project['progress'] }}</p>
@@ -79,10 +80,10 @@
     </div>
 
     {{-- Main Content --}}
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {{-- Project Details (Left Column) --}}
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg border border-gray-200">
+    <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-4">
+        {{-- Project Details (Left Column) — static --}}
+        <div class="min-h-0 lg:col-span-1">
+            <div class="bg-white rounded-lg border border-gray-200 h-full">
                 <div>
                     <div class="p-4 border-b border-gray-200">
                         <label class="block text-xs font-medium text-gray-500 mb-1">Entity</label>
@@ -116,12 +117,12 @@
             </div>
         </div>
 
-        {{-- Items Table (Right Column) --}}
-        <div class="lg:col-span-3">
-            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div class="overflow-x-auto">
+        {{-- Items Table (Right Column) — scrolls vertically --}}
+        <div class="min-h-0 lg:col-span-3">
+            <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
+                <div class="min-h-0 flex-1 overflow-y-auto overflow-x-auto">
                     <table class="w-full">
-                        <thead class="bg-gray-100 border-b border-gray-300">
+                        <thead class="bg-gray-100 border-b border-gray-300 sticky top-0 z-10">
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Item description</th>
                                 <th class="px-4 py-2 text-right text-xs font-semibold text-gray-700">Quantity</th>
@@ -170,7 +171,7 @@
     {{-- @TODO: wire the Delete and Edit actions below to their controller routes
            and methods once the Projects controller methods exist. --}}
 
-    <div class="flex items-center justify-end gap-3 mt-6">
+    <div class="mt-4 flex shrink-0 items-center justify-end gap-3">
         <a href="{{ route('projects') }}"
            class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,5 +187,6 @@
             Edit project
         </a>
     </div>
+    </div><!-- /flex column -->
 
 @endsection

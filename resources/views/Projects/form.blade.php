@@ -79,13 +79,16 @@
         }
     @endphp
 
-    <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
+    <div class="flex h-full min-h-0 flex-col">
+    <h2 class="shrink-0 text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
 
     {{-- @TODO: wire this up to a real store/update route + controller method once --}}
     {{-- database integration is in place (currently the form posts to '#'). --}}
-    <form action="#" method="POST" class="space-y-8">
+    <form action="#" method="POST" class="flex flex-1 min-h-0 flex-col">
         @csrf
 <!-- Comment -->
+        {{-- Content holder: project details stay static; only the items table scrolls --}}
+        <div class="flex flex-1 min-h-0 flex-col space-y-6 overflow-hidden rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
         {{-- Project fields --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
             <div class="space-y-5">
@@ -163,11 +166,11 @@
         </div>
 
         {{-- Items --}}
-        <div>
-            <label class="block text-sm font-medium text-gray-800 mb-2">Items</label>
+        <div class="flex flex-1 min-h-0 flex-col">
+            <label class="shrink-0 block text-sm font-medium text-gray-800 mb-2">Items</label>
 
-                <div id="itemRows" class="border border-gray-300 rounded-lg overflow-hidden">
-                <div class="grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
+                <div id="itemRows" class="flex-1 min-h-0 overflow-y-auto border border-gray-300 rounded-lg">
+                <div class="sticky top-0 z-10 grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
                     <div class="text-xs font-semibold text-gray-700">Description</div>
                     <div class="text-xs font-semibold text-gray-700">Category</div>
                     <div class="text-xs font-semibold text-gray-700">Unit</div>
@@ -212,7 +215,7 @@
                 @endforeach
             </div>
 
-            <div class="flex items-center gap-3 mt-3">
+            <div class="flex shrink-0 items-center gap-3 mt-3">
                 <button type="button" id="addItemBtn"
                         class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,8 +233,10 @@
             </div>
         </div>
 
-        {{-- Form actions --}}
-        <div class="flex items-center justify-end gap-3 pt-2">
+        </div><!-- /scrollable content holder -->
+
+        {{-- Form actions (pinned at the bottom) --}}
+        <div class="flex shrink-0 items-center justify-end gap-3 pt-4">
             <a href="{{ route('projects') }}"
                class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,6 +253,7 @@
             </button>
         </div>
     </form>
+    </div><!-- /flex column -->
 
 @endsection
 

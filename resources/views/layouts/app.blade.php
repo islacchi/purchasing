@@ -381,5 +381,6 @@
     signoutCancel.addEventListener('click', closeSignoutModal);
     signoutModalOverlay.addEventListener('click', closeSignoutModal);
 </script>
+@stack('scripts')
 </body>
 </html>

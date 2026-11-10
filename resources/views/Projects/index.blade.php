@@ -16,6 +16,8 @@
 @endsection
 
     @section('content')
+    {{-- Flex column: the toolbar stays fixed while the content holder scrolls --}}
+    <div class="flex h-full min-h-0 flex-col">
         {{-- Search, view options and actions bar --}}
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-4 flex-1 min-w-0">
@@ -29,27 +31,55 @@
                        class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
             </div>
 
-            {{-- View options: Content (default), Details, List --}}
-            <div class="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1" role="group" aria-label="View options">
-                <button type="button" class="projects-view-btn flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors bg-[#2a7a94] text-white border-[#2a7a94]" data-view="content" aria-pressed="true" title="Content view">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <rect x="3" y="4" width="18" height="6" rx="1.5" stroke-width="1.8"/>
-                        <rect x="3" y="14" width="18" height="6" rx="1.5" stroke-width="1.8"/>
+            {{-- View options dropdown: Content (default), Details, List --}}
+            <div id="projectsViewWrap" class="relative">
+                <button type="button" id="projectsViewBtn" aria-haspopup="true" aria-expanded="false" aria-controls="projectsViewMenu"
+                        class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <span id="projectsViewIcon" class="flex items-center text-gray-400" aria-hidden="true">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="6" rx="1.5" stroke-width="1.8"/>
+                            <rect x="3" y="14" width="18" height="6" rx="1.5" stroke-width="1.8"/>
+                        </svg>
+                    </span>
+                    <span id="projectsViewLabel">Content</span>
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m19 9-7 7-7-7"/>
                     </svg>
-                    <span class="hidden sm:inline">Content</span>
                 </button>
-                <button type="button" class="projects-view-btn flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors bg-white text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50" data-view="details" aria-pressed="false" title="Details view">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h16M4 18h10"/>
-                    </svg>
-                    <span class="hidden sm:inline">Details</span>
-                </button>
-                <button type="button" class="projects-view-btn flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors bg-white text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50" data-view="list" aria-pressed="false" title="List view">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
-                    </svg>
-                    <span class="hidden sm:inline">List</span>
-                </button>
+                <div id="projectsViewMenu" role="menu" aria-labelledby="projectsViewBtn"
+                     class="hidden absolute left-0 top-full mt-2 z-10 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                    <button type="button" role="menuitemradio" aria-checked="true" data-view="content"
+                            class="projects-view-item flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="6" rx="1.5" stroke-width="1.8"/>
+                            <rect x="3" y="14" width="18" height="6" rx="1.5" stroke-width="1.8"/>
+                        </svg>
+                        <span class="flex-1 text-left">Content</span>
+                        <svg class="projects-view-check h-4 w-4 text-[#2a7a94]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-view="details"
+                            class="projects-view-item flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h16M4 18h10"/>
+                        </svg>
+                        <span class="flex-1 text-left">Details</span>
+                        <svg class="projects-view-check h-4 w-4 text-[#2a7a94] hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+                        </svg>
+                    </button>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-view="list"
+                            class="projects-view-item flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+                        </svg>
+                        <span class="flex-1 text-left">List</span>
+                        <svg class="projects-view-check h-4 w-4 text-[#2a7a94] hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -111,6 +141,9 @@
             'green' => 'bg-green-100 text-green-700',
         ];
     @endphp
+
+    {{-- Scrollable content holder ("square" container). Holds the three view panels and gets its own scrollbar instead of the page's main scroller. --}}
+    <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-gray-200 bg-gray-200/50 p-4 sm:p-5 shadow-sm">
 
     {{-- ============================== CONTENT VIEW (default) ============================== --}}
     <div id="view-content" class="space-y-4">
@@ -290,36 +323,69 @@
             </table>
         </div>
     </div>
+    </div><!-- /scrollable content holder -->
+    </div><!-- /flex column -->
 
     <script>
-        // View options (Content / Details / List) — persist the choice in localStorage.
+        // View options dropdown (Content / Details / List) — persist the choice in localStorage.
         (function () {
             var STORAGE_KEY = 'projectsView';
             var VIEWS = ['content', 'details', 'list'];
-            var buttons = document.querySelectorAll('.projects-view-btn');
+            var LABELS = { content: 'Content', details: 'Details', list: 'List' };
+            var ICONS = {
+                content: '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1.5" stroke-width="1.8"/><rect x="3" y="14" width="18" height="6" rx="1.5" stroke-width="1.8"/></svg>',
+                details: '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h16M4 18h10"/></svg>',
+                list: '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>'
+            };
+
+            var wrap = document.getElementById('projectsViewWrap');
+            var btn = document.getElementById('projectsViewBtn');
+            var menu = document.getElementById('projectsViewMenu');
+            var label = document.getElementById('projectsViewLabel');
+            var icon = document.getElementById('projectsViewIcon');
+            var items = document.querySelectorAll('.projects-view-item');
+
+            function closeMenu() {
+                menu.classList.add('hidden');
+                btn.setAttribute('aria-expanded', 'false');
+            }
 
             function applyView(view) {
                 VIEWS.forEach(function (v) {
                     var panel = document.getElementById('view-' + v);
                     if (panel) panel.classList.toggle('hidden', v !== view);
                 });
-                buttons.forEach(function (btn) {
-                    var active = btn.dataset.view === view;
-                    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-                    btn.classList.toggle('bg-[#2a7a94]', active);
-                    btn.classList.toggle('text-white', active);
-                    btn.classList.toggle('border-[#2a7a94]', active);
-                    btn.classList.toggle('bg-white', !active);
-                    btn.classList.toggle('text-gray-500', !active);
-                    btn.classList.toggle('border-transparent', !active);
+                items.forEach(function (item) {
+                    var active = item.dataset.view === view;
+                    item.setAttribute('aria-checked', active ? 'true' : 'false');
+                    var check = item.querySelector('.projects-view-check');
+                    if (check) check.classList.toggle('hidden', !active);
                 });
+                icon.innerHTML = ICONS[view];
+                label.textContent = LABELS[view];
             }
 
-            buttons.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    localStorage.setItem(STORAGE_KEY, btn.dataset.view);
-                    applyView(btn.dataset.view);
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isHidden = menu.classList.toggle('hidden');
+                btn.setAttribute('aria-expanded', String(!isHidden));
+            });
+
+            items.forEach(function (item) {
+                item.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    var view = item.dataset.view;
+                    localStorage.setItem(STORAGE_KEY, view);
+                    applyView(view);
+                    closeMenu();
                 });
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!wrap.contains(e.target)) closeMenu();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeMenu();
             });
 
             // Row click navigates to the project detail page unless the click
