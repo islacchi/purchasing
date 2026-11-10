@@ -114,7 +114,7 @@ CREATE TABLE `item_categories` (
   `name` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `item_categories_name_unique` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -133,7 +133,7 @@ CREATE TABLE `items` (
   PRIMARY KEY (`id`),
   KEY `items_category_id_foreign` (`category_id`),
   CONSTRAINT `items_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `item_categories` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -190,7 +190,7 @@ CREATE TABLE `migrations` (
   `migration` varchar(255) NOT NULL,
   `batch` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -207,7 +207,7 @@ CREATE TABLE `number_sequences` (
   `last_number` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `number_sequences_key_year_unique` (`key`,`year`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -242,7 +242,7 @@ CREATE TABLE `preplist_item_sources` (
   KEY `preplist_item_sources_project_item_id_foreign` (`project_item_id`),
   CONSTRAINT `preplist_item_sources_preplist_item_id_foreign` FOREIGN KEY (`preplist_item_id`) REFERENCES `preplist_items` (`id`) ON DELETE CASCADE,
   CONSTRAINT `preplist_item_sources_project_item_id_foreign` FOREIGN KEY (`project_item_id`) REFERENCES `project_items` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -262,7 +262,7 @@ CREATE TABLE `preplist_items` (
   KEY `preplist_items_item_id_foreign` (`item_id`),
   CONSTRAINT `preplist_items_item_id_foreign` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`),
   CONSTRAINT `preplist_items_preplist_id_foreign` FOREIGN KEY (`preplist_id`) REFERENCES `preplists` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -279,11 +279,13 @@ CREATE TABLE `preplists` (
   `reference_no` varchar(255) NOT NULL,
   `notes` text DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `preplists_reference_no_unique` (`reference_no`),
   KEY `preplists_created_by_foreign` (`created_by`),
   CONSTRAINT `preplists_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -326,7 +328,7 @@ CREATE TABLE `project_items` (
   KEY `project_items_item_id_foreign` (`item_id`),
   CONSTRAINT `project_items_item_id_foreign` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`),
   CONSTRAINT `project_items_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -355,7 +357,7 @@ CREATE TABLE `projects` (
   KEY `projects_reference_no_index` (`reference_no`),
   CONSTRAINT `projects_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
   CONSTRAINT `projects_procuring_entity_id_foreign` FOREIGN KEY (`procuring_entity_id`) REFERENCES `procuring_entities` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -605,7 +607,7 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-09 15:25:50
+-- Dump completed on 2026-11-10 11:08:32
 -- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
 --
 -- Host: 127.0.0.1    Database: purchasing_db
@@ -637,6 +639,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `item_categories` WRITE;
 /*!40000 ALTER TABLE `item_categories` DISABLE KEYS */;
+INSERT INTO `item_categories` VALUES (1,'drugs and medicines'),(2,'supplies and equipments');
 /*!40000 ALTER TABLE `item_categories` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -646,6 +649,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `items` WRITE;
 /*!40000 ALTER TABLE `items` DISABLE KEYS */;
+INSERT INTO `items` VALUES (1,1,'Mefenamic Capsule - 500mg','Box',0),(2,2,'test','test',0),(3,1,'test2','Box',0);
 /*!40000 ALTER TABLE `items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -655,7 +659,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `migrations` WRITE;
 /*!40000 ALTER TABLE `migrations` DISABLE KEYS */;
-INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_roles_table',1),(2,'0001_01_01_000000_create_users_table',1),(3,'0001_01_01_000001_create_cache_table',1),(4,'0001_01_01_000002_create_jobs_table',1),(5,'2026_11_09_000001_create_number_sequences_table',1),(6,'2026_11_09_000002_create_procuring_entities_table',1),(7,'2026_11_09_000003_create_item_categories_table',1),(8,'2026_11_09_000004_create_items_table',1),(9,'2026_11_09_000005_create_suppliers_table',1),(10,'2026_11_09_000006_create_projects_table',1),(11,'2026_11_09_000007_create_preplists_table',1),(12,'2026_11_09_000008_create_preplist_items_table',1),(13,'2026_11_09_000009_create_activity_logs_table',1),(14,'2026_11_09_000010_create_project_items_table',1),(15,'2026_11_09_000011_create_preplist_item_sources_table',1),(16,'2026_11_09_000012_create_quotations_table',1),(17,'2026_11_09_000013_create_quotation_items_table',1),(18,'2026_11_09_000014_create_purchase_orders_table',1),(19,'2026_11_09_000015_create_purchase_order_items_table',1),(20,'2026_11_09_000016_create_purchase_order_receipts_table',1),(21,'2026_11_09_000017_create_purchase_order_item_allocations_table',1),(22,'2026_11_09_000018_add_timestamps_to_users_table',2);
+INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_roles_table',1),(2,'0001_01_01_000000_create_users_table',1),(3,'0001_01_01_000001_create_cache_table',1),(4,'0001_01_01_000002_create_jobs_table',1),(5,'2026_11_09_000001_create_number_sequences_table',1),(6,'2026_11_09_000002_create_procuring_entities_table',1),(7,'2026_11_09_000003_create_item_categories_table',1),(8,'2026_11_09_000004_create_items_table',1),(9,'2026_11_09_000005_create_suppliers_table',1),(10,'2026_11_09_000006_create_projects_table',1),(11,'2026_11_09_000007_create_preplists_table',1),(12,'2026_11_09_000008_create_preplist_items_table',1),(13,'2026_11_09_000009_create_activity_logs_table',1),(14,'2026_11_09_000010_create_project_items_table',1),(15,'2026_11_09_000011_create_preplist_item_sources_table',1),(16,'2026_11_09_000012_create_quotations_table',1),(17,'2026_11_09_000013_create_quotation_items_table',1),(18,'2026_11_09_000014_create_purchase_orders_table',1),(19,'2026_11_09_000015_create_purchase_order_items_table',1),(20,'2026_11_09_000016_create_purchase_order_receipts_table',1),(21,'2026_11_09_000017_create_purchase_order_item_allocations_table',1),(22,'2026_11_09_000018_add_timestamps_to_users_table',2),(23,'2026_11_10_000001_add_timestamps_to_preplists_table',3);
 /*!40000 ALTER TABLE `migrations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -665,6 +669,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `number_sequences` WRITE;
 /*!40000 ALTER TABLE `number_sequences` DISABLE KEYS */;
+INSERT INTO `number_sequences` VALUES (1,'preplist',2026,2);
 /*!40000 ALTER TABLE `number_sequences` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -683,6 +688,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `preplist_item_sources` WRITE;
 /*!40000 ALTER TABLE `preplist_item_sources` DISABLE KEYS */;
+INSERT INTO `preplist_item_sources` VALUES (3,3,3,21),(4,4,4,21),(7,7,3,21),(8,8,4,21);
 /*!40000 ALTER TABLE `preplist_item_sources` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -692,6 +698,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `preplist_items` WRITE;
 /*!40000 ALTER TABLE `preplist_items` DISABLE KEYS */;
+INSERT INTO `preplist_items` VALUES (3,1,2,0),(4,1,3,0),(7,2,2,0),(8,2,3,0);
 /*!40000 ALTER TABLE `preplist_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -701,6 +708,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `preplists` WRITE;
 /*!40000 ALTER TABLE `preplists` DISABLE KEYS */;
+INSERT INTO `preplists` VALUES (1,2,'TEST PREP LIST','PL-2026-0001','waragud','2026-11-09 18:45:52',NULL,'2026-11-09 18:45:52'),(2,2,'test prep list','PL-2026-0002','test notes',NULL,'2026-11-09 18:46:10','2026-11-09 18:46:10');
 /*!40000 ALTER TABLE `preplists` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -710,7 +718,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `procuring_entities` WRITE;
 /*!40000 ALTER TABLE `procuring_entities` DISABLE KEYS */;
-INSERT INTO `procuring_entities` VALUES (1,'hmmmm','Government Hospital','asdsdad','asdadas','asdasd','asdasdasd@gmail.com',NULL);
+INSERT INTO `procuring_entities` VALUES (1,'LGU - ANDA','Government Hospital','asdsdad','Joyce Espejo','Call my name and i\'ll be there','asdasdasd@gmail.com',NULL);
 /*!40000 ALTER TABLE `procuring_entities` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -720,6 +728,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `project_items` WRITE;
 /*!40000 ALTER TABLE `project_items` DISABLE KEYS */;
+INSERT INTO `project_items` VALUES (3,2,2,21,21.00,21.00,'pending'),(4,2,3,21,21.00,21.00,'pending');
 /*!40000 ALTER TABLE `project_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -729,6 +738,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `projects` WRITE;
 /*!40000 ALTER TABLE `projects` DISABLE KEYS */;
+INSERT INTO `projects` VALUES (1,1,2,'dum','asdawdasdadwaswd','competitive_bidding',5000.00,'2026-11-19',7,'2026-11-26','hehe','2026-11-09 18:11:42'),(2,1,2,'Drugs for me','test','direct_contracting',50000.00,'2026-12-12',45,'2027-01-26','this is a test data',NULL);
 /*!40000 ALTER TABLE `projects` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -824,4 +834,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-09 15:25:50
+-- Dump completed on 2026-11-10 11:08:33
