@@ -8,12 +8,25 @@
 
 @section('content')
     <style>
-        /* Keep a checked supplier chip readable on hover —
-           the base hover:bg-gray-50 would turn it near-white while
-           the label stays text-white. Use a slightly darker teal
-           instead, which also gives clear hover feedback. */
-        .supplier-token.bg-\[\#2a7a94\]:hover {
+        /* Selected supplier chips use a dedicated state class instead of
+           dynamically added Tailwind utilities. This prevents the base
+           bg-white / text-gray-700 classes from winning based on CSS order. */
+        .supplier-token.is-selected {
+            background-color: #2a7a94;
+            border-color: #2a7a94;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+        .supplier-token.is-selected:hover {
             background-color: #236b80; /* darker teal */
+        }
+        .supplier-token.is-selected .supplier-chip-label {
+            color: #fff;
+        }
+        .supplier-token.is-selected .chip-box {
+            display: none;
+        }
+        .supplier-token.is-selected .chip-check {
+            display: block;
         }
     </style>
 
@@ -202,24 +215,13 @@
 
             // ------------------------------------------------------------------
             // Chip visuals — reflect each hidden checkbox state on its token.
+            // The selected styling lives in the .is-selected CSS rules above,
+            // so it always wins over the chip's base white/gray classes.
             // ------------------------------------------------------------------
             function applyChipState(input) {
                 const token = input.closest('.supplier-token');
-                if (!token) return;
-                const box = token.querySelector('.chip-box');
-                const check = token.querySelector('.chip-check');
-                const label = token.querySelector('.supplier-chip-label');
-
-                if (input.checked) {
-                    token.classList.add('border-[#2a7a94]', 'bg-[#2a7a94]', 'shadow-sm');
-                    box.classList.add('hidden');
-                    check.classList.remove('hidden');
-                    label.classList.add('text-white');
-                } else {
-                    token.classList.remove('border-[#2a7a94]', 'bg-[#2a7a94]', 'shadow-sm');
-                    box.classList.remove('hidden');
-                    check.classList.add('hidden');
-                    label.classList.remove('text-white');
+                if (token) {
+                    token.classList.toggle('is-selected', input.checked);
                 }
             }
 
