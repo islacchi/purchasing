@@ -165,10 +165,10 @@
         </div>
 
         {{-- Items --}}
-        <div class="flex min-h-0 flex-1 flex-col">
+        <div class="relative flex min-h-0 flex-1 flex-col">
             <label class="shrink-0 block text-sm font-medium text-gray-800 mb-2">Items</label>
 
-                <div id="itemRows" class="flex-1 min-h-0 overflow-y-auto border border-gray-300 rounded-lg">
+                <div id="itemRows" class="overflow-y-auto border border-gray-300 rounded-lg">
                 <div class="sticky top-0 z-10 grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
                     <div class="text-xs font-semibold text-gray-700">Description</div>
                     <div class="text-xs font-semibold text-gray-700">Category</div>
@@ -214,7 +214,7 @@
                 @endforeach
             </div>
 
-            <div class="flex shrink-0 items-center gap-3 mt-3">
+            <div class="absolute bottom-0 inset-x-0 z-10 flex items-center gap-3 px-3 py-3">
                 <button type="button" id="addItemBtn"
                         class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,6 +293,10 @@
     // the controller filters untouched rows before validating the items array.
     (function () {
         const rowsContainer = document.getElementById('itemRows');
+        // Seed row HTML captured at load time so a fresh row can be rebuilt
+        // even after every existing row has been deleted.
+        const seedRow = rowsContainer.querySelector('.item-row');
+        const seedRowHTML = seedRow ? seedRow.outerHTML : null;
         const addBtn = document.getElementById('addItemBtn');
         const deleteBtn = document.getElementById('deleteItemBtn');
         const cancelSelectBtn = document.getElementById('cancelSelectBtn');
@@ -312,12 +316,14 @@
         }
 
         function updateDeleteBtn() {
+            const rows = rowsContainer.querySelectorAll('.item-row');
             const n = tickedCheckboxes().length;
             deleteCount.textContent = deleteMode ? ' (' + n + ')' : '';
             deleteBtn.disabled = deleteMode && n === 0;
             deleteBtn.title = ! deleteMode
                 ? 'Select items to delete'
                 : (n > 0 ? 'Delete ' + n + ' selected item' + (n > 1 ? 's' : '') : 'Tick items to delete');
+            deleteBtn.classList.toggle('hidden', rows.length === 0);
         }
 
         function setDeleteMode(on) {
@@ -346,7 +352,8 @@
 
         function syncAddButton() {
             const rows = rowsContainer.querySelectorAll('.item-row');
-            const filled = isRowFilled(rows[rows.length - 1]);
+            const lastRow = rows[rows.length - 1];
+            const filled = rows.length === 0 || isRowFilled(lastRow);
             addBtn.disabled = !filled;
             addBtn.title = filled ? 'Add item' : 'Fill in the last row first';
         }
@@ -363,7 +370,17 @@
         addBtn.addEventListener('click', function () {
             const rows = rowsContainer.querySelectorAll('.item-row');
             const newIndex = rows.length;
-            const template = rows[0].cloneNode(true);
+
+            let template;
+            if (rows.length > 0) {
+                template = rows[0].cloneNode(true);
+            } else if (seedRowHTML) {
+                const temp = document.createElement('div');
+                temp.innerHTML = seedRowHTML;
+                template = temp.firstElementChild;
+            } else {
+                return;
+            }
 
             template.querySelectorAll('input[type="text"], input[type="number"]').forEach(function (input) {
                 input.value = '';
@@ -379,7 +396,27 @@
             rowsContainer.appendChild(template);
             setDeleteMode(deleteMode);
             syncAddButton();
+            updateItemListHeight();
         });
+
+        // Keep the item list height content-driven: only expand when an item
+        // row actually has data; collapse back when nothing is entered yet.
+        function updateItemListHeight() {
+            const box = document.getElementById('itemRows');
+            const rows = box.querySelectorAll('.item-row');
+            let hasContent = false;
+            for (let i = 0; i < rows.length && ! hasContent; i++) {
+                const row = rows[i];
+                const fields = row.querySelectorAll('input, select');
+                for (let j = 0; j < fields.length; j++) {
+                    const field = fields[j];
+                    if (field.classList.contains('item-select')) continue;
+                    if (String(field.value || '').trim() !== '') { hasContent = true; break; }
+                }
+            }
+            box.classList.toggle('flex-1', hasContent);
+            box.classList.toggle('min-h-[420px]', hasContent);
+        }
 
         function openDeleteModal() {
             const n = tickedCheckboxes().length;
@@ -425,10 +462,13 @@
             closeDeleteModal();
             setDeleteMode(false);
             syncAddButton();
+            updateDeleteBtn();
+            updateItemListHeight();
         });
 
         updateDeleteBtn();
         syncAddButton();
+        updateItemListHeight();
     })();
 </script>
 @endpush
