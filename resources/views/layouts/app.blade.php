@@ -11,6 +11,8 @@
     <title>@yield('title', 'Purchasing')</title>
     <script src="https://cdn.tailwindcss.com"></script>
 <style>
+        html, body { overflow: hidden; height: 100%; }
+
         .sidebar-icon { padding-left: 28px; }
         .label {
             max-width: 0;
