@@ -38,7 +38,38 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @forelse ($quotations as $quotation)
+                        {{-- Group the RFQ tracker by prep list so quotations sent to
+                             different suppliers for the same batch stay together. --}}
+                        @forelse ($preplistGroups as $preplistGroup)
+                            {{-- Group header: every quotation sent against this prep list. Clicking it
+                                 opens a dropdown listing the quotations for that prep list. --}}
+                            <tr class="cursor-pointer select-none" data-group-toggle data-group-id="{{ $preplistGroup['preplist_id'] }}">
+                                <td colspan="5" class="bg-gray-50 px-6 py-3">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-bold text-gray-900">{{ $preplistGroup['name'] }}</p>
+                                            <p class="mt-0.5 text-xs text-gray-500">{{ $preplistGroup['ref'] }}</p>
+                                        </div>
+                                        <svg class="preplist-group-chevron h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 18l6-6-6-6"/>
+                                        </svg>
+                                    </div>
+
+                                    {{-- Drop-down of the quotations sent against this prep list. --}}
+                                    <div id="quotationGroupPanel-{{ $preplistGroup['preplist_id'] }}" data-quotation-group-panel class="hidden fixed z-[60] w-72 rounded-lg border border-gray-200 bg-white py-1 shadow-xl">
+                                        @foreach ($preplistGroup['quotations'] as $quotation)
+                                            <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
+                                               class="block px-4 py-2 transition-colors hover:bg-gray-50"
+                                               data-quotation-group-item>
+                                                <p class="text-sm font-medium text-gray-900">{{ $quotation['supplier'] }}</p>
+                                                <p class="text-xs text-gray-500">{{ $quotation['quoted'] }}/{{ $quotation['total'] }} quoted &middot; {{ $quotation['status'] }}</p>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </td>
+                            </tr>
+
+                            @foreach ($preplistGroup['quotations'] as $quotation)
                             @php
                                 $isFullyQuoted = $quotation['total'] > 0 && $quotation['quoted'] >= $quotation['total'];
                                 $isPartiallyQuoted = $quotation['quoted'] > 0 && ! $isFullyQuoted;
@@ -48,7 +79,8 @@
                                     : ($isPartiallyQuoted ? 'text-amber-500' : 'text-gray-400');
                             @endphp
                             <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
-                                data-href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}">
+                                data-href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
+                                data-quotation-group="{{ $quotation['preplist_id'] }}">
                                 <td class="whitespace-nowrap px-6 py-4">
                                     <p class="font-semibold text-gray-900">{{ $quotation['prep_list'] }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">{{ $quotation['ref'] }}</p>
@@ -125,6 +157,7 @@
                                     </div>
                                 </td>
                             </tr>
+                            @endforeach
                         @empty
                             <tr>
                                 <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">
@@ -220,6 +253,79 @@
                         // Raise it so the open menu paints above the rows below it.
                         var cell = toggle.closest('td');
                         if (cell) cell.style.zIndex = '30';
+                    });
+                });
+
+                // Prep-list group dropdown: clicking a prep list's group row opens a
+                // drop-down listing the quotations sent against that prep list.
+                var openQuotationGroupPanel = null;
+
+                function closeQuotationGroupPanel() {
+                    if (openQuotationGroupPanel) {
+                        openQuotationGroupPanel.classList.add('hidden');
+                        openQuotationGroupPanel = null;
+                    }
+                }
+
+                Array.prototype.forEach.call(document.querySelectorAll('[data-group-toggle]'), function (toggle) {
+                    var groupId = toggle.getAttribute('data-group-id');
+                    var panel = document.getElementById('quotationGroupPanel-' + groupId);
+                    if (!panel) return;
+                    var chevron = toggle.querySelector('.preplist-group-chevron');
+
+                    toggle.addEventListener('click', function (event) {
+                        event.stopPropagation();
+
+                        if (!panel.classList.contains('hidden')) {
+                            // Collapse: fade out + slide down before hiding.
+                            panel.style.transition = 'opacity 200ms ease-out, transform 200ms ease-out';
+                            panel.style.opacity = '0';
+                            panel.style.transform = 'translateY(8px)';
+                            setTimeout(function () {
+                                panel.classList.add('hidden');
+                                if (openQuotationGroupPanel === panel) openQuotationGroupPanel = null;
+                            }, 200);
+                            if (chevron) chevron.style.transform = '';
+                            return;
+                        }
+
+                        // Expand: fade in + slide up from just below the group row.
+                        var rect = toggle.getBoundingClientRect();
+                        panel.classList.remove('hidden');
+                        panel.style.transition = 'opacity 200ms ease-out, transform 200ms ease-out';
+                        panel.style.opacity = '1';
+                        panel.style.transform = 'translateY(0)';
+                        panel.style.top = (rect.bottom + 8) + 'px';
+                        panel.style.width = rect.width + 'px';
+                        panel.style.left = rect.left + 'px';
+                        openQuotationGroupPanel = panel;
+                        if (chevron) chevron.style.transform = 'rotate(180deg)';
+
+                        panel.querySelectorAll('a[data-quotation-group-item]').forEach(function (item) {
+                            item.addEventListener('click', function () {
+                                if (openQuotationGroupPanel === panel) closeQuotationGroupPanel();
+                            });
+                        });
+                    });
+                });
+
+                // Close the quotation drop-down on outside click or Escape.
+                document.addEventListener('click', function (event) {
+                    if (!openQuotationGroupPanel) return;
+                    if (openQuotationGroupPanel.contains(event.target) || event.target.closest('[data-group-toggle]')) return;
+                    closeQuotationGroupPanel();
+                });
+
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape') closeQuotationGroupPanel();
+                });
+
+                // Start with every prep-list group collapsed; the quotations for a
+                // prep list are revealed through its group drop-down when clicked.
+                Array.prototype.forEach.call(document.querySelectorAll('[data-group-toggle]'), function (toggle) {
+                    var groupId = toggle.getAttribute('data-group-id');
+                    document.querySelectorAll('tr[data-quotation-group="' + groupId + '"]').forEach(function (row) {
+                        row.classList.add('hidden');
                     });
                 });
 
