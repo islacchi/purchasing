@@ -13,6 +13,7 @@ use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\Supplier;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\AdminUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -40,7 +41,7 @@ class QuotationTest extends TestCase
 
     private function project(User $user, ProcuringEntity $entity, array $overrides = []): Project
     {
-        return Project::create(array_merge([
+        $attributes = array_merge([
             'procuring_entity_id' => $entity->id,
             'created_by' => $user->id,
             'title' => 'Purchase of pharma supplies',
@@ -50,7 +51,19 @@ class QuotationTest extends TestCase
             'date_awarded' => '2026-07-03',
             'delivery_days' => 30,
             'notes' => 'Quarterly procurement of pharmaceutical supplies.',
-        ], $overrides));
+        ], $overrides);
+
+        if (
+            empty($attributes['delivery_due_date'])
+            && ! empty($attributes['date_awarded'])
+            && ! empty($attributes['delivery_days'])
+        ) {
+            $attributes['delivery_due_date'] = Carbon::parse($attributes['date_awarded'])
+                ->addDays((int) $attributes['delivery_days'])
+                ->toDateString();
+        }
+
+        return Project::create($attributes);
     }
 
     private function item(array $overrides = []): Item
@@ -316,6 +329,8 @@ class QuotationTest extends TestCase
             'preplist_item_id' => $preplistItem->id,
             'min_remaining_months' => 12,
             'unit_price' => 305.00,
+            'brand' => 'MediCore',
+            'expiry' => '2028-01-01',
             'offered_shelf_life_months' => 6,
             'quoted_at' => now(),
         ]);
@@ -331,9 +346,156 @@ class QuotationTest extends TestCase
             ->assertSee('1 item below the required shelf life')
             ->assertSee('Short-dated')
             ->assertSee('Offered: 6 months')
+            ->assertSee('data-expiry-status="good"', false)
+            ->assertDontSee('data-expiry-status="short"', false)
+            ->assertDontSee('data-expiry-status="close"', false)
             ->assertSee('Remove quotation')
             ->assertSee(route('quotation.destroy-document', ['quotation' => $quotation->id]), false)
             ->assertSee(route('purchase-order.create', ['rfq' => $quotation->id]), false);
+    }
+
+    public function test_quotation_show_flags_an_expiry_that_does_not_cover_the_delivery(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        // The project's delivery is due 2026-08-02, so this expiry is too short.
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 305.00,
+            'brand' => 'MediCore',
+            'expiry' => '2026-07-20',
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('data-expiry-status="short"', false)
+            ->assertSee('text-red-600', false)
+            ->assertSee('Jul 20, 2026');
+    }
+
+    public function test_quotation_show_rates_expiry_per_project(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        // Both projects draw from the same item, but each has its own delivery
+        // period and therefore its own minimum expiry date.
+        $projectOne = $this->project($user, $entity, [
+            'title' => 'Project One',
+            'reference_no' => 'RF-2026-0101',
+            'date_awarded' => '2026-11-13',
+            'delivery_days' => 45,
+            'delivery_due_date' => null,
+        ]);
+        $projectTwo = $this->project($user, $entity, [
+            'title' => 'Project Two',
+            'reference_no' => 'RF-2026-0102',
+            'date_awarded' => '2026-11-13',
+            'delivery_days' => 30,
+            'delivery_due_date' => null,
+        ]);
+
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItemOne = $this->projectItem($projectOne, $item, ['quantity' => 30]);
+        $projectItemTwo = $this->projectItem($projectTwo, $item, ['quantity' => 20]);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'November Region VII batch',
+            'sources' => [$projectItemOne->id, $projectItemTwo->id],
+            'shelf_life' => [$projectItemOne->id => 1, $projectItemTwo->id => 1],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $this->assertSame(1, $preplistItem->min_shelf_life_months);
+
+        // Project One: due 2026-12-28 + 1 month = 2027-01-28 — Jan 17 is short.
+        // Project Two: due 2026-12-13 + 1 month = 2027-01-13 — Jan 17 is close.
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 1,
+            'unit_price' => 305.00,
+            'brand' => 'MediCore',
+            'expiry' => '2027-01-17',
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('Project One')
+            ->assertSee('Project Two')
+            ->assertSee('data-expiry-status="short"', false)
+            ->assertSee('data-expiry-status="close"', false)
+            ->assertSee('Jan 28, 2027')
+            ->assertSee('Jan 13, 2027')
+            ->assertSee('text-red-600', false)
+            ->assertSee('text-yellow-600', false);
+    }
+
+    public function test_quotation_show_treats_month_only_expiry_as_the_end_of_its_month(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity, [
+            'date_awarded' => '2026-12-01',
+            'delivery_days' => 45,
+            'delivery_due_date' => null,
+        ]);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        // Delivery is due 2027-01-15; "12/2026" ends 2026-12-31, which is too early.
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 305.00,
+            'brand' => 'MediCore',
+            'expiry' => '12/2026',
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('12/2026')
+            ->assertSee('data-expiry-status="short"', false);
     }
 
     public function test_quotation_document_can_be_downloaded(): void

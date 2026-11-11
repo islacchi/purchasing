@@ -60,12 +60,25 @@ class QuotationController extends Controller
                 $unit = $preplistItem->item?->unit ?? '';
                 $requiredShelfLife = (int) $preplistItem->min_shelf_life_months;
                 $requested = $preplistItem->sources->sum('qty');
-                $allocations = $preplistItem->sources->map(function ($source) use ($unit) {
+                $allocations = $preplistItem->sources->map(function ($source) use ($unit, $requiredShelfLife) {
+                    $project = $source->projectItem?->project;
+
+                    // Fall back to the award date plus the project's delivery
+                    // period when the due date was never persisted.
+                    $deliveryDueDate = $project?->delivery_due_date
+                        ?? ($project?->date_awarded && $project?->delivery_days
+                            ? $project->date_awarded->copy()->addDays($project->delivery_days)
+                            : null);
+
                     return [
-                        'project' => $source->projectItem?->project?->title ?? 'Project removed',
-                        'reference' => $source->projectItem?->project?->reference_no ?? '—',
+                        'project' => $project?->title ?? 'Project removed',
+                        'reference' => $project?->reference_no ?? '—',
                         'qty' => $source->qty,
                         'unit' => $unit,
+                        'delivery_due_date' => $deliveryDueDate?->toDateString(),
+                        'required_expiry_date' => $deliveryDueDate
+                            ? $deliveryDueDate->copy()->addMonths($requiredShelfLife)->toDateString()
+                            : null,
                     ];
                 });
 

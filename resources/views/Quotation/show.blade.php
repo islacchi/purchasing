@@ -73,6 +73,40 @@
             return $expiry;
         };
 
+        // Interpret the supplier's free-typed expiry so it can be compared
+        // with the project's delivery due date. Month/year-only values are
+        // treated as valid through the end of that month.
+        $parseExpiryDate = function (?string $expiry): ?\Carbon\CarbonImmutable {
+            if (! $expiry) {
+                return null;
+            }
+
+            $value = trim($expiry);
+
+            try {
+                // Month/year-only values are valid through the end of that month.
+                if (preg_match('/^(0?[1-9]|1[0-2])\/(\d{4})$/', $value)) {
+                    return \Carbon\CarbonImmutable::createFromFormat('!m/Y', $value)->endOfMonth();
+                }
+
+                if (preg_match('/^\d{4}-(0?[1-9]|1[0-2])$/', $value)) {
+                    return \Carbon\CarbonImmutable::createFromFormat('!Y-m', $value)->endOfMonth();
+                }
+
+                if (preg_match('/^[A-Za-z]+\.?\s+\d{4}$/', $value)) {
+                    return \Carbon\CarbonImmutable::parse('first day of '.$value)->endOfMonth();
+                }
+
+                return \Carbon\CarbonImmutable::parse($value)->startOfDay();
+            } catch (\Throwable) {
+                return null;
+            }
+        };
+
+        // Difference (in days) between the required expiry date and the
+        // supplier's expiry that still counts as "close" rather than "good".
+        $expiryCloseWindow = 30;
+
         $documentSize = $formatDocumentSize($quotation->document_size);
     @endphp
 
@@ -201,6 +235,7 @@
                     $offeredShelf = $quotedItem?->offered_shelf_life_months;
                     $brand = $quotedItem?->brand;
                     $expiry = $formatExpiry($quotedItem?->expiry);
+                    $expiryDate = $parseExpiryDate($quotedItem?->expiry);
                     $isShortDated = $isQuoted
                         && $requiredShelf > 0
                         && $offeredShelf !== null
@@ -272,16 +307,63 @@
 
                     <div class="divide-y divide-gray-100 border-t border-gray-100">
                         @foreach ($item['allocations'] as $allocation)
+                            @php
+                                // The supplier's expiry is judged against what this
+                                // particular project requires: its delivery due date
+                                // plus the prep list's minimum shelf life.
+                                $requiredExpiry = empty($allocation['required_expiry_date'])
+                                    ? null
+                                    : \Carbon\CarbonImmutable::parse($allocation['required_expiry_date'])->startOfDay();
+                                $requiredExpiryLabel = $requiredExpiry?->format('M j, Y');
+                                $allocationStatus = 'unknown';
+
+                                if ($isQuoted && $expiryDate && $requiredExpiry) {
+                                    if ($expiryDate->lessThan($requiredExpiry)) {
+                                        $allocationStatus = 'short';
+                                    } elseif ($expiryDate->lessThanOrEqualTo($requiredExpiry->addDays($expiryCloseWindow))) {
+                                        $allocationStatus = 'close';
+                                    } else {
+                                        $allocationStatus = 'good';
+                                    }
+                                }
+                            @endphp
+
                             <div class="flex items-center justify-between gap-4 px-5 py-3">
                                 <div class="flex min-w-0 items-center gap-2">
                                     <svg class="h-4 w-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>
                                     </svg>
-                                    <p class="truncate text-sm text-gray-600">
-                                        {{ $allocation['project'] }}
-                                        <span class="mx-1 text-gray-300">&middot;</span>
-                                        <span class="text-xs text-gray-400">{{ $allocation['reference'] }}</span>
-                                    </p>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm text-gray-600">
+                                            {{ $allocation['project'] }}
+                                            <span class="mx-1 text-gray-300">&middot;</span>
+                                            <span class="text-xs text-gray-400">{{ $allocation['reference'] }}</span>
+                                        </p>
+                                        @if ($isQuoted)
+                                            <p data-expiry-status="{{ $allocationStatus }}"
+                                               @class([
+                                                   'mt-0.5 text-[11px]',
+                                                   'text-red-600' => $allocationStatus === 'short',
+                                                   'text-yellow-600' => $allocationStatus === 'close',
+                                                   'text-green-600' => $allocationStatus === 'good',
+                                                   'text-gray-400' => $allocationStatus === 'unknown',
+                                               ])>
+                                                @if ($allocationStatus === 'short')
+                                                    Expiry {{ $expiry }} &middot; before the required {{ $requiredExpiryLabel }}
+                                                @elseif ($allocationStatus === 'close')
+                                                    Expiry {{ $expiry }} &middot; close to the required {{ $requiredExpiryLabel }}
+                                                @elseif ($allocationStatus === 'good')
+                                                    Expiry {{ $expiry }} &middot; meets the required {{ $requiredExpiryLabel }}
+                                                @elseif ($expiry && $requiredExpiryLabel)
+                                                    Expiry {{ $expiry }} &middot; required {{ $requiredExpiryLabel }}
+                                                @elseif ($requiredExpiryLabel)
+                                                    Supplier expiry not stated &middot; required {{ $requiredExpiryLabel }}
+                                                @else
+                                                    Supplier expiry not stated
+                                                @endif
+                                            </p>
+                                        @endif
+                                    </div>
                                 </div>
                                 <p class="flex-shrink-0 text-sm font-medium text-gray-900">
                                     {{ $allocation['qty'] }} {{ $allocation['unit'] }}
