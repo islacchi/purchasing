@@ -81,12 +81,6 @@ class PurchaseOrderWorkbook
 
         $quotation = $purchaseOrder->quotation;
         $supplier = $purchaseOrder->supplier;
-        $prepList = $quotation?->preplist;
-
-        $instruction = collect([
-            'Expected delivery: '.($purchaseOrder->expected_delivery_on?->format('F j, Y') ?? 'to be scheduled'),
-            'Payment terms: '.($purchaseOrder->payment_terms ?? 'as agreed'),
-        ])->implode('. ').'. Items must meet the required remaining shelf life at delivery.';
 
         $rows = [];
         $rowNumber = 1;
@@ -222,17 +216,8 @@ class PurchaseOrderWorkbook
             self::cell('B14', 8, $purchaseOrder->deliver_to ?: 'To be scheduled'),
         ], 23.25, 5);
 
-        // Expected delivery / payment terms line.
-        $rows[] = self::row($rowNumber++, [
-            self::cell('A15', 15, $instruction),
-            self::cell('B15', 16, null),
-            self::cell('C15', 16, null),
-            self::cell('D15', 16, null),
-            self::cell('E15', 16, null),
-            self::cell('F15', 16, null),
-            self::cell('G15', 16, null),
-            self::cell('H15', 16, null),
-        ], 30);
+        // Note: expected delivery / payment terms only live on our side, so
+        // they are intentionally not printed on the supplier's copy.
 
         $rows[] = self::blankRow($rowNumber++, 3.95);
 
@@ -404,7 +389,6 @@ class PurchaseOrderWorkbook
             'A5:H5',
             'A6:H6',
             'A7:H7',
-            'A15:H15',
             'A'.$totalRow.':F'.$totalRow,
             'A'.$deliveryRow.':F'.$deliveryRow,
             'A'.$grandTotalRow.':F'.$grandTotalRow,
