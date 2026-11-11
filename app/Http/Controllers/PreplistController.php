@@ -39,7 +39,13 @@ class PreplistController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        return view('Preplist.index', compact('preplists', 'search'));
+        $quotationCounts = Quotation::query()
+            ->select('preplist_id', DB::raw('COUNT(*) as aggregate'))
+            ->whereIn('preplist_id', $preplists->pluck('id'))
+            ->groupBy('preplist_id')
+            ->pluck('aggregate', 'preplist_id');
+
+        return view('Preplist.index', compact('preplists', 'search', 'quotationCounts'));
     }
 
     /**
@@ -86,7 +92,9 @@ class PreplistController extends Controller
     {
         $preplist->load(['creator', 'items.item', 'items.sources.projectItem.project']);
 
-        return view('Preplist.show', compact('preplist'));
+        $quotationCount = Quotation::query()->where('preplist_id', $preplist->id)->count();
+
+        return view('Preplist.show', compact('preplist', 'quotationCount'));
     }
 
     /**
@@ -149,10 +157,18 @@ class PreplistController extends Controller
     }
 
     /**
-     * Soft-delete a prep list.
+     * Soft-delete a prep list. A prep list that is already referenced by at
+     * least one quotation cannot be deleted.
      */
     public function destroy(Preplist $preplist)
     {
+        $quotationCount = Quotation::query()->where('preplist_id', $preplist->id)->count();
+
+        if ($quotationCount > 0) {
+            return back()
+                ->withErrors(['preplist' => 'This prep list cannot be deleted because it is already referenced by '.$quotationCount.' quotation'.($quotationCount === 1 ? '' : 's').'. Remove it from the quotation(s) first.']);
+        }
+
         $preplist->delete();
 
         return redirect()

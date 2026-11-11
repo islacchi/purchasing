@@ -31,6 +31,49 @@ class PurchaseOrderTest extends TestCase
         return User::where('name', 'admin')->firstOrFail();
     }
 
+    private function viewer(): User
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        return User::where('email', 'user2@example.com')->firstOrFail();
+    }
+
+    private function procurementOfficer(): User
+    {
+        $this->seed(AdminUserSeeder::class);
+
+        return User::where('email', 'user1@example.com')->firstOrFail();
+    }
+
+    private static int $poSequence = 9000;
+
+    private function makePurchaseOrder(User $user, string $status = PurchaseOrder::STATUS_DRAFT): PurchaseOrder
+    {
+        $quoted = $this->quotedQuotation($user);
+        $quotation = $quoted['quotation'];
+
+        $purchaseOrder = PurchaseOrder::create([
+            'quotation_id' => $quotation->id,
+            'supplier_id' => $quoted['supplier']->id,
+            'created_by' => $user->id,
+            'po_number' => sprintf('PO-%d-%04d', now()->year, ++self::$poSequence),
+            'status' => $status,
+            'issued_on' => $status === PurchaseOrder::STATUS_DRAFT ? null : today(),
+        ]);
+
+        foreach ($quoted['items'] as $item) {
+            PurchaseOrderItem::create([
+                'purchase_order_id' => $purchaseOrder->id,
+                'quotation_item_id' => $item['quotation_item']->id,
+                'item_id' => $item['preplist_item']->item_id,
+                'qty' => 10,
+                'unit_price' => $item['quotation_item']->unit_price,
+            ]);
+        }
+
+        return $purchaseOrder->fresh(['items']);
+    }
+
     private function entity(array $overrides = []): ProcuringEntity
     {
         return ProcuringEntity::create(array_merge([
@@ -101,6 +144,8 @@ class PurchaseOrderTest extends TestCase
         return Preplist::query()->latest('id')->firstOrFail();
     }
 
+    private static int $rfqSequence = 4200;
+
     /**
      * Build a quoted quotation with two items and return its context.
      *
@@ -114,7 +159,7 @@ class PurchaseOrderTest extends TestCase
         $secondItem = $this->item(['name' => 'BetaItemBeta', 'category' => 'supplies and equipments']);
         $firstSource = $this->projectItem($project, $firstItem, ['quantity' => 30]);
         $secondSource = $this->projectItem($project, $secondItem, ['quantity' => 20]);
-        $supplier = Supplier::create(['name' => 'Triple Tact']);
+        $supplier = Supplier::firstOrCreate(['name' => 'Triple Tact']);
 
         $preplist = $this->compile($user, [
             'name' => 'July Region VII batch',
@@ -130,7 +175,7 @@ class PurchaseOrderTest extends TestCase
             'preplist_id' => $preplist->id,
             'supplier_id' => $supplier->id,
             'created_by' => $user->id,
-            'rfq_number' => 'RFQ-'.now()->year.'-0042',
+            'rfq_number' => sprintf('RFQ-%d-%04d', (int) now()->year, ++self::$rfqSequence),
             'generated_at' => now(),
         ]);
 
@@ -258,7 +303,7 @@ class PurchaseOrderTest extends TestCase
         $item = $this->item(['name' => 'AlphaItemAlpha']);
         $projectItemOne = $this->projectItem($projectOne, $item, ['quantity' => 30]);
         $projectItemTwo = $this->projectItem($projectTwo, $item, ['quantity' => 20]);
-        $supplier = Supplier::create(['name' => 'Triple Tact']);
+        $supplier = Supplier::firstOrCreate(['name' => 'Triple Tact']);
 
         $preplist = $this->compile($user, [
             'name' => 'November batch',
@@ -483,6 +528,122 @@ class PurchaseOrderTest extends TestCase
             ->assertSessionHasErrors('purchase_order');
 
         $this->assertDatabaseCount('purchase_order_receipts', 0);
+    }
+
+    public function test_administrator_can_delete_a_draft_purchase_order_and_its_rows(): void
+    {
+        $admin = $this->admin();
+        $purchaseOrder = $this->makePurchaseOrder($admin, PurchaseOrder::STATUS_DRAFT);
+
+        $this->actingAs($admin)
+            ->delete(route('purchase-order.destroy', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertRedirect(route('purchase-order'))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseMissing('purchase_orders', ['id' => $purchaseOrder->id]);
+        $this->assertDatabaseCount('purchase_order_items', 0);
+    }
+
+    public function test_administrator_can_delete_a_cancelled_purchase_order(): void
+    {
+        $admin = $this->admin();
+        $purchaseOrder = $this->makePurchaseOrder($admin, PurchaseOrder::STATUS_CANCELLED);
+
+        $this->actingAs($admin)
+            ->delete(route('purchase-order.destroy', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertRedirect(route('purchase-order'))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseMissing('purchase_orders', ['id' => $purchaseOrder->id]);
+    }
+
+    public function test_administrator_cannot_delete_a_sent_purchase_order(): void
+    {
+        $admin = $this->admin();
+        $purchaseOrder = $this->makePurchaseOrder($admin, PurchaseOrder::STATUS_SENT);
+
+        $this->actingAs($admin)
+            ->delete(route('purchase-order.destroy', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertRedirect(route('purchase-order'))
+            ->assertSessionHasErrors('purchase_order');
+
+        $this->assertDatabaseHas('purchase_orders', ['id' => $purchaseOrder->id]);
+    }
+
+    public function test_administrator_cannot_delete_a_completed_purchase_order(): void
+    {
+        $admin = $this->admin();
+        $purchaseOrder = $this->makePurchaseOrder($admin, PurchaseOrder::STATUS_COMPLETED);
+
+        $this->actingAs($admin)
+            ->delete(route('purchase-order.destroy', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertRedirect(route('purchase-order'))
+            ->assertSessionHasErrors('purchase_order');
+
+        $this->assertDatabaseHas('purchase_orders', ['id' => $purchaseOrder->id]);
+    }
+
+    public function test_a_viewer_cannot_delete_a_draft_purchase_order(): void
+    {
+        $viewer = $this->viewer();
+        $purchaseOrder = $this->makePurchaseOrder($viewer, PurchaseOrder::STATUS_DRAFT);
+
+        $this->actingAs($viewer)
+            ->delete(route('purchase-order.destroy', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('purchase_orders', ['id' => $purchaseOrder->id]);
+    }
+
+    public function test_a_procurement_officer_cannot_delete_a_draft_purchase_order(): void
+    {
+        $officer = $this->procurementOfficer();
+        $purchaseOrder = $this->makePurchaseOrder($officer, PurchaseOrder::STATUS_DRAFT);
+
+        $this->actingAs($officer)
+            ->delete(route('purchase-order.destroy', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('purchase_orders', ['id' => $purchaseOrder->id]);
+    }
+
+    public function test_delete_action_is_only_shown_to_administrators_for_draft_or_cancelled_orders(): void
+    {
+        $admin = $this->admin();
+        $draft = $this->makePurchaseOrder($admin, PurchaseOrder::STATUS_DRAFT);
+
+        $this->actingAs($admin)
+            ->get(route('purchase-order.show', ['purchaseOrder' => $draft->id]))
+            ->assertOk()
+            ->assertSee('id="poDeleteBtn"', false)
+            ->assertSee('Delete order');
+
+        $this->actingAs($this->viewer())
+            ->get(route('purchase-order.show', ['purchaseOrder' => $draft->id]))
+            ->assertOk()
+            ->assertDontSee('id="poDeleteBtn"', false);
+
+        $sent = $this->makePurchaseOrder($admin, PurchaseOrder::STATUS_SENT);
+
+        $this->actingAs($admin)
+            ->get(route('purchase-order.show', ['purchaseOrder' => $sent->id]))
+            ->assertOk()
+            ->assertDontSee('id="poDeleteBtn"', false);
+
+        // The destroy endpoint URL is identical to the GET show route, so the
+        // index only carries the delete button when the order is deletable.
+        $content = $this->actingAs($admin)
+            ->get(route('purchase-order'))
+            ->assertOk()
+            ->getContent();
+
+        // The delete endpoint URL matches the show route, so count the
+        // destructive forms instead: exactly the draft one should render.
+        $draftForm = 'action="'.route('purchase-order.destroy', ['purchaseOrder' => $draft->id]).'"';
+        $sentForm = 'action="'.route('purchase-order.destroy', ['purchaseOrder' => $sent->id]).'"';
+
+        $this->assertSame(1, substr_count($content, $draftForm));
+        $this->assertSame(0, substr_count($content, $sentForm));
     }
 
     public function test_unknown_quotation_and_purchase_order_return_not_found(): void

@@ -123,6 +123,16 @@
                     Cancel order
                 </button>
 
+                @if ($purchaseOrder->isDeletable() && auth()->user()?->isAdministrator())
+                    <button type="button" id="poDeleteBtn"
+                            class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                        </svg>
+                        Delete order
+                    </button>
+                @endif
+
                 {{-- @TODO: Generate the printable PO document. --}}
                 <a href="#" aria-disabled="true" title="Not available yet"
                    class="inline-flex items-center gap-2 rounded-lg bg-[#2a7a94]/40 px-4 py-2 text-sm font-medium text-white">
@@ -391,39 +401,91 @@
                 </div>
             </form>
         </div>
+
+        {{-- Delete purchase order confirmation modal --}}
+        <div id="poDeleteModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="poDeleteTitle">
+            <div id="poDeleteOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+            <form id="poDeleteForm" method="POST" action="{{ route('purchase-order.destroy', ['purchaseOrder' => $purchaseOrder->id]) }}" class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+                @csrf
+                @method('DELETE')
+                <div class="flex items-start gap-3 px-5 py-4">
+                    <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                        <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 id="poDeleteTitle" class="text-base font-bold text-gray-900">Delete purchase order?</h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            <span class="font-medium text-gray-700">{{ $purchaseOrder->po_number }}</span>
+                            will be permanently deleted along with its lines and allocations. This action cannot be undone.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                    <button type="button" id="poDeleteDismiss"
+                            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                        Keep order
+                    </button>
+                    <button type="submit"
+                            class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
+                        Delete
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
-        // Cancel purchase order confirmation modal.
+        // Cancel and delete purchase order confirmation modals.
         (function () {
-            const btn = document.getElementById('poCancelBtn');
-            const modal = document.getElementById('poCancelModal');
-            const overlay = document.getElementById('poCancelOverlay');
-            const dismiss = document.getElementById('poCancelDismiss');
+            const cancelBtn = document.getElementById('poCancelBtn');
+            const cancelModal = document.getElementById('poCancelModal');
+            const cancelOverlay = document.getElementById('poCancelOverlay');
+            const cancelDismiss = document.getElementById('poCancelDismiss');
 
-            function openModal() {
+            const deleteBtn = document.getElementById('poDeleteBtn');
+            const deleteModal = document.getElementById('poDeleteModal');
+            const deleteOverlay = document.getElementById('poDeleteOverlay');
+            const deleteDismiss = document.getElementById('poDeleteDismiss');
+
+            function openModal(modal) {
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
             }
-            function closeModal() {
+            function closeModal(modal, focusBack) {
+                if (! modal) return;
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
-                if (btn) btn.focus();
+                if (focusBack) focusBack.focus();
             }
 
-            if (btn) {
-                btn.addEventListener('click', openModal);
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => openModal(cancelModal));
             }
-            if (overlay) {
-                overlay.addEventListener('click', closeModal);
+            if (cancelOverlay) {
+                cancelOverlay.addEventListener('click', () => closeModal(cancelModal, cancelBtn));
             }
-            if (dismiss) {
-                dismiss.addEventListener('click', closeModal);
+            if (cancelDismiss) {
+                cancelDismiss.addEventListener('click', () => closeModal(cancelModal, cancelBtn));
             }
+
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => openModal(deleteModal));
+            }
+            if (deleteOverlay) {
+                deleteOverlay.addEventListener('click', () => closeModal(deleteModal, deleteBtn));
+            }
+            if (deleteDismiss) {
+                deleteDismiss.addEventListener('click', () => closeModal(deleteModal, deleteBtn));
+            }
+
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && ! modal.classList.contains('hidden')) {
-                    closeModal();
-                }
+                if (e.key !== 'Escape') return;
+                if (cancelModal && ! cancelModal.classList.contains('hidden')) closeModal(cancelModal, cancelBtn);
+                if (deleteModal && ! deleteModal.classList.contains('hidden')) closeModal(deleteModal, deleteBtn);
             });
         })();
     </script>

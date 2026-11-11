@@ -161,6 +161,14 @@ class PurchaseOrder extends Model
     }
 
     /**
+     * Only draft or cancelled orders can be deleted.
+     */
+    public function isDeletable(): bool
+    {
+        return in_array($this->status, [self::STATUS_DRAFT, self::STATUS_CANCELLED], true);
+    }
+
+    /**
      * Receipts can only be recorded once the order has been sent.
      */
     public function canReceive(): bool

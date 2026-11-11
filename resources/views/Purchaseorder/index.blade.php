@@ -214,6 +214,22 @@
                                                     </button>
                                                 </form>
                                             @endif
+
+                                            @if ($po['deletable'] && auth()->user()?->isAdministrator())
+                                                <form method="POST" action="{{ route('purchase-order.destroy', ['purchaseOrder' => $po['id']]) }}">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="button" role="menuitem"
+                                                            data-po-delete
+                                                            data-po-number="{{ $po['number'] }}"
+                                                            class="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50">
+                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                                                        </svg>
+                                                        Delete order
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
@@ -272,6 +288,41 @@
                     <button type="submit"
                             class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
                         Cancel order
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {{-- Delete order confirmation modal --}}
+        <div id="poDeleteModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="poDeleteTitle">
+            <div id="poDeleteOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+            <form id="poDeleteForm" method="POST" class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+                @csrf
+                @method('DELETE')
+                <div class="flex items-start gap-3 px-5 py-4">
+                    <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                        <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 id="poDeleteTitle" class="text-base font-bold text-gray-900">Delete purchase order?</h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            <span id="poDeleteNumber" class="font-medium text-gray-700"></span>
+                            will be permanently deleted along with its lines and allocations. This action cannot be undone.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                    <button type="button" id="poDeleteDismiss"
+                            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                        Keep order
+                    </button>
+                    <button type="submit"
+                            class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
+                        Delete
                     </button>
                 </div>
             </form>
@@ -429,8 +480,37 @@
 
             if (cancelOverlay) cancelOverlay.addEventListener('click', closeCancelModal);
             if (cancelDismiss) cancelDismiss.addEventListener('click', closeCancelModal);
+
+            // --- Delete order modal ---
+            const deleteModal = document.getElementById('poDeleteModal');
+            const deleteForm = document.getElementById('poDeleteForm');
+            const deleteNumber = document.getElementById('poDeleteNumber');
+            const deleteOverlay = document.getElementById('poDeleteOverlay');
+            const deleteDismiss = document.getElementById('poDeleteDismiss');
+
+            function closeDeleteModal() {
+                deleteModal.classList.add('hidden');
+                deleteModal.classList.remove('flex');
+            }
+
+            Array.prototype.forEach.call(document.querySelectorAll('[data-po-delete]'), function (btn) {
+                btn.addEventListener('click', function () {
+                    deleteForm.action = btn.closest('form').action;
+                    deleteNumber.textContent = btn.getAttribute('data-po-number') || 'This purchase order';
+                    deleteModal.classList.remove('hidden');
+                    deleteModal.classList.add('flex');
+                    closeMenus();
+                });
+            });
+
+            if (deleteOverlay) deleteOverlay.addEventListener('click', closeDeleteModal);
+            if (deleteDismiss) deleteDismiss.addEventListener('click', closeDeleteModal);
+
             document.addEventListener('keydown', function (event) {
-                if (event.key === 'Escape') closeCancelModal();
+                if (event.key === 'Escape') {
+                    closeCancelModal();
+                    closeDeleteModal();
+                }
             });
         })();
     </script>

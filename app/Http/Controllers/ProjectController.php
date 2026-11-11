@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\ItemCategory;
+use App\Models\Preplist;
+use App\Models\PreplistItem;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -96,8 +99,9 @@ class ProjectController extends Controller
     public function show(Project $project)
     {
         $project->load(['procuringEntity', 'creator', 'items.item.category']);
+        $preplistSources = $this->preplistsReferencing($project);
 
-        return view('Projects.show', compact('project'));
+        return view('Projects.show', compact('project', 'preplistSources'));
     }
 
     /**
@@ -137,11 +141,40 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project)
     {
+        $references = $this->preplistsReferencing($project);
+
+        if ($references->isNotEmpty()) {
+            $names = $references
+                ->map(fn ($preplist) => $preplist->reference_no.' ('.$preplist->name.')')
+                ->implode(', ');
+
+            return redirect()
+                ->route('projects.show', ['project' => $project->id])
+                ->withErrors(['project' => 'This project can no longer be deleted because it is used by the prep list(s): '.$names.'.']);
+        }
+
         $project->delete();
 
         return redirect()
             ->route('projects')
             ->with('status', 'Project deleted successfully.');
+    }
+
+    /**
+     * The prep lists referencing this project's items, if any.
+     *
+     * @return Collection<int, Preplist>
+     */
+    private function preplistsReferencing(Project $project)
+    {
+        $preplistIds = PreplistItem::query()
+            ->whereHas('sources', fn ($query) => $query->whereHas('projectItem', fn ($query) => $query->where('project_id', $project->id)))
+            ->pluck('preplist_id');
+
+        return Preplist::query()
+            ->whereIn('id', $preplistIds)
+            ->orderBy('reference_no')
+            ->get();
     }
 
     /**

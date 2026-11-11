@@ -394,6 +394,47 @@ class PreplistTest extends TestCase
         $this->assertSoftDeleted('preplists', ['id' => $preplist->id]);
     }
 
+    public function test_preplist_cannot_be_deleted_once_added_to_a_quotation(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-0001',
+            'generated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('preplist.destroy', ['preplist' => $preplist->id]))
+            ->assertSessionHasErrors('preplist');
+
+        $this->assertNull(Preplist::withTrashed()->find($preplist->id)->deleted_at);
+
+        // The delete buttons are disabled on the detail page and in the list.
+        $this->actingAs($user)
+            ->get(route('preplist.show', ['preplist' => $preplist->id]))
+            ->assertOk()
+            ->assertSee('cannot be deleted')
+            ->assertDontSee('id="preplistDeleteBtn"', false);
+
+        $this->actingAs($user)
+            ->get(route('preplist'))
+            ->assertOk()
+            ->assertSee('Already referenced by 1 quotation');
+    }
+
     public function test_preplist_requires_at_least_one_project_item(): void
     {
         $user = $this->admin();

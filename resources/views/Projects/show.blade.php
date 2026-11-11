@@ -57,6 +57,36 @@
         </div>
     </div>
 
+    @if (session('status'))
+        <div class="mb-4 shrink-0 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+            </svg>
+            <span>{{ session('status') }}</span>
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
+    @php
+        $preplistSources = $preplistSources ?? collect();
+    @endphp
+
+    @if ($preplistSources->isNotEmpty())
+        <div class="mb-4 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p class="font-semibold">This project cannot be deleted.</p>
+            <p class="mt-0.5 text-xs text-amber-700">
+                It is used by the prep list(s)
+                <span class="font-medium text-amber-900">{{ $preplistSources->map(fn ($item) => $item->reference_no.' — '.$item->name)->implode(', ') }}</span>.
+                Remove its items from those prep lists first.
+            </p>
+        </div>
+    @endif
+
     {{-- Main Content --}}
     <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-4">
         {{-- Project Details (Left Column) — static --}}
@@ -158,17 +188,28 @@
 
     {{-- Action Buttons --}}
     <div class="mt-4 flex shrink-0 items-center justify-end gap-3">
-        <form id="projectDeleteForm" method="POST" action="{{ route('projects.destroy', ['project' => $project->id]) }}">
-            @csrf
-            @method('DELETE')
-            <button type="button" id="projectDeleteBtn" aria-haspopup="dialog"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+        @if ($preplistSources->isNotEmpty())
+            <button type="button" disabled
+                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-400 cursor-not-allowed"
+                    title="Used by a prep list and cannot be deleted">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
                 Delete project
             </button>
-        </form>
+        @else
+            <form id="projectDeleteForm" method="POST" action="{{ route('projects.destroy', ['project' => $project->id]) }}">
+                @csrf
+                @method('DELETE')
+                <button type="button" id="projectDeleteBtn" aria-haspopup="dialog"
+                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Delete project
+                </button>
+            </form>
+        @endif
         <a href="{{ route('projects.edit', ['project' => $project->id]) }}"
            class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,10 +272,12 @@
             function closeModal() {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
-                btn.focus();
+                if (btn) btn.focus();
             }
 
-            btn.addEventListener('click', openModal);
+            if (btn) {
+                btn.addEventListener('click', openModal);
+            }
             cancelBtn.addEventListener('click', closeModal);
             overlay.addEventListener('click', closeModal);
             confirmBtn.addEventListener('click', function () { form.submit(); });

@@ -24,16 +24,16 @@ class QuotationController extends Controller
             ->orderByDesc('id')
             ->get()
             ->map(function (Quotation $quotation) {
-                $total = $quotation->preplist->items->count();
+                $total = $quotation->preplist?->items->count() ?? 0;
                 $quoted = $quotation->items
                     ->filter(fn ($item) => $item->unit_price !== null)
                     ->count();
 
                 return [
                     'id' => $quotation->id,
-                    'prep_list' => $quotation->preplist->name,
-                    'ref' => $quotation->preplist->reference_no,
-                    'supplier' => $quotation->supplier->name,
+                    'prep_list' => $quotation->preplist?->name ?? 'Prep list removed',
+                    'ref' => $quotation->preplist?->reference_no ?? 'Prep list removed',
+                    'supplier' => $quotation->supplier?->name ?? 'Supplier removed',
                     'quoted' => $quoted,
                     'total' => $total,
                     'status' => $quoted > 0 ? 'Quoted' : 'Awaiting quote',
@@ -55,43 +55,46 @@ class QuotationController extends Controller
             'items.preplistItem',
         ]);
 
-        $items = $quotation->preplist->items
-            ->map(function (PreplistItem $preplistItem) {
-                $unit = $preplistItem->item?->unit ?? '';
-                $requiredShelfLife = (int) $preplistItem->min_shelf_life_months;
-                $requested = $preplistItem->sources->sum('qty');
-                $allocations = $preplistItem->sources->map(function ($source) use ($unit, $requiredShelfLife) {
-                    $project = $source->projectItem?->project;
+        $preplist = $quotation->preplist;
+        $items = $preplist?->items
+            ? $preplist->items
+                ->map(function (PreplistItem $preplistItem) {
+                    $unit = $preplistItem->item?->unit ?? '';
+                    $requiredShelfLife = (int) $preplistItem->min_shelf_life_months;
+                    $requested = $preplistItem->sources->sum('qty');
+                    $allocations = $preplistItem->sources->map(function ($source) use ($unit, $requiredShelfLife) {
+                        $project = $source->projectItem?->project;
 
-                    // Fall back to the award date plus the project's delivery
-                    // period when the due date was never persisted.
-                    $deliveryDueDate = $project?->delivery_due_date
-                        ?? ($project?->date_awarded && $project?->delivery_days
-                            ? $project->date_awarded->copy()->addDays($project->delivery_days)
-                            : null);
+                        // Fall back to the award date plus the project's delivery
+                        // period when the due date was never persisted.
+                        $deliveryDueDate = $project?->delivery_due_date
+                            ?? ($project?->date_awarded && $project?->delivery_days
+                                ? $project->date_awarded->copy()->addDays($project->delivery_days)
+                                : null);
+
+                        return [
+                            'project' => $project?->title ?? 'Project removed',
+                            'reference' => $project?->reference_no ?? '—',
+                            'qty' => $source->qty,
+                            'unit' => $unit,
+                            'delivery_due_date' => $deliveryDueDate?->toDateString(),
+                            'required_expiry_date' => $deliveryDueDate
+                                ? $deliveryDueDate->copy()->addMonths($requiredShelfLife)->toDateString()
+                                : null,
+                        ];
+                    });
 
                     return [
-                        'project' => $project?->title ?? 'Project removed',
-                        'reference' => $project?->reference_no ?? '—',
-                        'qty' => $source->qty,
+                        'key' => (string) $preplistItem->id,
+                        'name' => $preplistItem->item?->name ?? 'Item',
+                        'requested' => (int) $requested,
                         'unit' => $unit,
-                        'delivery_due_date' => $deliveryDueDate?->toDateString(),
-                        'required_expiry_date' => $deliveryDueDate
-                            ? $deliveryDueDate->copy()->addMonths($requiredShelfLife)->toDateString()
-                            : null,
+                        'min_remaining_months' => $requiredShelfLife,
+                        'allocations' => $allocations,
                     ];
-                });
-
-                return [
-                    'key' => (string) $preplistItem->id,
-                    'name' => $preplistItem->item?->name ?? 'Item',
-                    'requested' => (int) $requested,
-                    'unit' => $unit,
-                    'min_remaining_months' => $requiredShelfLife,
-                    'allocations' => $allocations,
-                ];
-            })
-            ->values();
+                })
+                ->values()
+            : collect();
 
         $quotationItems = $quotation->items->keyBy('preplist_item_id');
 
@@ -126,6 +129,12 @@ class QuotationController extends Controller
         }
 
         $quotation->load(['preplist.items.item']);
+
+        if ($quotation->preplist === null) {
+            throw ValidationException::withMessages([
+                'document' => 'This quotation’s prep list no longer exists; the file cannot be processed.',
+            ]);
+        }
 
         $itemsByName = $quotation->preplist->items
             ->keyBy(fn (PreplistItem $preplistItem) => mb_strtolower(trim($preplistItem->item?->name ?? 'Item')));

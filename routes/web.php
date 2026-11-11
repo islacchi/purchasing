@@ -160,6 +160,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
     Route::post('/purchase-order/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])
         ->whereNumber('purchaseOrder')
         ->name('purchase-order.cancel');
+    Route::delete('/purchase-order/{purchaseOrder}', [PurchaseOrderController::class, 'destroy'])
+        ->whereNumber('purchaseOrder')
+        ->name('purchase-order.destroy');
     Route::post('/purchase-order/{purchaseOrder}/items/{purchaseOrderItem}/toggle-receipt', [PurchaseOrderController::class, 'toggleReceipt'])
         ->whereNumber('purchaseOrder')
         ->whereNumber('purchaseOrderItem')

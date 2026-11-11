@@ -36,6 +36,7 @@ class PurchaseOrderController extends Controller
                     'status' => $purchaseOrder->statusLabel(),
                     'issued' => $purchaseOrder->issued_on?->format('M j, Y'),
                     'cancellable' => $purchaseOrder->isCancellable(),
+                    'deletable' => $purchaseOrder->isDeletable(),
                 ];
             });
 
@@ -55,6 +56,12 @@ class PurchaseOrderController extends Controller
                 'items.preplistItem',
             ])
             ->findOrFail($rfq);
+
+        if ($quotation->preplist === null) {
+            return redirect()
+                ->route('quotation.show', ['quotation' => $quotation->id])
+                ->withErrors(['quotation' => 'This quotation’s prep list no longer exists.']);
+        }
 
         $quotationItems = $quotation->items->keyBy('preplist_item_id');
 
@@ -238,6 +245,27 @@ class PurchaseOrderController extends Controller
         ]);
 
         return view('Purchaseorder.show', ['purchaseOrder' => $purchaseOrder]);
+    }
+
+    /**
+     * Delete a purchase order. Only administrators can delete, and only when
+     * the order is a draft or has been cancelled.
+     */
+    public function destroy(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        abort_unless($request->user()?->isAdministrator(), 403);
+
+        if (! $purchaseOrder->isDeletable()) {
+            return redirect()
+                ->route('purchase-order')
+                ->withErrors(['purchase_order' => 'Only draft or cancelled purchase orders can be deleted.']);
+        }
+
+        $purchaseOrder->delete();
+
+        return redirect()
+            ->route('purchase-order')
+            ->with('status', 'Purchase order '.$purchaseOrder->po_number.' has been deleted.');
     }
 
     /**

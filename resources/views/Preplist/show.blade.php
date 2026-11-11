@@ -43,6 +43,30 @@
         </a>
     </div>
 
+    @if (session('status'))
+        <div class="mb-4 shrink-0 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+            </svg>
+            <span>{{ session('status') }}</span>
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
+    @if ($quotationCount > 0)
+        <div class="mb-4 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p class="font-semibold">This prep list cannot be deleted.</p>
+            <p class="mt-0.5 text-xs text-amber-700">
+                It is already referenced by {{ $quotationCount }} quotation{{ $quotationCount === 1 ? '' : 's' }}. Remove the quotation{{ $quotationCount === 1 ? '' : 's' }} first.
+            </p>
+        </div>
+    @endif
+
     {{-- Main two-column layout --}}
     <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
 
@@ -139,17 +163,28 @@
 
     {{-- Bottom action buttons --}}
     <div class="flex shrink-0 items-center justify-end gap-3 mt-6">
-        <form id="preplistDeleteForm" method="POST" action="{{ route('preplist.destroy', ['preplist' => $preplist->id]) }}">
-            @csrf
-            @method('DELETE')
-            <button type="button" id="preplistDeleteBtn" aria-haspopup="dialog"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+        @if ($quotationCount > 0)
+            <button type="button" disabled
+                    class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-400 cursor-not-allowed"
+                    title="Already referenced by a quotation and cannot be deleted">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
                 Delete prep list
             </button>
-        </form>
+        @else
+            <form id="preplistDeleteForm" method="POST" action="{{ route('preplist.destroy', ['preplist' => $preplist->id]) }}">
+                @csrf
+                @method('DELETE')
+                <button type="button" id="preplistDeleteBtn" aria-haspopup="dialog"
+                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Delete prep list
+                </button>
+            </form>
+        @endif
         <button class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
@@ -220,10 +255,12 @@
         function closeModal() {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-            btn.focus();
+            if (btn) btn.focus();
         }
 
-        btn.addEventListener('click', openModal);
+        if (btn) {
+            btn.addEventListener('click', openModal);
+        }
         cancelBtn.addEventListener('click', closeModal);
         overlay.addEventListener('click', closeModal);
         confirmBtn.addEventListener('click', function () {

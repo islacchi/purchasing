@@ -46,16 +46,16 @@ class ProjectTest extends TestCase
         ], $overrides));
     }
 
-    private function addItem(Project $project): void
+    private function addItem(Project $project): ProjectItem
     {
-        $category = ItemCategory::create(['name' => 'drugs and medicines']);
+        $category = ItemCategory::firstOrCreate(['name' => 'drugs and medicines']);
         $item = Item::create([
             'category_id' => $category->id,
             'name' => 'Mefenamic Capsule - 500mg',
             'unit' => 'Box',
         ]);
 
-        ProjectItem::create([
+        return ProjectItem::create([
             'project_id' => $project->id,
             'item_id' => $item->id,
             'quantity' => 50,
@@ -245,6 +245,34 @@ class ProjectTest extends TestCase
         $this->assertSoftDeleted('projects', [
             'id' => $project->id,
         ]);
+    }
+
+    public function test_project_cannot_be_deleted_when_a_prep_list_sources_it(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $projectItem = $this->addItem($project);
+
+        // The prep list compiles the project's item, so the project is in use.
+        $this->actingAs($user)
+            ->post(route('preplist.store'), [
+                'name' => 'July Region VII batch',
+                'sources' => [$projectItem->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->delete(route('projects.destroy', ['project' => $project->id]))
+            ->assertSessionHasErrors('project');
+
+        $this->assertNull(Project::withTrashed()->find($project->id)->deleted_at);
+
+        $this->actingAs($user)
+            ->get(route('projects.show', ['project' => $project->id]))
+            ->assertOk()
+            ->assertSee('cannot be deleted')
+            ->assertDontSee('id="projectDeleteBtn"', false);
     }
 
     public function test_project_requires_an_existing_procuring_entity(): void

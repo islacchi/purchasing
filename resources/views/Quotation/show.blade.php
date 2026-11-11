@@ -117,6 +117,26 @@
     </form>
 
     <div class="flex h-full min-h-0 flex-col">
+        @if (! $preplist)
+            <div class="mb-6 flex shrink-0 items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-4">
+                <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
+                </svg>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-red-800">This quotation's prep list has been deleted</p>
+                    <p class="mt-0.5 text-xs text-red-700">
+                        Quoted prices are preserved, but this quotation can no longer be compared against the requested items or re-uploaded.
+                    </p>
+                </div>
+            </div>
+        @endif
+
+        @if ($errors->any() && ! $errors->has('document'))
+            <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
         {{-- Quotation details + supplier's quotation document, side by side --}}
         <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
             <div class="grid gap-5 md:grid-cols-2">
@@ -126,9 +146,9 @@
                         <div class="min-w-0">
                             <h2 class="text-xl font-bold text-gray-900">{{ $supplier?->name ?? 'Supplier removed' }}</h2>
                             <p class="mt-1 text-xs text-gray-500">
-                                {{ $preplist->name }}
+                                {{ $preplist?->name ?? 'Prep list removed' }}
                                 <span class="mx-1 text-gray-300">&middot;</span>
-                                {{ $preplist->reference_no }}
+                                {{ $preplist?->reference_no ?? 'Prep list removed' }}
                             </p>
                             @if ($quotation->rfq_number)
                                 <p class="mt-0.5 text-xs text-gray-400">{{ $quotation->rfq_number }}</p>
@@ -178,10 +198,14 @@
                             </div>
 
                             <div class="flex shrink-0 items-center gap-3">
-                                <label for="supplierQuotationFile"
-                                       class="cursor-pointer text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94] hover:underline">
-                                    Replace
-                                </label>
+                                @if ($preplist)
+                                    <label for="supplierQuotationFile"
+                                           class="cursor-pointer text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94] hover:underline">
+                                        Replace
+                                    </label>
+                                @else
+                                    <span class="cursor-not-allowed text-sm font-medium text-gray-300">Replace</span>
+                                @endif
                                 <a href="{{ route('quotation.download', ['quotation' => $quotation->id]) }}"
                                    class="flex items-center gap-1.5 text-sm font-medium text-[#2a7a94] hover:underline"
                                    aria-label="Download {{ $quotation->document_name }}">
@@ -416,21 +440,38 @@
                 @endif
 
                 @if ($status === 'Quoted')
-                    <a href="{{ route('purchase-order.create', ['rfq' => $quotation->id]) }}"
-                       class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3h-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
-                        </svg>
-                        Proceed to PO
-                    </a>
+                    @if ($preplist)
+                        <a href="{{ route('purchase-order.create', ['rfq' => $quotation->id]) }}"
+                           class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3h-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                            </svg>
+                            Proceed to PO
+                        </a>
+                    @else
+                        <span class="flex cursor-not-allowed items-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
+                              title="This quotation's prep list has been deleted">
+                            Proceed to PO
+                        </span>
+                    @endif
                 @else
-                    <label for="supplierQuotationFile"
-                           class="flex cursor-pointer items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                        </svg>
-                        Submit quotation
-                    </label>
+                    @if ($preplist)
+                        <label for="supplierQuotationFile"
+                               class="flex cursor-pointer items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                            </svg>
+                            Submit quotation
+                        </label>
+                    @else
+                        <span class="flex cursor-not-allowed items-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
+                              title="This quotation's prep list has been deleted">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                            </svg>
+                            Submit quotation
+                        </span>
+                    @endif
                 @endif
             </div>
         </div>

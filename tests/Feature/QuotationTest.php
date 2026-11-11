@@ -866,6 +866,65 @@ class QuotationTest extends TestCase
         $this->assertNull($quotation->fresh()->document_path);
     }
 
+    public function test_quotation_pages_survive_a_missing_prep_list(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+
+        $preplist->delete();
+
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('Prep list removed')
+            ->assertSee('prep list has been deleted');
+
+        $this->actingAs($user)
+            ->get(route('quotation'))
+            ->assertOk()
+            ->assertSee('Prep list removed');
+    }
+
+    public function test_quotation_upload_is_rejected_when_the_prep_list_is_gone(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $preplistItem = PreplistItem::firstOrFail();
+        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+
+        $quotation = Quotation::query()->firstOrFail();
+
+        $preplist->delete();
+
+        $this->upload($user, $quotation, $binary)
+            ->assertSessionHasErrors('document');
+    }
+
     public function test_unknown_quotation_returns_not_found(): void
     {
         $user = $this->admin();
