@@ -14,14 +14,7 @@
             <p class="text-xs text-gray-500">Supplier responses to sent RFQs</p>
         </div>
 
-        @if (session('status'))
-            <div class="mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
-                </svg>
-                <span>{{ session('status') }}</span>
-            </div>
-        @endif
+        {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
 
         @if ($errors->any())
             <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
