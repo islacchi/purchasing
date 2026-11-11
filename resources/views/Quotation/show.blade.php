@@ -288,18 +288,20 @@
             </a>
 
             <div class="flex flex-wrap items-center gap-3">
-                @if ($status === 'Awaiting quote')
-                <form id="quotationDeleteForm" method="POST" action="{{ route('quotation.destroy', ['quotation' => $quotation->id]) }}">
-                    @csrf
-                    @method('DELETE')
-                    <button type="button" id="quotationDeleteBtn" aria-haspopup="dialog"
-                            class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
-                        </svg>
-                        Remove quotation
-                    </button>
-                </form>
+                @if ($quotation->document_path)
+                    {{-- Removing a quotation only removes the supplier's uploaded file
+                         (and its quoted prices); the entry itself is deleted elsewhere. --}}
+                    <form id="quotationRemoveForm" method="POST" action="{{ route('quotation.destroy-document', ['quotation' => $quotation->id]) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" id="quotationRemoveBtn" aria-haspopup="dialog"
+                                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                            </svg>
+                            Remove quotation
+                        </button>
+                    </form>
                 @endif
 
                 @if ($status === 'Quoted')
@@ -322,9 +324,9 @@
             </div>
         </div>
 
-        {{-- Delete quotation confirmation modal --}}
-        <div id="quotationDeleteModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="quotationDeleteTitle">
-            <div id="quotationDeleteOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+        {{-- Remove quotation confirmation modal --}}
+        <div id="quotationRemoveModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="quotationRemoveTitle">
+            <div id="quotationRemoveOverlay" class="absolute inset-0 bg-gray-900/50"></div>
 
             <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
                 <div class="flex items-start gap-3 px-5 py-4">
@@ -334,22 +336,24 @@
                         </svg>
                     </span>
                     <div class="min-w-0">
-                        <h3 id="quotationDeleteTitle" class="text-base font-bold text-gray-900">Delete quotation?</h3>
+                        <h3 id="quotationRemoveTitle" class="text-base font-bold text-gray-900">Remove quotation?</h3>
                         <p class="mt-1 text-sm text-gray-500">
-                            <span class="font-medium text-gray-700">{{ $supplier?->name ?? 'Supplier removed' }}</span>
-                            quotation for <span class="font-medium text-gray-700">{{ $preplist->name }}</span> will be permanently deleted. This action cannot be undone.
+                            The quotation file uploaded by
+                            <span class="font-medium text-gray-700">{{ $supplier?->name ?? 'this supplier' }}</span>
+                            will be removed and its quoted prices cleared. The quotation will return to
+                            <span class="font-medium text-gray-700">Awaiting quote</span>.
                         </p>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
-                    <button type="button" id="quotationDeleteCancel"
+                    <button type="button" id="quotationRemoveCancel"
                             class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
                         Cancel
                     </button>
-                    <button type="button" id="quotationDeleteConfirm"
+                    <button type="button" id="quotationRemoveConfirm"
                             class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
-                        Delete
+                        Remove
                     </button>
                 </div>
             </div>
@@ -358,14 +362,14 @@
 
     @push('scripts')
     <script>
-        // Delete quotation confirmation modal
+        // Remove quotation confirmation modal
         (function () {
-            const btn = document.getElementById('quotationDeleteBtn');
-            const modal = document.getElementById('quotationDeleteModal');
-            const overlay = document.getElementById('quotationDeleteOverlay');
-            const cancelBtn = document.getElementById('quotationDeleteCancel');
-            const confirmBtn = document.getElementById('quotationDeleteConfirm');
-            const form = document.getElementById('quotationDeleteForm');
+            const btn = document.getElementById('quotationRemoveBtn');
+            const modal = document.getElementById('quotationRemoveModal');
+            const overlay = document.getElementById('quotationRemoveOverlay');
+            const cancelBtn = document.getElementById('quotationRemoveCancel');
+            const confirmBtn = document.getElementById('quotationRemoveConfirm');
+            const form = document.getElementById('quotationRemoveForm');
 
             function openModal() {
                 modal.classList.remove('hidden');

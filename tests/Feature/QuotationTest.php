@@ -309,6 +309,8 @@ class QuotationTest extends TestCase
             ->assertSee('1 item below the required shelf life')
             ->assertSee('Short-dated')
             ->assertSee('Offered: 6 months')
+            ->assertSee('Remove quotation')
+            ->assertSee(route('quotation.destroy-document', ['quotation' => $quotation->id]), false)
             ->assertSee(route('purchase-order.create', ['rfq' => $quotation->id]), false);
     }
 
@@ -374,6 +376,91 @@ class QuotationTest extends TestCase
 
         $this->assertDatabaseMissing('quotations', ['id' => $quotation->id]);
         Storage::disk('local')->assertMissing('quotations/test-'.$supplier->id.'.xlsx');
+    }
+
+    public function test_quoted_quotation_cannot_be_deleted(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 305.00,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('quotation.destroy', ['quotation' => $quotation->id]))
+            ->assertRedirect(route('quotation'))
+            ->assertSessionHasErrors('quotation');
+
+        $this->assertDatabaseHas('quotations', ['id' => $quotation->id]);
+        Storage::disk('local')->assertExists('quotations/test-'.$supplier->id.'.xlsx');
+    }
+
+    public function test_quotation_document_can_be_removed_without_deleting_the_entry(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 305.00,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('quotation.destroy-document', ['quotation' => $quotation->id]))
+            ->assertRedirect(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertSessionHas('status');
+
+        $quotation->refresh();
+
+        $this->assertDatabaseHas('quotations', ['id' => $quotation->id]);
+        $this->assertDatabaseMissing('quotation_items', ['quotation_id' => $quotation->id]);
+        $this->assertNull($quotation->document_path);
+        $this->assertNull($quotation->document_name);
+        Storage::disk('local')->assertMissing('quotations/test-'.$supplier->id.'.xlsx');
+
+        // The entry now waits for a fresh supplier response.
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('0 / 1')
+            ->assertSee('Awaiting quote')
+            ->assertSee('No supplier quotation submitted yet');
     }
 
     public function test_quotation_upload_parses_unit_prices_and_marks_items_quoted(): void

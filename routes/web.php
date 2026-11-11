@@ -128,6 +128,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
     Route::get('/quotation/{quotation}/download', [QuotationController::class, 'download'])
         ->whereNumber('quotation')
         ->name('quotation.download');
+    Route::delete('/quotation/{quotation}/document', [QuotationController::class, 'destroyDocument'])
+        ->whereNumber('quotation')
+        ->name('quotation.destroy-document');
     Route::delete('/quotation/{quotation}', [QuotationController::class, 'destroy'])
         ->whereNumber('quotation')
         ->name('quotation.destroy');

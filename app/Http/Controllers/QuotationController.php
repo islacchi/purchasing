@@ -200,10 +200,45 @@ class QuotationController extends Controller
     }
 
     /**
-     * Delete a quotation record and its stored document.
+     * Remove the supplier's uploaded quotation document and clear the
+     * quoted prices so the quotation returns to "Awaiting quote".
+     */
+    public function destroyDocument(Quotation $quotation)
+    {
+        DB::transaction(function () use ($quotation) {
+            if ($quotation->document_path) {
+                Storage::disk('local')->delete($quotation->document_path);
+            }
+
+            $quotation->items()->delete();
+
+            $quotation->update([
+                'document_path' => null,
+                'document_name' => null,
+                'document_size' => null,
+            ]);
+        });
+
+        return redirect()
+            ->route('quotation.show', ['quotation' => $quotation->id])
+            ->with('status', 'Quotation removed. The supplier can now submit a new file.');
+    }
+
+    /**
+     * Delete a quotation record. Only quotations that are still awaiting a
+     * quote can be deleted; quoted entries must have their uploaded file
+     * removed first.
      */
     public function destroy(Quotation $quotation)
     {
+        if ($quotation->quotedItems()->exists()) {
+            return redirect()
+                ->route('quotation')
+                ->withErrors([
+                    'quotation' => 'This quotation has already been answered. Remove the supplier’s quotation first before deleting the entry.',
+                ]);
+        }
+
         if ($quotation->document_path) {
             Storage::disk('local')->delete($quotation->document_path);
         }
