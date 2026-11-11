@@ -20,7 +20,7 @@ class QuotationWorkbookParser
     /**
      * Read the worksheet and return the parsed item rows.
      *
-     * @return array<int, array{description: string, unit_price: float|null}>
+     * @return array<int, array{description: string, brand: string|null, expiry: string|null, unit_price: float|null}>
      */
     public static function parse(string $path): array
     {
@@ -46,6 +46,7 @@ class QuotationWorkbookParser
         }
 
         $sharedStrings = self::sharedStrings($files['xl/sharedStrings.xml'] ?? '');
+        $dateStyles = self::dateStyles($files['xl/styles.xml'] ?? '');
 
         $sheet = simplexml_load_string($sheetXml);
 
@@ -89,6 +90,8 @@ class QuotationWorkbookParser
 
             $parsed[] = [
                 'description' => $description,
+                'brand' => self::brandValue(self::findCell($row, 'E'), $sharedStrings),
+                'expiry' => self::expiryValue(self::findCell($row, 'G'), $sharedStrings, $dateStyles),
                 'unit_price' => self::unitPrice($cells['F'] ?? null),
             ];
         }
@@ -143,6 +146,138 @@ class QuotationWorkbookParser
         }
 
         return $cells;
+    }
+
+    /**
+     * Locate a single cell element by its column letter.
+     */
+    private static function findCell(\SimpleXMLElement $row, string $column): ?\SimpleXMLElement
+    {
+        foreach ($row->c as $cell) {
+            if (preg_replace('/[0-9]+$/', '', (string) $cell['r']) === $column) {
+                return $cell;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The supplier's brand for an item, trimmed and null when left blank.
+     *
+     * @param  array<int, string>  $sharedStrings
+     */
+    private static function brandValue(?\SimpleXMLElement $cell, array $sharedStrings): ?string
+    {
+        if ($cell === null) {
+            return null;
+        }
+
+        $value = trim(self::cellValue($cell, $sharedStrings));
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * The supplier's expiry for an item. Date-formatted cells are converted
+     * from Excel's numeric serial to a Y-m-d string; anything else is kept
+     * exactly as the supplier typed it.
+     *
+     * @param  array<int, string>  $sharedStrings
+     * @param  array<int, bool>  $dateStyles
+     */
+    private static function expiryValue(?\SimpleXMLElement $cell, array $sharedStrings, array $dateStyles): ?string
+    {
+        if ($cell === null) {
+            return null;
+        }
+
+        $value = trim(self::cellValue($cell, $sharedStrings));
+
+        if ($value === '') {
+            return null;
+        }
+
+        $style = (int) ($cell['s'] ?? 0);
+
+        if (is_numeric($value) && ($dateStyles[$style] ?? false)) {
+            return self::excelDate((float) $value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Convert an Excel date serial into a Y-m-d string.
+     */
+    private static function excelDate(float $serial): string
+    {
+        $days = (int) floor($serial);
+        $seconds = (int) round(($serial - $days) * 86400);
+        $timestamp = (($days - 25569) * 86400) + $seconds;
+
+        return gmdate('Y-m-d', $timestamp);
+    }
+
+    /**
+     * Map each cell style index to whether it renders as a date.
+     *
+     * @return array<int, bool>
+     */
+    private static function dateStyles(string $xml): array
+    {
+        $trimmed = trim($xml);
+
+        if ($trimmed === '') {
+            return [];
+        }
+
+        $document = new \DOMDocument;
+
+        if (@$document->loadXML($trimmed) === false) {
+            return [];
+        }
+
+        $xpath = new \DOMXPath($document);
+
+        $customFormats = [];
+
+        foreach ($xpath->query('//*[local-name()="numFmts"]/*[local-name()="numFmt"]') as $numFmt) {
+            /** @var \DOMElement $numFmt */
+            $customFormats[(int) $numFmt->getAttribute('numFmtId')] = (string) $numFmt->getAttribute('formatCode');
+        }
+
+        $builtInDateFormats = [14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47];
+        $styles = [];
+
+        $cellFormats = $xpath->query('//*[local-name()="cellXfs"]/*[local-name()="xf"]');
+
+        if ($cellFormats === false) {
+            return [];
+        }
+
+        foreach ($cellFormats as $index => $format) {
+            /** @var \DOMElement $format */
+            $formatId = (int) $format->getAttribute('numFmtId');
+            $formatCode = $customFormats[$formatId] ?? null;
+
+            $styles[(int) $index] = in_array($formatId, $builtInDateFormats, true)
+                || ($formatCode !== null && self::looksLikeDateFormat($formatCode));
+        }
+
+        return $styles;
+    }
+
+    /**
+     * Whether a custom number format contains date/time tokens.
+     */
+    private static function looksLikeDateFormat(string $formatCode): bool
+    {
+        // Ignore quoted literals, escaped characters, and bracketed sections
+        // (colors, conditions) before looking for date tokens.
+        $cleaned = preg_replace('/"[^"]*"|\\\\.|\[[^\]]*\]/', '', $formatCode) ?? $formatCode;
+
+        return (bool) preg_match('/[ymdhis]/i', $cleaned);
     }
 
     /**

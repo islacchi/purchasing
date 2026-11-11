@@ -132,6 +132,8 @@ class QuotationController extends Controller
             $updates[] = [
                 'preplist_item_id' => $preplistItem->id,
                 'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,
+                'brand' => $row['brand'],
+                'expiry' => $row['expiry'],
                 'unit_price' => $row['unit_price'],
             ];
         }
@@ -156,6 +158,8 @@ class QuotationController extends Controller
                     ],
                     [
                         'min_remaining_months' => $data['min_remaining_months'],
+                        'brand' => $data['brand'],
+                        'expiry' => $data['expiry'],
                         'unit_price' => $data['unit_price'],
                         'quoted_at' => now(),
                     ],

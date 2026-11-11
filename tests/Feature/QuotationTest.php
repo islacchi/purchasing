@@ -169,6 +169,28 @@ class QuotationTest extends TestCase
         });
     }
 
+    /**
+     * Patch the supplier-entered Brand (E) and Expiry (G) cells.
+     */
+    private function fillItemDetails(string $binary, int $row, ?string $brand = null, ?string $expiry = null): string
+    {
+        return $this->patchWorksheet($binary, function (string $sheet) use ($row, $brand, $expiry) {
+            foreach (['E' => $brand, 'G' => $expiry] as $column => $value) {
+                if ($value === null) {
+                    continue;
+                }
+
+                $sheet = str_replace(
+                    '<c r="'.$column.$row.'" s="4"/>',
+                    '<c r="'.$column.$row.'" s="4" t="inlineStr"><is><t>'.$value.'</t></is></c>',
+                    $sheet,
+                );
+            }
+
+            return $sheet;
+        });
+    }
+
     private function replaceInSheet(string $binary, string $search, string $replace): string
     {
         return $this->patchWorksheet(
@@ -484,6 +506,7 @@ class QuotationTest extends TestCase
 
         $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
         $binary = $this->fillUnitPrices($binary, [18 => '305.50']);
+        $binary = $this->fillItemDetails($binary, 18, 'MediCore', 'December 2027');
 
         // Generating the RFQ creates the quotation record to upload against.
         $quotation = Quotation::query()->firstOrFail();
@@ -497,6 +520,8 @@ class QuotationTest extends TestCase
             'preplist_item_id' => $preplistItem->id,
             'unit_price' => 305.50,
             'min_remaining_months' => 9,
+            'brand' => 'MediCore',
+            'expiry' => 'December 2027',
         ]);
 
         $this->assertSame('305.50', QuotationItem::firstOrFail()->unit_price);
@@ -512,6 +537,8 @@ class QuotationTest extends TestCase
             ->assertOk()
             ->assertSee('1 / 1')
             ->assertSee('Quoted')
+            ->assertSee('MediCore')
+            ->assertSee('December 2027')
             ->assertSee('₱ 305.50 / Box');
     }
 
@@ -598,6 +625,7 @@ class QuotationTest extends TestCase
 
         $first = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
         $first = $this->fillUnitPrices($first, [18 => 305]);
+        $first = $this->fillItemDetails($first, 18, 'OldBrand', '2027-12-31');
 
         $quotation = Quotation::query()->firstOrFail();
 
@@ -605,6 +633,7 @@ class QuotationTest extends TestCase
 
         $second = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
         $second = $this->fillUnitPrices($second, [18 => 250]);
+        $second = $this->fillItemDetails($second, 18, 'NewBrand', '2028-06-30');
 
         $this->upload($user, $quotation->fresh(), $second, 'updated.xlsx')->assertSessionHas('status');
 
@@ -613,6 +642,8 @@ class QuotationTest extends TestCase
             'quotation_id' => $quotation->id,
             'preplist_item_id' => $preplistItem->id,
             'unit_price' => 250.00,
+            'brand' => 'NewBrand',
+            'expiry' => '2028-06-30',
         ]);
     }
 

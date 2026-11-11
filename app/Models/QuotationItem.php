@@ -24,6 +24,8 @@ class QuotationItem extends Model
         'preplist_item_id',
         'min_remaining_months',
         'unit_price',
+        'brand',
+        'expiry',
         'offered_shelf_life_months',
         'available_qty',
         'quoted_at',

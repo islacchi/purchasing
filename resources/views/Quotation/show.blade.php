@@ -57,6 +57,22 @@
 
         $peso = fn ($amount) => '₱ '.number_format((float) $amount, 2);
 
+        // Excel dates are stored as Y-m-d by the upload parser; show them in a
+        // friendlier form while leaving free-typed values untouched.
+        $formatExpiry = function (?string $expiry): ?string {
+            if (! $expiry) {
+                return null;
+            }
+
+            $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $expiry);
+
+            if ($date !== false && $date->format('Y-m-d') === $expiry) {
+                return $date->format('M j, Y');
+            }
+
+            return $expiry;
+        };
+
         $documentSize = $formatDocumentSize($quotation->document_size);
     @endphp
 
@@ -183,6 +199,8 @@
                     $isQuoted = $quotedItem?->unit_price !== null;
                     $requiredShelf = $item['min_remaining_months'] ?? 0;
                     $offeredShelf = $quotedItem?->offered_shelf_life_months;
+                    $brand = $quotedItem?->brand;
+                    $expiry = $formatExpiry($quotedItem?->expiry);
                     $isShortDated = $isQuoted
                         && $requiredShelf > 0
                         && $offeredShelf !== null
@@ -211,6 +229,19 @@
                                     Non-perishable &mdash; no shelf-life requirement
                                 @endif
                             </p>
+
+                            @if ($isQuoted)
+                                <div class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-gray-500">
+                                    <p>
+                                        Brand:
+                                        <span class="font-medium text-gray-700">{{ $brand ?: 'Not stated' }}</span>
+                                    </p>
+                                    <p>
+                                        Expiry:
+                                        <span class="font-medium text-gray-700">{{ $expiry ?: 'Not stated' }}</span>
+                                    </p>
+                                </div>
+                            @endif
                         </div>
 
                         <div class="flex-shrink-0 text-right">
