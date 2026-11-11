@@ -31,6 +31,7 @@ class QuotationController extends Controller
 
                 return [
                     'id' => $quotation->id,
+                    'preplist_id' => (int) $quotation->preplist_id,
                     'prep_list' => $quotation->preplist?->name ?? 'Prep list removed',
                     'ref' => $quotation->preplist?->reference_no ?? 'Prep list removed',
                     'supplier' => $quotation->supplier?->name ?? 'Supplier removed',
@@ -38,9 +39,31 @@ class QuotationController extends Controller
                     'total' => $total,
                     'status' => $quoted > 0 ? 'Quoted' : 'Awaiting quote',
                 ];
-            });
+            })->values();
 
-        return view('Quotation.index', compact('quotations'));
+        // Group the RFQ tracker by prep list so the quotations sent to
+        // different suppliers against the same batch stay together.
+        $preplistGroups = [];
+
+        foreach ($quotations as $quotation) {
+            $preplistGroups[$quotation['preplist_id']][] = $quotation;
+        }
+
+        $groups = collect($preplistGroups)
+            ->map(function (array $groupQuotations, $preplistId) {
+                return [
+                    'preplist_id' => (int) $preplistId,
+                    'name' => $groupQuotations[0]['prep_list'],
+                    'ref' => $groupQuotations[0]['ref'],
+                    'quotations' => $groupQuotations,
+                ];
+            })
+            ->sortByDesc(fn (array $group) => max(array_column($group['quotations'], 'id')))
+            ->values();
+
+        return view('Quotation.index', [
+            'preplistGroups' => $groups,
+        ]);
     }
 
     /**

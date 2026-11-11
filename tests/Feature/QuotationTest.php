@@ -269,6 +269,37 @@ class QuotationTest extends TestCase
             ->assertSee('No quotations yet');
     }
 
+    public function test_quotation_index_groups_quotations_by_prep_list(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplierOne = Supplier::create(['name' => 'Triple Tact']);
+        $supplierTwo = Supplier::create(['name' => 'Acme Supplies']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+
+        $this->createQuotation($user, $preplist, $supplierOne);
+        $this->createQuotation($user, $preplist, $supplierTwo);
+
+        $this->actingAs($user)
+            ->get(route('quotation'))
+            ->assertOk()
+            ->assertSee($preplist->name)
+            ->assertSee($preplist->reference_no)
+            ->assertSee($supplierOne->name)
+            ->assertSee($supplierTwo->name)
+            ->assertSee('Awaiting quote');
+    }
+
     public function test_quotation_show_displays_pending_items_and_document(): void
     {
         Storage::fake('local');
