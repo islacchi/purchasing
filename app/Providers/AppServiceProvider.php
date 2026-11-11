@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Support\DeliveryNotifications;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +25,15 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::define('access-settings', function (User $user): bool {
             return $user->isAdministrator();
+        });
+
+        // Feed the header bell with live delivery notifications on every
+        // page using the application layout.
+        View::composer('layouts.app', function ($view): void {
+            $notifications = DeliveryNotifications::projects();
+
+            $view->with('deliveryNotifications', $notifications);
+            $view->with('deliveryNotificationCount', $notifications->count());
         });
     }
 }
