@@ -32,9 +32,16 @@ class QuotationController extends Controller
                 return [
                     'id' => $quotation->id,
                     'preplist_id' => (int) $quotation->preplist_id,
+<<<<<<< Updated upstream
                     'prep_list' => $quotation->preplist?->name ?? 'Prep list removed',
                     'ref' => $quotation->preplist?->reference_no ?? 'Prep list removed',
                     'supplier' => $quotation->supplier?->name ?? 'Supplier removed',
+=======
+                    'prep_list' => $quotation->preplist->name,
+                    'ref' => $quotation->preplist->reference_no,
+                    'supplier' => $quotation->supplier->name,
+                    'rfq_number' => $quotation->rfq_number,
+>>>>>>> Stashed changes
                     'quoted' => $quoted,
                     'total' => $total,
                     'status' => $quoted > 0 ? 'Quoted' : 'Awaiting quote',
