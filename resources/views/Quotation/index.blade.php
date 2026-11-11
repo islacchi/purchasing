@@ -47,9 +47,6 @@
                                 $fractionColor = $isFullyQuoted
                                     ? 'text-green-600'
                                     : ($isPartiallyQuoted ? 'text-amber-500' : 'text-gray-400');
-
-                                // Menus on the last two rows open upward so they are not clipped.
-                                $openMenuUp = $loop->remaining < 2;
                             @endphp
                             <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
                                 data-href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}">
@@ -91,9 +88,31 @@
                                             </svg>
                                         </button>
 
+                                        {{--
+                                            The menu is positioned with `fixed` coordinates in JS.
+                                            It lives inside an `overflow-x-auto` table wrapper, so an
+                                            absolutely positioned menu would be clipped (which cut off the
+                                            Delete item on rows whose menu opened upward).
+                                        --}}
                                         <div data-quotation-menu
                                              role="menu"
-                                             class="absolute right-0 z-50 hidden w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg {{ $openMenuUp ? 'bottom-full mb-2' : 'top-full mt-2' }}">
+                                             class="fixed z-50 hidden w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+                                            @if ($quotation['status'] === 'Awaiting quote')
+                                            <form method="POST" action="{{ route('quotation.destroy', ['quotation' => $quotation['id']]) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" data-quotation-delete
+                                                        data-quotation-supplier="{{ $quotation['supplier'] }}"
+                                                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+                                                        role="menuitem">
+                                                    <svg class="h-4 w-4 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                            @endif
+
                                             <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}" role="menuitem"
                                                class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50">
                                                 <svg class="h-4 w-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -136,12 +155,49 @@
                     openMenu.classList.add('hidden');
                     openToggle.setAttribute('aria-expanded', 'false');
 
+                    // Clear the coordinates set while the menu was positioned,
+                    // so the next open starts from a clean slate.
+                    openMenu.style.top = '';
+                    openMenu.style.bottom = '';
+                    openMenu.style.left = '';
+                    openMenu.style.right = '';
+
                     var cell = openToggle.closest('td');
                     if (cell) cell.style.zIndex = '';
 
                     openToggle = null;
                     openMenu = null;
                 }
+
+                /**
+                 * Place the menu just below the toggle, right-aligned to it.
+                 * A fixed position escapes the table's horizontal scroll
+                 * container, which would otherwise clip the menu.
+                 * If there is no room below, flip it above the toggle.
+                 */
+                function positionMenu(toggle, menu) {
+                    var rect = toggle.getBoundingClientRect();
+                    var menuRect = menu.getBoundingClientRect();
+                    var gap = 8;
+                    var spaceBelow = window.innerHeight - rect.bottom;
+                    var openUp = spaceBelow < menuRect.height + gap + 8 && rect.top > menuRect.height + gap;
+
+                    menu.style.position = 'fixed';
+                    menu.style.right = (window.innerWidth - rect.right) + 'px';
+                    menu.style.left = 'auto';
+
+                    if (openUp) {
+                        menu.style.top = 'auto';
+                        menu.style.bottom = (window.innerHeight - rect.top + gap) + 'px';
+                    } else {
+                        menu.style.bottom = 'auto';
+                        menu.style.top = (rect.bottom + gap) + 'px';
+                    }
+                }
+
+                // Exposed so the delete-modal script can collapse the open menu
+                // without duplicating the toggle/menu bookkeeping.
+                window.__quotationCloseMenu = closeMenu;
 
                 Array.prototype.forEach.call(toggles, function (toggle) {
                     toggle.addEventListener('click', function (event) {
@@ -158,6 +214,8 @@
 
                         menu.classList.remove('hidden');
                         toggle.setAttribute('aria-expanded', 'true');
+
+                        positionMenu(toggle, menu);
 
                         // The action cell is sticky and therefore its own stacking context.
                         // Raise it so the open menu paints above the rows below it.
@@ -177,6 +235,11 @@
                     if (event.key === 'Escape') closeMenu();
                 });
 
+                // A fixed menu would drift away from its toggle if the page or
+                // table scrolls, so dismiss it instead of letting it float.
+                window.addEventListener('scroll', closeMenu, true);
+                window.addEventListener('resize', closeMenu);
+
                 // Clicking anywhere on a row opens that quotation's detail page,
                 // unless the click landed on the three-dot menu.
                 document.querySelectorAll('tr[data-href]').forEach(function (row) {
@@ -186,6 +249,77 @@
                         }
                         window.location.href = row.dataset.href;
                     });
+                });
+            })();
+        </script>
+        @endpush
+
+        {{-- Delete quotation confirmation modal --}}
+        <div id="quotationDeleteModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="quotationDeleteTitle">
+            <div id="quotationDeleteOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+            <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+                <div class="flex items-start gap-3 px-5 py-4">
+                    <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                        <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 id="quotationDeleteTitle" class="text-base font-bold text-gray-900">Delete quotation?</h3>
+                        <p id="quotationDeleteSummary" class="mt-1 text-sm text-gray-500"></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                    <button type="button" id="quotationDeleteCancel"
+                            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="button" id="quotationDeleteConfirm"
+                            class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @push('scripts')
+        <script>
+            // Delete quotation confirmation modal
+            (function () {
+                const modal = document.getElementById('quotationDeleteModal');
+                const overlay = document.getElementById('quotationDeleteOverlay');
+                const cancelBtn = document.getElementById('quotationDeleteCancel');
+                const confirmBtn = document.getElementById('quotationDeleteConfirm');
+                const summary = document.getElementById('quotationDeleteSummary');
+                let deleteForm = null;
+
+                function openModal(btn) {
+                    deleteForm = btn.closest('form');
+                    summary.textContent = (btn.getAttribute('data-quotation-supplier') || 'This supplier') + ' quotation will be permanently deleted. This action cannot be undone.';
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    confirmBtn.focus();
+                    // The confirmation modal's overlay takes over the action area;
+                    // collapse the open menu so the overlay is the only layer on top.
+                    if (window.__quotationCloseMenu) window.__quotationCloseMenu();
+                }
+                function closeModal() {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }
+
+                document.querySelectorAll('[data-quotation-delete]').forEach(function (btn) {
+                    btn.addEventListener('click', function () { openModal(btn); });
+                });
+                document.getElementById('quotationDeleteCancel').addEventListener('click', closeModal);
+                document.getElementById('quotationDeleteOverlay').addEventListener('click', closeModal);
+                document.getElementById('quotationDeleteConfirm').addEventListener('click', function () {
+                    if (deleteForm) deleteForm.submit();
+                });
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
                 });
             })();
         </script>
