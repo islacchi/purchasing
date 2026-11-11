@@ -60,20 +60,36 @@
         $documentSize = $formatDocumentSize($quotation->document_size);
     @endphp
 
+    {{-- The file chooser lives in this hidden form; the Replace / Submit buttons open it and submit on selection. --}}
+    <form id="supplierQuotationForm" method="POST" action="{{ route('quotation.store-document', ['quotation' => $quotation->id]) }}" enctype="multipart/form-data" class="hidden">
+        @csrf
+        <input id="supplierQuotationFile" type="file" name="document" accept=".xlsx" required onchange="this.form.requestSubmit()">
+    </form>
+
     <div class="flex h-full min-h-0 flex-col">
-        {{-- Supplier / prep list summary --}}
+        {{-- Quotation details + supplier's quotation document, side by side --}}
         <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-            <div class="flex items-start justify-between gap-4">
+            <div class="grid gap-5 md:grid-cols-2">
+                {{-- Quotation details --}}
                 <div class="min-w-0">
-                    <h2 class="text-xl font-bold text-gray-900">{{ $supplier?->name ?? 'Supplier removed' }}</h2>
-                    <p class="mt-1 text-xs text-gray-500">
-                        {{ $preplist->name }}
-                        <span class="mx-1 text-gray-300">&middot;</span>
-                        {{ $preplist->reference_no }}
-                    </p>
-                    @if ($quotation->rfq_number)
-                        <p class="mt-0.5 text-xs text-gray-400">{{ $quotation->rfq_number }}</p>
-                    @endif
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <h2 class="text-xl font-bold text-gray-900">{{ $supplier?->name ?? 'Supplier removed' }}</h2>
+                            <p class="mt-1 text-xs text-gray-500">
+                                {{ $preplist->name }}
+                                <span class="mx-1 text-gray-300">&middot;</span>
+                                {{ $preplist->reference_no }}
+                            </p>
+                            @if ($quotation->rfq_number)
+                                <p class="mt-0.5 text-xs text-gray-400">{{ $quotation->rfq_number }}</p>
+                            @endif
+                        </div>
+
+                        <span class="inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium
+                            {{ $status === 'Quoted' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600' }}">
+                            {{ $status }}
+                        </span>
+                    </div>
 
                     <div class="mt-4">
                         <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Items quoted</p>
@@ -83,10 +99,60 @@
                     </div>
                 </div>
 
-                <span class="inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium
-                    {{ $status === 'Quoted' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600' }}">
-                    {{ $status }}
-                </span>
+                {{-- Supplier's quotation document --}}
+                <div class="min-w-0 border-t border-gray-100 pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                        Supplier's quotation document
+                    </p>
+
+                    @if ($errors->has('document'))
+                        <div class="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            {{ $errors->first('document') }}
+                        </div>
+                    @endif
+
+                    @if ($quotation->document_path)
+                        <div class="mt-2 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                            <div class="flex min-w-0 flex-1 items-center gap-3">
+                                <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-red-50">
+                                    <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                                    </svg>
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-gray-900">{{ $quotation->document_name }}</p>
+                                    @if ($documentSize)
+                                        <p class="text-xs text-gray-500">{{ $documentSize }}</p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="flex shrink-0 items-center gap-3">
+                                <label for="supplierQuotationFile"
+                                       class="cursor-pointer text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94] hover:underline">
+                                    Replace
+                                </label>
+                                <a href="{{ route('quotation.download', ['quotation' => $quotation->id]) }}"
+                                   class="flex items-center gap-1.5 text-sm font-medium text-[#2a7a94] hover:underline"
+                                   aria-label="Download {{ $quotation->document_name }}">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                    </svg>
+                                    Download
+                                </a>
+                            </div>
+                        </div>
+                    @else
+                        <div class="mt-2 flex items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3">
+                            <svg class="h-5 w-5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v4a1 1 0 0 0 1 1h4"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.5 13.5 5 5m0-5-5 5"/>
+                            </svg>
+                            <p class="text-sm text-gray-500">No supplier quotation submitted yet. Use “Submit quotation” to upload the supplier’s completed file.</p>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
 
@@ -107,71 +173,10 @@
             </div>
         @endif
 
-        {{-- Supplier's quotation document --}}
-        <p class="mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-            Supplier's quotation document
-        </p>
-
-        {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
-
-        @if ($errors->has('document'))
-            <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {{ $errors->first('document') }}
-            </div>
-        @endif
-
-        {{-- The file chooser lives in this hidden form; the buttons below open it and submit on selection. --}}
-        <form id="supplierQuotationForm" method="POST" action="{{ route('quotation.store-document', ['quotation' => $quotation->id]) }}" enctype="multipart/form-data" class="hidden">
-            @csrf
-            <input id="supplierQuotationFile" type="file" name="document" accept=".xlsx" required onchange="this.form.requestSubmit()">
-        </form>
-
-        @if ($quotation->document_path)
-            <div class="mb-6 flex shrink-0 items-center justify-between gap-4 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-                <div class="flex min-w-0 items-center gap-3">
-                    <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-red-50">
-                        <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
-                        </svg>
-                    </span>
-                    <div class="min-w-0">
-                        <p class="truncate text-sm font-semibold text-gray-900">{{ $quotation->document_name }}</p>
-                        @if ($documentSize)
-                            <p class="text-xs text-gray-500">{{ $documentSize }}</p>
-                        @endif
-                    </div>
-                </div>
-
-                <div class="flex shrink-0 items-center gap-3">
-                    <label for="supplierQuotationFile"
-                           class="cursor-pointer text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94] hover:underline">
-                        Replace
-                    </label>
-                    <a href="{{ route('quotation.download', ['quotation' => $quotation->id]) }}"
-                       class="flex items-center gap-1.5 text-sm font-medium text-[#2a7a94] hover:underline"
-                       aria-label="Download {{ $quotation->document_name }}">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                        </svg>
-                        Download
-                    </a>
-                </div>
-            </div>
-        @else
-            <div class="mb-6 flex shrink-0 items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-3">
-                <svg class="h-5 w-5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v4a1 1 0 0 0 1 1h4"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.5 13.5 5 5m0-5-5 5"/>
-                </svg>
-                <p class="text-sm text-gray-500">No supplier quotation submitted yet. Use “Submit quotation” to upload the supplier’s completed file.</p>
-            </div>
-        @endif
-
         {{-- Item breakdown --}}
         <p class="mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Item breakdown</p>
 
-        <div class="min-h-[240px] flex-1 space-y-4 overflow-y-auto pr-1">
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
             @forelse ($items as $item)
                 @php
                     $quotedItem = $quotationItems->get((int) $item['key']);
