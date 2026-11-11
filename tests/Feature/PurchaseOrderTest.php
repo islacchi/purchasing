@@ -268,7 +268,34 @@ class PurchaseOrderTest extends TestCase
 
         $purchaseOrder = PurchaseOrder::query()->firstOrFail();
 
-        $response->assertRedirect(route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id]));
+        // Creating the draft PO also returns the Excel document as a download.
+        $response->assertStatus(200);
+
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type'),
+        );
+
+        $this->assertStringContainsString(
+            'attachment; filename="'.$purchaseOrder->po_number.'.xlsx"',
+            (string) $response->headers->get('Content-Disposition'),
+        );
+
+        // The generated file is a real workbook carrying the PO details.
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'po_workbook_');
+        file_put_contents($temporaryPath, $response->getContent());
+
+        $zip = new \ZipArchive;
+        $zip->open($temporaryPath);
+        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        unlink($temporaryPath);
+
+        $this->assertIsString($sheetXml);
+        $this->assertStringContainsString($purchaseOrder->po_number, $sheetXml);
+        $this->assertStringContainsString('PURCHASE ORDER', $sheetXml);
+        $this->assertStringContainsString('AlphaItemAlpha', $sheetXml);
+        $this->assertStringContainsString('₱ ', $sheetXml);
 
         $this->assertMatchesRegularExpression('/^PO-'.now()->year.'-\d{4}$/', $purchaseOrder->po_number);
         $this->assertSame(PurchaseOrder::STATUS_DRAFT, $purchaseOrder->status);
@@ -342,7 +369,7 @@ class PurchaseOrderTest extends TestCase
                     ],
                 ],
             ])
-            ->assertRedirect();
+            ->assertStatus(200);
 
         $purchaseOrderItem = PurchaseOrderItem::firstOrFail();
 

@@ -9,6 +9,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderItemAllocation;
 use App\Models\PurchaseOrderReceipt;
 use App\Models\Quotation;
+use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -226,9 +227,18 @@ class PurchaseOrderController extends Controller
             return $purchaseOrder;
         });
 
-        return redirect()
-            ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
-            ->with('status', 'Draft purchase order '.$purchaseOrder->po_number.' created.');
+        $purchaseOrder->load(['items.item', 'items.allocations']);
+
+        $content = PurchaseOrderWorkbook::build($purchaseOrder, $purchaseOrder->items);
+
+        session()->flash('status', 'Draft purchase order '.$purchaseOrder->po_number.' created.');
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$purchaseOrder->po_number.'.xlsx"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**
