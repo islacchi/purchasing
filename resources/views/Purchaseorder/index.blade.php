@@ -31,96 +31,18 @@
     </style>
 
     @php
-        // ------------------------------------------------------------------
-        // Dummy data for the tracker below (no DB integration yet).
-        //
-        // @TODO: Replace with a real query once the PurchaseOrder model and
-        // migrations exist, e.g.:
-        //   $purchaseOrders = PurchaseOrder::with(['supplier', 'quotation', 'items'])
-        //       ->latest('issued_at')
-        //       ->get();
-        // Totals should be summed from the PO line items, not stored as a
-        // single column, and status should come from the PO workflow.
-        // ------------------------------------------------------------------
-        $purchaseOrders = [
-            [
-                'id' => 1,
-                'number' => 'PO-2026-0117',
-                'supplier' => 'GreenCore Pharmaceuticals',
-                'rfq_number' => 'RFQ-2026-0090',
-                'prep_list' => 'July Region VII batch',
-                'items' => 3,
-                'total' => 49350.00,
-                'status' => 'Sent',
-                'issued' => 'Jul 18, 2026',
-            ],
-            [
-                'id' => 2,
-                'number' => 'PO-2026-0116',
-                'supplier' => 'MedSource Inc.',
-                'rfq_number' => 'RFQ-2026-0089',
-                'prep_list' => 'Lab reagents – PGH',
-                'items' => 3,
-                'total' => 67700.00,
-                'status' => 'Partial',
-                'issued' => 'Jul 15, 2026',
-            ],
-            [
-                'id' => 3,
-                'number' => 'PO-2026-0115',
-                'supplier' => 'Triple Tact',
-                'rfq_number' => 'RFQ-2026-0088',
-                'prep_list' => 'Pharma supplies Q3',
-                'items' => 2,
-                'total' => 30640.00,
-                'status' => 'Draft',
-                'issued' => 'Jul 14, 2026',
-            ],
-            [
-                'id' => 4,
-                'number' => 'PO-2026-0114',
-                'supplier' => 'MedSource Inc.',
-                'rfq_number' => 'RFQ-2026-0087',
-                'prep_list' => 'Surgical supplies',
-                'items' => 4,
-                'total' => 81800.00,
-                'status' => 'Completed',
-                'issued' => 'Jul 02, 2026',
-            ],
-            [
-                'id' => 5,
-                'number' => 'PO-2026-0113',
-                'supplier' => 'GreenCore Pharmaceuticals',
-                'rfq_number' => '#2026-0086',
-                'prep_list' => 'Laboratory reagents',
-                'items' => 2,
-                'total' => 19950.00,
-                'status' => 'Cancelled',
-                'issued' => 'Jun 28, 2026',
-            ],
-            [
-                'id' => 6,
-                'number' => 'PO-2026-0112',
-                'supplier' => 'Triple Tact',
-                'rfq_number' => '#2026-0085',
-                'prep_list' => 'IT hardware refresh',
-                'items' => 3,
-                'total' => 263500.00,
-                'status' => 'Sent',
-                'issued' => 'Jun 25, 2026',
-            ],
-        ];
-
+        // Real records come from PurchaseOrderController@index. The view only
+        // formats them; statuses are canonical (see PurchaseOrder::statusLabel).
         $statusStyles = [
             'Draft' => 'bg-gray-100 text-gray-600',
-            'Sent' => 'bg-blue-100 text-blue-700',
-            'Partial' => 'bg-amber-100 text-amber-700',
+            'Sent to supplier' => 'bg-blue-100 text-blue-700',
+            'Partially received' => 'bg-amber-100 text-amber-700',
             'Completed' => 'bg-green-100 text-green-700',
             'Cancelled' => 'bg-red-100 text-red-700',
         ];
 
-        $supplierOptions = collect($purchaseOrders)->pluck('supplier')->unique()->sort()->values();
-        $statusOptions = collect($purchaseOrders)->pluck('status')->unique()->sort()->values();
+        $supplierOptions = $purchaseOrders->pluck('supplier')->unique()->sort()->values();
+        $statusOptions = $purchaseOrders->pluck('status')->unique()->sort()->values();
 
         $peso = function ($amount) {
             return '₱' . number_format($amount, 2);
@@ -168,6 +90,21 @@
             </div>
         </div>
 
+        @if (session('status'))
+            <div class="mb-6 flex shrink-0 items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 13 4 4L19 7"/>
+                </svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
         {{-- Purchase order tracker --}}
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
@@ -176,7 +113,7 @@
                     <p class="mt-0.5 text-xs text-gray-500">Track issued, partially received, and completed orders.</p>
                 </div>
                 <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                    {{ count($purchaseOrders) }} total
+                    {{ $purchaseOrders->count() }} total
                 </span>
             </div>
 
@@ -197,15 +134,15 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @foreach ($purchaseOrders as $po)
+                        @forelse ($purchaseOrders as $po)
                             <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
-                                data-href="{{ route('purchase-order.show', ['id' => $po['id']]) }}"
+                                data-href="{{ route('purchase-order.show', ['purchaseOrder' => $po['id']]) }}"
                                 data-search="{{ strtolower($po['number'] . ' ' . $po['supplier'] . ' ' . $po['prep_list'] . ' ' . $po['rfq_number']) }}"
                                 data-supplier="{{ $po['supplier'] }}"
                                 data-status="{{ $po['status'] }}">
                                 <td class="whitespace-nowrap px-6 py-4">
                                     <p class="font-semibold text-gray-900">{{ $po['number'] }}</p>
-                                    <p class="mt-0.5 text-xs text-gray-500">from quotation Q-{{ substr($po['rfq_number'], 4) }}</p>
+                                    <p class="mt-0.5 text-xs text-gray-500">from quotation {{ $po['rfq_number'] }}</p>
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-gray-700">
                                     {{ $po['supplier'] }}
@@ -225,7 +162,7 @@
                                     </span>
                                 </td>
                                 <td class="whitespace-nowrap px-6 py-4 text-gray-500">
-                                    {{ $po['issued'] }}
+                                    {{ $po['issued'] ?? 'Not issued' }}
                                 </td>
                                 <td class="sticky right-0 z-10 bg-white px-6 py-4 text-center group-hover:bg-gray-50">
                                     <div class="relative inline-block text-left">
@@ -244,7 +181,7 @@
 
                                         <div data-po-menu
                                              class="hidden absolute right-0 top-full mt-2 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg z-30">
-                                            <a href="{{ route('purchase-order.show', ['id' => $po['id']]) }}"
+                                            <a href="{{ route('purchase-order.show', ['purchaseOrder' => $po['id']]) }}"
                                                role="menuitem"
                                                class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                                 <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -263,21 +200,31 @@
                                                 Download PDF
                                             </button>
 
-                                            @if (! in_array($po['status'], ['Completed', 'Cancelled']))
-                                                {{-- @TODO: Route this at the PO cancel endpoint once it exists. --}}
-                                                <button type="button" role="menuitem"
-                                                        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                                    </svg>
-                                                    Cancel order
-                                                </button>
+                                            @if ($po['cancellable'])
+                                                <form method="POST" action="{{ route('purchase-order.cancel', ['purchaseOrder' => $po['id']]) }}">
+                                                    @csrf
+                                                    <button type="button" role="menuitem"
+                                                            data-po-cancel
+                                                            data-po-number="{{ $po['number'] }}"
+                                                            class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                                                        </svg>
+                                                        Cancel order
+                                                    </button>
+                                                </form>
                                             @endif
                                         </div>
                                     </div>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-500">
+                                    No purchase orders yet. Purchase orders are created from a supplier quotation using “Proceed to PO”.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -288,8 +235,46 @@
             </div>
 
             <div class="border-t border-gray-100 px-6 py-3">
-                <p id="poCount" class="text-xs text-gray-500">Showing {{ count($purchaseOrders) }} of {{ count($purchaseOrders) }} purchase orders</p>
+                <p id="poCount" class="text-xs text-gray-500">Showing {{ $purchaseOrders->count() }} of {{ $purchaseOrders->count() }} purchase orders</p>
             </div>
+        </div>
+
+        {{-- Cancel order confirmation modal --}}
+        <div id="poCancelModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="poCancelTitle">
+            <div id="poCancelOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+            <form id="poCancelForm" method="POST" class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+                @csrf
+                <div class="flex items-start gap-3 px-5 py-4">
+                    <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                        <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 id="poCancelTitle" class="text-base font-bold text-gray-900">Cancel purchase order?</h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            <span id="poCancelNumber" class="font-medium text-gray-700"></span>
+                            will be cancelled. The supplier should be informed as well.
+                        </p>
+                        <label for="poCancelReason" class="mt-3 block text-xs font-medium text-gray-600">Reason (optional)</label>
+                        <input type="text" id="poCancelReason" name="reason" maxlength="255"
+                               class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+                               placeholder="e.g. quantities were renegotiated">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                    <button type="button" id="poCancelDismiss"
+                            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                        Keep order
+                    </button>
+                    <button type="submit"
+                            class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
+                        Cancel order
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -419,6 +404,34 @@
             searchInput.addEventListener('input', applyFilters);
             supplierInput.addEventListener('change', applyFilters);
             statusInput.addEventListener('change', applyFilters);
+
+            // --- Cancel order modal ---
+            const cancelModal = document.getElementById('poCancelModal');
+            const cancelForm = document.getElementById('poCancelForm');
+            const cancelNumber = document.getElementById('poCancelNumber');
+            const cancelOverlay = document.getElementById('poCancelOverlay');
+            const cancelDismiss = document.getElementById('poCancelDismiss');
+
+            function closeCancelModal() {
+                cancelModal.classList.add('hidden');
+                cancelModal.classList.remove('flex');
+            }
+
+            Array.prototype.forEach.call(document.querySelectorAll('[data-po-cancel]'), function (btn) {
+                btn.addEventListener('click', function () {
+                    cancelForm.action = btn.closest('form').action;
+                    cancelNumber.textContent = btn.getAttribute('data-po-number') || 'This purchase order';
+                    cancelModal.classList.remove('hidden');
+                    cancelModal.classList.add('flex');
+                    if (closeMenus) closeMenus();
+                });
+            });
+
+            if (cancelOverlay) cancelOverlay.addEventListener('click', closeCancelModal);
+            if (cancelDismiss) cancelDismiss.addEventListener('click', closeCancelModal);
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') closeCancelModal();
+            });
         })();
     </script>
 @endsection

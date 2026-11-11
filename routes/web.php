@@ -16,6 +16,7 @@ use App\Http\Controllers\EntityController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PreplistController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
@@ -136,25 +137,32 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         ->name('quotation.destroy');
 
     // Purchase orders generated from awarded quotations.
-    // @TODO: once the PurchaseOrder model + migrations exist, swap for:
-    // Route::get('/purchase-order', [PurchaseOrderController::class, 'index'])->name('purchase-order');
-    Route::get('/purchase-order', [PageController::class, 'show'])
-        ->defaults('page', 'Purchaseorder.index')
-        ->name('purchase-order');
+    Route::get('/purchase-order', [PurchaseOrderController::class, 'index'])->name('purchase-order');
 
     // Purchase order preparation screen, opened by the quotation page's
     // "Proceed to PO" button: pick the quoted items to order and set the
     // purchase quantity before the PO is created.
-    // Declared before /purchase-order/{id} so "create" is never captured as an id.
-    // @TODO: Route::get('/purchase-order/create/{rfq}', [PurchaseOrderController::class, 'create'])->name('purchase-order.create');
-    Route::get('/purchase-order/create/{rfq}', function ($rfq) {
-        return view('Purchaseorder.create', ['rfqId' => (int) $rfq]);
-    })->name('purchase-order.create');
+    // Declared before /purchase-order/{purchaseOrder} so "create" is never
+    // captured as an id.
+    Route::get('/purchase-order/create/{rfq}', [PurchaseOrderController::class, 'create'])
+        ->whereNumber('rfq')
+        ->name('purchase-order.create');
+    Route::post('/purchase-order', [PurchaseOrderController::class, 'store'])
+        ->name('purchase-order.store');
 
-    // Purchase order detail (dummy data for now — the view uses $id to pick a hardcoded record).
-    // @TODO: Route::get('/purchase-order/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->name('purchase-order.show');
-    Route::get('/purchase-order/{id}', function ($id) {
-        return view('Purchaseorder.show', ['id' => $id]);
-    })->name('purchase-order.show');
+    // Purchase order detail.
+    Route::get('/purchase-order/{purchaseOrder}', [PurchaseOrderController::class, 'show'])
+        ->whereNumber('purchaseOrder')
+        ->name('purchase-order.show');
+    Route::post('/purchase-order/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])
+        ->whereNumber('purchaseOrder')
+        ->name('purchase-order.send');
+    Route::post('/purchase-order/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])
+        ->whereNumber('purchaseOrder')
+        ->name('purchase-order.cancel');
+    Route::post('/purchase-order/{purchaseOrder}/items/{purchaseOrderItem}/toggle-receipt', [PurchaseOrderController::class, 'toggleReceipt'])
+        ->whereNumber('purchaseOrder')
+        ->whereNumber('purchaseOrderItem')
+        ->name('purchase-order.receive');
 
 });

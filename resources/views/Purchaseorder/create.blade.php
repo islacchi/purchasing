@@ -14,151 +14,38 @@
     </style>
 
     @php
-        // ------------------------------------------------------------------
-        // Dummy data for the preparation screen (no DB integration yet).
-        // Reached from the quotation page via "Proceed to PO"; submitting
-        // "Generate purchase order" prepares the draft PO.
-        //
-        // @TODO: Replace with a real lookup once the Quotation / PurchaseOrder
-        // models exist, e.g.:
-        //   $quotation = Quotation::with(['supplier', 'prepList', 'items.allocations.sourceProject'])
-        //       ->findOrFail($quotationId);
-        // Only items that carry a unit_price can be ordered. Purchase quantity
-        // must never exceed the quantity requested internally (or the quantity
-        // allocated to this supplier for split awards).
-        // The dataset mirrors Quotation/show.blade.php for ids 1-3.
-        // ------------------------------------------------------------------
-        $quotations = [
-            1 => [
-                'id' => 1,
-                'supplier' => 'Triple Tact',
-                'prep_list' => 'July Region VII batch',
-                'reference_no' => '#2026-0090',
-                'contact' => 'Liza Tan',
-                'email' => 'sales@tripletact.com',
-                'deliver_to' => 'DOH Region VII Warehouse, Cebu City',
-                'payment_terms' => '30 days from delivery',
-                'expected' => '2026-07-25',
-                'items' => [
-                    [
-                        'name' => 'Amoxicillin 500mg, box of 100',
-                        'requested' => 100,
-                        'unit' => 'box',
-                        'unit_price' => null,
-                        'min_remaining_months' => 12,
-                        'offered_shelf_life_months' => null,
-                        'allocations' => ['Pharma supplies Q3', 'Laboratory reagents'],
-                    ],
-                    [
-                        'name' => 'Surgical gloves, box of 50 pairs',
-                        'requested' => 40,
-                        'unit' => 'box',
-                        'unit_price' => null,
-                        'min_remaining_months' => 24,
-                        'offered_shelf_life_months' => null,
-                        'allocations' => ['Pharma supplies Q3'],
-                    ],
-                ],
-            ],
-            2 => [
-                'id' => 2,
-                'supplier' => 'GreenCore Pharmaceuticals',
-                'prep_list' => 'July Region VII batch',
-                'reference_no' => '#2026-0090',
-                'contact' => 'Ana Lim',
-                'email' => 'sales@greencore.ph',
-                'deliver_to' => 'DOH Region VII Warehouse, Cebu City',
-                'payment_terms' => '30 days from delivery',
-                'expected' => '2026-07-25',
-                'items' => [
-                    [
-                        'name' => 'Amoxicillin 500mg, box of 100',
-                        'requested' => 100,
-                        'unit' => 'box',
-                        'unit_price' => 305.00,
-                        'min_remaining_months' => 12,
-                        'offered_shelf_life_months' => 9,
-                        'allocations' => ['Pharma supplies Q3', 'Laboratory reagents'],
-                    ],
-                    [
-                        'name' => 'Surgical gloves, box of 50 pairs',
-                        'requested' => 40,
-                        'unit' => 'box',
-                        'unit_price' => null,
-                        'min_remaining_months' => 24,
-                        'offered_shelf_life_months' => null,
-                        'allocations' => ['Pharma supplies Q3'],
-                    ],
-                ],
-            ],
-            3 => [
-                'id' => 3,
-                'supplier' => 'MedSource Inc.',
-                'prep_list' => 'Lab reagents – PGH',
-                'reference_no' => '#2026-0089',
-                'contact' => 'Marco Reyes',
-                'email' => 'orders@medsource.ph',
-                'deliver_to' => 'PGH Manila — Central Supply Room',
-                'payment_terms' => '15 days from delivery',
-                'expected' => '2026-07-22',
-                'items' => [
-                    [
-                        'name' => 'Sodium chloride 0.9% 500mL, box of 24',
-                        'requested' => 60,
-                        'unit' => 'box',
-                        'unit_price' => 850.00,
-                        'min_remaining_months' => 12,
-                        'offered_shelf_life_months' => 12,
-                        'allocations' => ['Laboratory reagents', 'Pharma supplies Q3'],
-                    ],
-                    [
-                        'name' => 'Sterile gloves, box of 50 pairs',
-                        'requested' => 40,
-                        'unit' => 'box',
-                        'unit_price' => 310.00,
-                        'min_remaining_months' => 24,
-                        'offered_shelf_life_months' => 30,
-                        'allocations' => ['Laboratory reagents'],
-                    ],
-                    [
-                        'name' => 'Microscope slides, box of 100',
-                        'requested' => 25,
-                        'unit' => 'box',
-                        'unit_price' => 220.00,
-                        'min_remaining_months' => 0,
-                        'offered_shelf_life_months' => null,
-                        'allocations' => ['Laboratory reagents', 'Pharma supplies Q3'],
-                    ],
-                ],
-            ],
-        ];
-
-        $quotation = $quotations[$rfqId] ?? $quotations[2];
-
+        // Real data: a quotation plus its line items. Only items with a unit
+        // price can be ordered; see PurchaseOrderController@create.
         $peso = fn ($amount) => '₱' . number_format((float) $amount, 2);
 
-        $quotedItems = collect($quotation['items'])->filter(fn ($item) => $item['unit_price'] !== null);
+        $quotedItems = $items->filter(fn ($item) => $item['unit_price'] !== null);
         $quotedCount = $quotedItems->count();
 
-        $subtotal = $quotedItems->sum(fn ($item) => $item['unit_price'] * $item['requested']);
+        $subtotal = $quotedItems->sum(fn ($item) => (float) $item['unit_price'] * $item['requested']);
         $delivery = 0.0;
         $total = $subtotal + $delivery;
 
-        $initials = collect(explode(' ', $quotation['supplier']))
+        $supplierName = $quotation->supplier?->name ?? 'Supplier removed';
+
+        $initials = collect(explode(' ', $supplierName))
             ->take(2)
             ->map(fn ($word) => strtoupper(substr($word, 0, 1)))
             ->implode('');
+
+        $paymentTermOptions = ['30 days from delivery', '15 days from delivery', 'Cash on delivery', '50% down, 50% on delivery'];
+        $defaultPaymentTerm = '30 days from delivery';
+        $defaultExpected = now()->addDays(30)->toDateString();
     @endphp
 
     <div class="flex h-full min-h-0 flex-col">
 
         {{-- Back --}}
-        <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
+        <a href="{{ route('quotation.show', ['quotation' => $quotation->id]) }}"
            class="mb-5 inline-flex shrink-0 items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94]">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
             </svg>
-            Back to quotation {{ $quotation['reference_no'] }}
+            Back to quotation {{ $quotation->rfq_number }}
         </a>
 
         {{-- Heading --}}
@@ -170,30 +57,24 @@
                 </div>
                 <p class="mt-1 text-xs text-gray-500">
                     From quotation
-                    <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
-                       class="font-medium text-[#2a7a94] hover:underline">{{ $quotation['reference_no'] }}</a>
-                    · {{ $quotation['prep_list'] }}
+                    <a href="{{ route('quotation.show', ['quotation' => $quotation->id]) }}"
+                       class="font-medium text-[#2a7a94] hover:underline">{{ $quotation->rfq_number }}</a>
+                    &middot; {{ $quotation->preplist->name }}
                 </p>
             </div>
         </div>
 
-        {{-- Demo confirmation (no persistence yet) — floats at the former banner spot --}}
-        <div id="poCreatedBanner" class="flash-success-overlay hidden" role="status">
-            <div class="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-5 py-4 shadow-sm">
-                <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                </svg>
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold text-green-800">Draft purchase order prepared</p>
-                    <p id="poCreatedSummary" class="mt-0.5 text-xs text-green-700"></p>
-                    <p class="mt-1 text-xs text-green-700">
-                        Nothing was saved yet — wiring this to the PurchaseOrder controller is still a @TODO.
-                    </p>
-                </div>
+        @if ($errors->any())
+            <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                @foreach ($errors->all() as $error)
+                    <p>{{ $error }}</p>
+                @endforeach
             </div>
-        </div>
+        @endif
 
-        <form id="poForm" novalidate class="flex min-h-0 flex-1 flex-col">
+        <form id="poForm" method="POST" action="{{ route('purchase-order.store') }}" class="flex min-h-0 flex-1 flex-col">
+            @csrf
+            <input type="hidden" name="quotation_id" value="{{ $quotation->id }}">
             <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-3">
 
                 {{-- Left column: items + delivery --}}
@@ -245,10 +126,14 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
-                                    @foreach ($quotation['items'] as $index => $item)
+                                    @foreach ($items as $index => $item)
                                         @php
                                             $isQuoted = $item['unit_price'] !== null;
                                             $lineAmount = $isQuoted ? $item['unit_price'] * $item['requested'] : 0;
+                                            // Rows are keyed by quotation item id so the store endpoint
+                                            // can re-fetch the exact line; unquoted rows use a local key
+                                            // and are ignored by the server.
+                                            $rowKey = $item['quotation_item_id'] ?? 'pending-'.$item['id'];
                                         @endphp
                                         <tr class="po-row transition-colors {{ $isQuoted ? 'hover:bg-gray-50' : 'bg-gray-50/70' }}"
                                             data-po-item
@@ -259,6 +144,8 @@
                                             data-unit="{{ $item['unit'] }}"
                                             data-offered-shelf-life="{{ $item['offered_shelf_life_months'] ?? '' }}">
                                             <td class="px-4 py-4 text-center">
+                                                <input type="hidden" class="po-included" name="items[{{ $rowKey }}][included]" value="{{ $isQuoted ? 1 : 0 }}">
+                                                <input type="hidden" name="items[{{ $rowKey }}][quotation_item_id]" value="{{ $item['quotation_item_id'] }}">
                                                 <input type="checkbox"
                                                        class="po-include h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:cursor-not-allowed"
                                                        aria-label="Include {{ $item['name'] }}"
@@ -285,7 +172,8 @@
                                                     <div class="inline-flex items-center gap-1">
                                                         <input type="number"
                                                                class="po-shelf-life w-16 rounded-md border border-gray-300 px-2 py-1 text-center text-sm text-gray-900 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20"
-                                                               value="{{ $item['min_remaining_months'] ?? 0 }}"
+                                                               name="items[{{ $rowKey }}][min_remaining_months]"
+                                                               value="{{ $item['min_remaining_months'] }}"
                                                                min="0"
                                                                step="1"
                                                                inputmode="numeric"
@@ -305,6 +193,7 @@
                                                 @if ($isQuoted)
                                                     <input type="number"
                                                            class="po-qty w-20 rounded-md border border-gray-300 px-2 py-1 text-center text-sm text-gray-900 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20"
+                                                           name="items[{{ $rowKey }}][qty]"
                                                            value="{{ $item['requested'] }}"
                                                            min="1"
                                                            max="{{ $item['requested'] }}"
@@ -344,29 +233,30 @@
                         <div class="grid grid-cols-1 gap-4 px-6 py-5 md:grid-cols-2">
                             <div>
                                 <label for="poExpected" class="mb-1 block text-xs font-medium text-gray-600">Expected delivery</label>
-                                <input type="date" id="poExpected" value="{{ $quotation['expected'] }}"
+                                <input type="date" id="poExpected" name="expected_delivery" value="{{ $defaultExpected }}"
                                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
                             </div>
 
                             <div>
                                 <label for="poTerms" class="mb-1 block text-xs font-medium text-gray-600">Payment terms</label>
-                                <select id="poTerms"
+                                <select id="poTerms" name="payment_terms"
                                         class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                                    @foreach (['30 days from delivery', '15 days from delivery', 'Cash on delivery', '50% down, 50% on delivery'] as $term)
-                                        <option value="{{ $term }}" {{ $quotation['payment_terms'] === $term ? 'selected' : '' }}>{{ $term }}</option>
+                                    @foreach ($paymentTermOptions as $term)
+                                        <option value="{{ $term }}" {{ $term === $defaultPaymentTerm ? 'selected' : '' }}>{{ $term }}</option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="md:col-span-2">
                                 <label for="poDeliverTo" class="mb-1 block text-xs font-medium text-gray-600">Deliver to</label>
-                                <input type="text" id="poDeliverTo" value="{{ $quotation['deliver_to'] }}"
-                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
+                                <input type="text" id="poDeliverTo" name="deliver_to" value=""
+                                       class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20"
+                                       placeholder="Delivery address">
                             </div>
 
                             <div class="md:col-span-2">
                                 <label for="poNotes" class="mb-1 block text-xs font-medium text-gray-600">Notes for the supplier</label>
-                                <textarea id="poNotes" rows="3"
+                                <textarea id="poNotes" name="notes" rows="3"
                                           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">Deliver in a single shipment. Include the PO number on all packing slips and invoices.</textarea>
                             </div>
                         </div>
@@ -387,25 +277,29 @@
                                     {{ $initials }}
                                 </span>
                                 <div class="min-w-0">
-                                    <p class="truncate font-semibold text-gray-900">{{ $quotation['supplier'] }}</p>
-                                    <p class="text-xs text-gray-500">{{ $quotation['contact'] }}</p>
+                                    <p class="truncate font-semibold text-gray-900">{{ $supplierName }}</p>
+                                    <p class="text-xs text-gray-500">{{ $quotation->supplier?->contact_person ?? 'No contact person' }}</p>
                                 </div>
                             </div>
                             <dl class="mt-4 space-y-2 text-sm">
                                 <div class="flex items-start justify-between gap-4">
                                     <dt class="text-xs text-gray-500">Email</dt>
-                                    <dd class="text-right text-gray-700">{{ $quotation['email'] }}</dd>
+                                    <dd class="text-right text-gray-700">{{ $quotation->supplier?->email ?? '—' }}</dd>
+                                </div>
+                                <div class="flex items-start justify-between gap-4">
+                                    <dt class="text-xs text-gray-500">Phone</dt>
+                                    <dd class="text-right text-gray-700">{{ $quotation->supplier?->contact_no ?? '—' }}</dd>
                                 </div>
                                 <div class="flex items-start justify-between gap-4">
                                     <dt class="text-xs text-gray-500">Quotation</dt>
                                     <dd class="text-right">
-                                        <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
-                                           class="font-medium text-[#2a7a94] hover:underline">{{ $quotation['reference_no'] }}</a>
+                                        <a href="{{ route('quotation.show', ['quotation' => $quotation->id]) }}"
+                                           class="font-medium text-[#2a7a94] hover:underline">{{ $quotation->rfq_number }}</a>
                                     </dd>
                                 </div>
                                 <div class="flex items-start justify-between gap-4">
                                     <dt class="text-xs text-gray-500">Prep list</dt>
-                                    <dd class="text-right text-gray-700">{{ $quotation['prep_list'] }}</dd>
+                                    <dd class="text-right text-gray-700">{{ $quotation->preplist->name }}</dd>
                                 </div>
                             </dl>
                         </div>
@@ -444,7 +338,7 @@
                                 Generate purchase order
                             </button>
 
-                            <a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
+                            <a href="{{ route('quotation.show', ['quotation' => $quotation->id]) }}"
                                class="mt-2 flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                                 Cancel
                             </a>
@@ -472,9 +366,6 @@
             const summaryTotal = document.getElementById('poSummaryTotal');
             const tableSubtotal = document.getElementById('poTableSubtotal');
             const createBtn = document.getElementById('poCreateBtn');
-            const banner = document.getElementById('poCreatedBanner');
-            const bannerSummary = document.getElementById('poCreatedSummary');
-            let bannerTimer = null;
             const expectedInput = document.getElementById('poExpected');
 
             function peso(amount) {
@@ -706,64 +597,17 @@
                 });
             }
 
-            // @TODO: replace this stub with a POST to the PurchaseOrder controller.
-            // The payload below is everything the backend needs to create the PO.
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();
+            // The form posts to the PurchaseOrder controller; sync the hidden
+            // "included" flags from the checkboxes right before submitting.
+            form.addEventListener('submit', function () {
+                rows.forEach(function (row) {
+                    const include = row.querySelector('.po-include');
+                    const hidden = row.querySelector('.po-included');
 
-                const totals = recalc();
-                if (totals.count === 0) return;
-
-                const items = rows
-                    .filter(function (row) {
-                        const include = row.querySelector('.po-include');
-                        return include && include.checked && !include.disabled;
-                    })
-                    .map(function (row) {
-                        const input = qtyInput(row);
-                        return {
-                            item: row.dataset.name,
-                            unit: row.dataset.unit,
-                            qty: parseInt(input.value, 10),
-                            unit_price: parseFloat(row.dataset.price),
-                            min_remaining_months: readRequiredMonths(row),
-                            offered_shelf_life_months: offeredMonths(row),
-                        };
-                    });
-
-                const payload = {
-                    rfq_id: {{ $quotation['id'] }},
-                    supplier: @json($quotation['supplier']),
-                    items: items,
-                    expected_delivery: document.getElementById('poExpected').value,
-                    payment_terms: document.getElementById('poTerms').value,
-                    deliver_to: document.getElementById('poDeliverTo').value,
-                    notes: document.getElementById('poNotes').value,
-                    subtotal: totals.subtotal,
-                    delivery: 0,
-                    total: totals.subtotal,
-                };
-
-                console.log('Generate purchase order — payload (TODO: POST to controller)', payload);
-
-                let summary = totals.count + ' item' + (totals.count === 1 ? '' : 's')
-                    + ' · ' + peso(totals.subtotal) + ' · ' + payload.supplier;
-                if (totals.shortDated > 0) {
-                    summary += ' · ' + totals.shortDated + ' short-dated line' + (totals.shortDated === 1 ? '' : 's');
-                }
-
-                bannerSummary.textContent = summary;
-                banner.classList.remove('hidden', 'is-hiding');
-
-                // Informational only: hide it again after a few seconds.
-                clearTimeout(bannerTimer);
-                bannerTimer = setTimeout(function () {
-                    banner.classList.add('is-hiding');
-                    setTimeout(function () {
-                        banner.classList.add('hidden');
-                        banner.classList.remove('is-hiding');
-                    }, 350);
-                }, 5000);
+                    if (hidden && include) {
+                        hidden.value = include.checked && ! include.disabled ? '1' : '0';
+                    }
+                });
             });
 
             updateShelfDates();
