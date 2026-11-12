@@ -65,7 +65,7 @@
         </div>
 
         @if ($errors->any())
-            <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700">
                 @foreach ($errors->all() as $error)
                     <p>{{ $error }}</p>
                 @endforeach
@@ -108,21 +108,21 @@
                         @endif
 
                         <div class="max-h-[320px] min-h-[140px] overflow-auto">
-                            <table class="w-full min-w-[1040px] text-sm">
+                            <table class="w-full text-sm">
                                 <thead class="sticky top-0 z-10">
                                     <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                        <th scope="col" class="w-12 px-4 py-3 text-center">
+                                        <th scope="col" class="w-12 px-3 py-3 text-center">
                                             <input type="checkbox" id="poIncludeAll"
                                                    class="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
                                                    aria-label="Include all quoted items"
                                                    {{ $quotedCount === 0 ? 'disabled' : 'checked' }}>
                                         </th>
-                                        <th scope="col" class="px-4 py-3">Item</th>
-                                        <th scope="col" class="whitespace-nowrap px-4 py-3 text-center">Requested</th>
-                                        <th scope="col" class="whitespace-nowrap px-4 py-3 text-center">Shelf life req.</th>
-                                        <th scope="col" class="whitespace-nowrap px-4 py-3 text-right">Unit price</th>
-                                        <th scope="col" class="whitespace-nowrap px-4 py-3 text-center">Purchase qty</th>
-                                        <th scope="col" class="whitespace-nowrap px-4 py-3 text-right">Amount</th>
+                                        <th scope="col" class="px-3 py-3">Item</th>
+                                        <th scope="col" class="whitespace-nowrap px-3 py-3 text-center">Requested</th>
+                                        <th scope="col" class="whitespace-nowrap px-3 py-3 text-center">Shelf life req.</th>
+                                        <th scope="col" class="whitespace-nowrap px-3 py-3 text-right">Unit price</th>
+                                        <th scope="col" class="whitespace-nowrap px-3 py-3 text-center">Purchase qty</th>
+                                        <th scope="col" class="whitespace-nowrap px-3 py-3 text-right">Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
@@ -143,7 +143,7 @@
                                             data-max="{{ $item['requested'] }}"
                                             data-unit="{{ $item['unit'] }}"
                                             data-supplier-expiry="{{ $item['expiry'] ?? '' }}">
-                                            <td class="px-4 py-4 text-center">
+                                            <td class="px-3 py-4 text-center">
                                                 <input type="hidden" class="po-included" name="items[{{ $rowKey }}][included]" value="{{ $isQuoted ? 1 : 0 }}">
                                                 <input type="hidden" name="items[{{ $rowKey }}][quotation_item_id]" value="{{ $item['quotation_item_id'] }}">
                                                 <input type="checkbox"
@@ -151,7 +151,7 @@
                                                        aria-label="Include {{ $item['name'] }}"
                                                        {{ $isQuoted ? 'checked' : 'disabled' }}>
                                             </td>
-                                            <td class="px-4 py-4">
+                                            <td class="px-3 py-4">
                                                 <p class="font-medium {{ $isQuoted ? 'text-gray-900' : 'text-gray-500' }}">{{ $item['name'] }}</p>
                                                 <p class="mt-0.5 text-xs text-gray-500">
                                                     {{ $item['unit'] }}
@@ -164,10 +164,10 @@
                                                     </p>
                                                 @endif
                                             </td>
-                                            <td class="whitespace-nowrap px-4 py-4 text-center text-gray-700">
+                                            <td class="whitespace-nowrap px-3 py-4 text-center text-gray-700">
                                                 {{ $item['requested'] }}
                                             </td>
-                                            <td class="whitespace-nowrap px-4 py-4 text-center">
+                                            <td class="whitespace-nowrap px-3 py-4 text-center">
                                                 @if ($isQuoted)
                                                     <div class="inline-flex items-center gap-1">
                                                         <input type="number"
@@ -186,10 +186,10 @@
                                                     <span class="text-xs text-gray-400">&mdash;</span>
                                                 @endif
                                             </td>
-                                            <td class="whitespace-nowrap px-4 py-4 text-right {{ $isQuoted ? 'text-gray-700' : 'text-gray-400' }}">
+                                            <td class="whitespace-nowrap px-3 py-4 text-right {{ $isQuoted ? 'text-gray-700' : 'text-gray-400' }}">
                                                 {{ $isQuoted ? $peso($item['unit_price']) : '—' }}
                                             </td>
-                                            <td class="whitespace-nowrap px-4 py-4 text-center">
+                                            <td class="whitespace-nowrap px-3 py-4 text-center">
                                                 @if ($isQuoted)
                                                     <input type="number"
                                                            class="po-qty w-20 rounded-md border border-gray-300 px-2 py-1 text-center text-sm text-gray-900 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20"
@@ -204,7 +204,7 @@
                                                     <span class="text-xs text-gray-400">No quote</span>
                                                 @endif
                                             </td>
-                                            <td class="whitespace-nowrap px-4 py-4 text-right font-semibold {{ $isQuoted ? 'text-gray-900' : 'text-gray-400' }}"
+                                            <td class="whitespace-nowrap px-3 py-4 text-right font-semibold {{ $isQuoted ? 'text-gray-900' : 'text-gray-400' }}"
                                                 data-line-amount>
                                                 {{ $isQuoted ? $peso($lineAmount) : '—' }}
                                             </td>
