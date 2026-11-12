@@ -343,7 +343,7 @@ class PreplistTest extends TestCase
             ->assertSee($preplist->reference_no)
             ->assertSee($item->name)
             ->assertSee($project->title)
-            ->assertSee('50 Box total')
+            ->assertSee('50 Box to procure')
             ->assertSee($preplist->created_at->format('M d, Y g:i A'));
     }
 
@@ -487,7 +487,7 @@ class PreplistTest extends TestCase
             ->assertOk()
             ->assertSee('Generate RFQ - '.$preplist->name)
             ->assertSee($item->name)
-            ->assertSee('50 Box total')
+            ->assertSee('50 Box to procure')
             ->assertSee('&ge; 12 months remaining at delivery', false)
             ->assertSee($supplier->name)
             ->assertSee(route('preplist.show', ['preplist' => $preplist->id]), false)

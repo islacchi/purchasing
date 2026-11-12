@@ -89,7 +89,7 @@
                             @endif
                         </p>
                     </div>
-                    <span class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ $item['total'] }} {{ $item['unit'] }} total</span>
+                    <span class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ $item['total'] }} {{ $item['unit'] }} to procure</span>
                 </div>
                 <div class="px-5 py-4">
                     <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Suppliers</p>

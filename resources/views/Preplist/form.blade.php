@@ -162,9 +162,10 @@
                                     </div>
                                 </div>
 
-                                {{-- Read-only quantity --}}
-                                <span class="item-quantity text-sm font-medium text-gray-900 whitespace-nowrap">
-                                    {{ $projectItem->quantity }} {{ $projectItem->item?->unit ?? '' }}
+                                {{-- Read-only quantity to procure --}}
+                                <span class="item-quantity text-sm font-medium text-gray-900 whitespace-nowrap"
+                                      title="Awarded: {{ $projectItem->quantity }} · On-hand stock: {{ $projectItem->in_stock }}">
+                                    {{ $projectItem->remainingQuantity() }} {{ $projectItem->item?->unit ?? '' }}
                                 </span>
                             </div>
                         @endforeach

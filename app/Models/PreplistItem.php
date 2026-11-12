@@ -63,6 +63,16 @@ class PreplistItem extends Model
     }
 
     /**
+     * Quantity still to procure after deducting stock-on-hand from each source.
+     */
+    public function remainingQuantity(): int
+    {
+        return (int) $this->sources->sum(
+            fn (PreplistItemSource $source) => $source->projectItem?->remainingQuantity() ?? 0
+        );
+    }
+
+    /**
      * Sum of the quantities contributed by the source projects.
      */
     public function totalQuantity(): int

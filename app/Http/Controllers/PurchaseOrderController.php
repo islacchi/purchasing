@@ -87,15 +87,13 @@ class PurchaseOrderController extends Controller
                 $quotationItem = $quotationItems->get($preplistItem->id);
                 $unit = $preplistItem->item?->unit ?? '';
 
-                $remaining = (int) $preplistItem->sources->sum(
-                    fn ($source) => max(0, (int) $source->qty - (int) ($source->projectItem?->in_stock ?? 0))
-                );
+                $remaining = $preplistItem->remainingQuantity();
 
                 return [
                     'id' => $preplistItem->id,
                     'quotation_item_id' => $quotationItem?->id,
                     'name' => $preplistItem->item?->name ?? 'Item',
-                    'requested' => (int) $preplistItem->sources->sum('qty'),
+                    'requested' => $remaining,
                     'remaining' => $remaining,
                     'unit' => $unit,
                     'unit_price' => $quotationItem?->unit_price,
@@ -165,16 +163,12 @@ class PurchaseOrderController extends Controller
             }
 
             $preplistItem = $preplistItems->get($quotationItem->preplist_item_id);
-            $remaining = (int) ($preplistItem?->sources ?? collect())->sum(
-                fn ($source) => max(0, (int) $source->qty - (int) ($source->projectItem?->in_stock ?? 0))
-            );
+            $requested = $preplistItem?->remainingQuantity() ?? 0;
 
             // Lines fully covered by on-hand stock are never ordered.
-            if ($remaining <= 0) {
+            if ($requested <= 0) {
                 continue;
             }
-
-            $requested = (int) $preplistItem->sources->sum('qty');
             $qty = (int) ($row['qty'] ?? 0);
 
             if ($qty < 1) {
@@ -233,16 +227,21 @@ class PurchaseOrderController extends Controller
                     ]);
 
                     // Allocate the ordered quantity across the prep list's project
-                    // sources proportionally, keeping the remainder on the last one.
+                    // sources in proportion to what each source still needs
+                    // (awarded quantity minus on-hand stock).
                     $sources = $preplistItem->sources->values();
-                    $totalRequested = (int) $sources->sum('qty');
+                    $shares = $sources->map(fn ($source) => $source->projectItem?->remainingQuantity() ?? 0);
+                    $totalRequested = (int) $shares->sum();
                     $remaining = $line['qty'];
+                    $lastPositiveIndex = $shares->filter(fn ($share) => $share > 0)->keys()->last();
 
                     foreach ($sources as $index => $source) {
+                        $weight = $shares[$index];
+
                         if ($totalRequested > 0) {
-                            $share = $index === $sources->count() - 1
+                            $share = $lastPositiveIndex !== null && $index === $lastPositiveIndex
                                 ? $remaining
-                                : (int) floor($line['qty'] * $source->qty / $totalRequested);
+                                : (int) floor($line['qty'] * $weight / $totalRequested);
                         } else {
                             $share = $index === 0 ? $line['qty'] : 0;
                         }

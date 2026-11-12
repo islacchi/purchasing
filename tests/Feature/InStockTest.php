@@ -10,6 +10,8 @@ use App\Models\PreplistItemSource;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
+use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseOrderItemAllocation;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\Supplier;
@@ -249,6 +251,87 @@ class InStockTest extends TestCase
 
         $this->assertDatabaseCount('preplists', 1);
         $this->assertSame(1, PreplistItemSource::query()->where('project_item_id', $source->id)->count());
+    }
+
+    public function test_po_uses_remaining_quantity_and_allocates_by_remaining(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $projectA = $this->project($user, $entity, [
+            'title' => 'Alpha project',
+            'reference_no' => 'RF-2026-A1',
+        ]);
+        $projectB = $this->project($user, $entity, [
+            'title' => 'Beta project',
+            'reference_no' => 'RF-2026-B2',
+        ]);
+        $item = $this->item(['name' => 'SharedItemQtyTest']);
+
+        // Both partly/never stocked — both compilable, both needed.
+        $sourceA = $this->projectItem($projectA, $item, ['quantity' => 40, 'in_stock' => 30]); // remaining 10
+        $sourceB = $this->projectItem($projectB, $item, ['quantity' => 20, 'in_stock' => 0]);  // remaining 20
+
+        $this->actingAs($user)->post(route('preplist.store'), [
+            'name' => 'Remaining quantity check',
+            'sources' => [$sourceA->id, $sourceB->id],
+            'shelf_life' => [$sourceA->id => 6, $sourceB->id => 6],
+        ])->assertSessionHasNoErrors();
+
+        $preplist = Preplist::query()->firstOrFail();
+        $supplier = Supplier::firstOrCreate(['name' => 'Triple Tact']);
+
+        $quotation = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'rfq_number' => sprintf('RFQ-%d-%04d', (int) now()->year, 9998),
+            'generated_at' => now(),
+        ]);
+
+        $preplistItem = PreplistItem::query()->firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 6,
+            'unit_price' => 305.00,
+            'quoted_at' => now(),
+        ]);
+
+        // The prep page reflects the sum of what is still missing.
+        $this->actingAs($user)
+            ->get(route('purchase-order.create', ['rfq' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('30');
+
+        $quotationItem = $quotation->items->firstOrFail();
+
+        $this->actingAs($user)->post(route('purchase-order.store'), [
+            'quotation_id' => $quotation->id,
+            'expected_delivery' => '2026-10-15',
+            'payment_terms' => '30 days from delivery',
+            'deliver_to' => 'DOH Region VII Warehouse, Cebu City',
+            'notes' => 'Single shipment.',
+            'items' => [
+                $quotationItem->id => [
+                    'quotation_item_id' => (string) $quotationItem->id,
+                    'included' => '1',
+                    'qty' => '15',
+                    'min_remaining_months' => '6',
+                ],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $poLine = PurchaseOrderItem::query()->firstOrFail();
+
+        $allocations = PurchaseOrderItemAllocation::query()
+            ->where('purchase_order_item_id', $poLine->id)
+            ->pluck('qty', 'project_item_id');
+
+        // Proportional to what each source still needs: 15 x (10/30) = 5 for A, remainder 10 for B.
+        $this->assertSame(5, $allocations[$sourceA->id] ?? null);
+        $this->assertSame(10, $allocations[$sourceB->id] ?? null);
     }
 
     public function test_stock_covered_item_is_not_listed_on_the_po_prep_page(): void

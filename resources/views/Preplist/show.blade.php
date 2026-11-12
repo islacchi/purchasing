@@ -17,11 +17,11 @@
 
             return [
                 'name' => $preplistItem->item?->name ?? 'Item',
-                'total' => $preplistItem->totalQuantity().' '.($unit !== '' ? $unit : 'unit').' total',
+                'total' => $preplistItem->remainingQuantity().' '.($unit !== '' ? $unit : 'unit').' to procure',
                 'sources' => $preplistItem->sources->map(function ($source) use ($unit) {
                     return [
                         'project' => $source->projectItem?->project?->title ?? 'Project removed',
-                        'qty' => $source->qty.' '.$unit,
+                        'qty' => ($source->projectItem?->remainingQuantity() ?? 0).' '.$unit,
                     ];
                 }),
             ];

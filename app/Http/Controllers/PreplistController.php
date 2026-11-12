@@ -212,7 +212,7 @@ class PreplistController extends Controller
                 return [
                     'key' => (string) $preplistItem->id,
                     'name' => $preplistItem->item?->name ?? 'Item',
-                    'total' => $preplistItem->totalQuantity(),
+                    'total' => $preplistItem->remainingQuantity(),
                     'unit' => $preplistItem->item?->unit ?? '',
                     'shelf_life' => (int) $preplistItem->min_shelf_life_months,
                 ];

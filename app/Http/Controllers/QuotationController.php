@@ -101,7 +101,7 @@ class QuotationController extends Controller
                 ->map(function (PreplistItem $preplistItem) {
                     $unit = $preplistItem->item?->unit ?? '';
                     $requiredShelfLife = (int) $preplistItem->min_shelf_life_months;
-                    $requested = $preplistItem->sources->sum('qty');
+                    $requested = $preplistItem->remainingQuantity();
                     $allocations = $preplistItem->sources->map(function ($source) use ($unit, $requiredShelfLife) {
                         $project = $source->projectItem?->project;
 
@@ -115,7 +115,7 @@ class QuotationController extends Controller
                         return [
                             'project' => $project?->title ?? 'Project removed',
                             'reference' => $project?->reference_no ?? '—',
-                            'qty' => $source->qty,
+                            'qty' => $source->projectItem?->remainingQuantity() ?? 0,
                             'unit' => $unit,
                             'delivery_due_date' => $deliveryDueDate?->toDateString(),
                             'required_expiry_date' => $deliveryDueDate
