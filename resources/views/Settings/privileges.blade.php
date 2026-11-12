@@ -92,10 +92,10 @@
                             </div>
                             <p class="text-xs text-gray-500 mt-1">{{ $role->description }}</p>
                         </div>
-                        {{-- @TODO: wire Configure to a role/permission editor once RBAC exists. --}}
-                        <button type="button" class="shrink-0 text-xs font-medium text-[#2a7a94] hover:text-[#236b80]">
+                        {{-- TODO: wire Configure to a role/permission editor once RBAC exists; for now it points to the configuration page. --}}
+                        <a href="{{ route('settings.configuration', ['role' => $role->name]) }}" class="shrink-0 text-xs font-medium text-[#2a7a94] hover:text-[#236b80]">
                             Configure
-                        </button>
+                        </a>
                     </div>
                 @endforeach
             </div>

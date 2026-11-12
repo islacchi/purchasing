@@ -118,6 +118,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::delete('/settings/privileges/{id}', [SettingsController::class, 'privilegeDestroy'])->name('settings.privileges.destroy');
 
         Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
+
+        // Dummy configuration page (front end only; back-end TODOs live in the view).
+        Route::get('/settings/configuration', [PageController::class, 'show'])->defaults('page', 'Settings.configuration')->name('settings.configuration');
     });
 
     Route::get('/quotation/{quotation}', [QuotationController::class, 'show'])
