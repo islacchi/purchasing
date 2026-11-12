@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\ProcuringEntity;
 use App\Models\Supplier;
+use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -81,15 +83,17 @@ class EntityController extends Controller
             $this->assertNoOnlyTrashedSupplier($validated['name']);
         }
 
-        if ($type === 'procuring_entity') {
-            ProcuringEntity::query()->create($validated);
+        $record = DB::transaction(function () use ($type, $validated) {
+            $record = $type === 'procuring_entity'
+                ? ProcuringEntity::query()->create($validated)
+                : Supplier::query()->create($validated);
 
-            $label = 'Procuring Entity';
-        } else {
-            Supplier::query()->create($validated);
+            ActivityLogger::log('Created', 'Entities', $record->name, $record);
 
-            $label = 'Supplier';
-        }
+            return $record;
+        });
+
+        $label = $type === 'procuring_entity' ? 'Procuring Entity' : 'Supplier';
 
         return redirect()
             ->route('entities', ['tab' => $this->indexTab($type)])
@@ -133,15 +137,13 @@ class EntityController extends Controller
             $this->assertNoOnlyTrashedSupplier($validated['name']);
         }
 
-        if ($type === 'procuring_entity') {
+        DB::transaction(function () use ($record, $validated) {
             $record->update($validated);
 
-            $label = 'Procuring Entity';
-        } else {
-            $record->update($validated);
+            ActivityLogger::log('Edited', 'Entities', $record->name, $record);
+        });
 
-            $label = 'Supplier';
-        }
+        $label = $type === 'procuring_entity' ? 'Procuring Entity' : 'Supplier';
 
         return redirect()
             ->route('entities', ['tab' => $this->indexTab($type)])
@@ -156,7 +158,13 @@ class EntityController extends Controller
         $this->assertType($type);
 
         $model = $this->modelForType($type);
-        $model::query()->findOrFail($id)->delete();
+        $entity = $model::query()->findOrFail($id);
+
+        DB::transaction(function () use ($entity) {
+            $entity->delete();
+
+            ActivityLogger::log('Deleted', 'Entities', $entity->name, $entity);
+        });
 
         $label = $type === 'procuring_entity' ? 'Procuring Entity' : 'Supplier';
 

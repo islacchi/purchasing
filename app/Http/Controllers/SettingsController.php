@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -234,13 +236,17 @@ class SettingsController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        User::create([
-            'role_id' => $validated['role_id'],
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'is_active' => $validated['status'] === 'Active',
-        ]);
+        DB::transaction(function () use ($validated) {
+            $user = User::create([
+                'role_id' => $validated['role_id'],
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'is_active' => $validated['status'] === 'Active',
+            ]);
+
+            ActivityLogger::log('Created', 'Users', $user->name, $user);
+        });
 
         return redirect()
             ->route('settings.privileges')
@@ -291,18 +297,22 @@ class SettingsController extends Controller
                 ->with('error', 'At least one active administrator account must remain.');
         }
 
-        $user->fill([
-            'role_id' => $validated['role_id'],
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'is_active' => $willBeActive,
-        ]);
+        DB::transaction(function () use ($user, $validated, $willBeActive) {
+            $user->fill([
+                'role_id' => $validated['role_id'],
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'is_active' => $willBeActive,
+            ]);
 
-        if (! empty($validated['password'])) {
-            $user->password = Hash::make($validated['password']);
-        }
+            if (! empty($validated['password'])) {
+                $user->password = Hash::make($validated['password']);
+            }
 
-        $user->save();
+            $user->save();
+
+            ActivityLogger::log('Edited', 'Users', $user->name, $user);
+        });
 
         return redirect()
             ->route('settings.privileges')
@@ -328,8 +338,12 @@ class SettingsController extends Controller
                 ->with('error', 'At least one active administrator account must remain.');
         }
 
-        $user->is_active = ! $user->is_active;
-        $user->save();
+        DB::transaction(function () use ($user) {
+            $user->is_active = ! $user->is_active;
+            $user->save();
+
+            ActivityLogger::log('Edited', 'Users', $user->name, $user);
+        });
 
         return redirect()
             ->route('settings.privileges')
@@ -357,7 +371,11 @@ class SettingsController extends Controller
                 ->with('error', 'At least one active administrator account must remain.');
         }
 
-        $user->delete();
+        DB::transaction(function () use ($user) {
+            $user->delete();
+
+            ActivityLogger::log('Deleted', 'Users', $user->name, $user);
+        });
 
         return redirect()
             ->route('settings.privileges')

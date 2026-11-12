@@ -142,6 +142,8 @@ class PreplistController extends Controller
                 ]);
 
                 $this->syncItems($preplist, $validated);
+
+                ActivityLogger::log('Edited', 'Preplist', $preplist->name, $preplist);
             });
         } catch (QueryException $exception) {
             $this->throwIfUniqueViolation($exception, 'That combination of items has already been compiled into a prep list.');
@@ -161,7 +163,11 @@ class PreplistController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        $preplist->update(['notes' => $validated['notes'] ?? null]);
+        DB::transaction(function () use ($preplist, $validated) {
+            $preplist->update(['notes' => $validated['notes'] ?? null]);
+
+            ActivityLogger::log('Edited', 'Preplist', $preplist->name, $preplist);
+        });
 
         return redirect()
             ->route('preplist.show', ['preplist' => $preplist->id])
@@ -181,7 +187,11 @@ class PreplistController extends Controller
                 ->withErrors(['preplist' => 'This prep list cannot be deleted because it is already referenced by '.$quotationCount.' quotation'.($quotationCount === 1 ? '' : 's').'. Remove it from the quotation(s) first.']);
         }
 
-        $preplist->delete();
+        DB::transaction(function () use ($preplist) {
+            $preplist->delete();
+
+            ActivityLogger::log('Deleted', 'Preplist', $preplist->name, $preplist);
+        });
 
         return redirect()
             ->route('preplist')
@@ -309,13 +319,17 @@ class PreplistController extends Controller
 
                 if ($existing) {
                     $existing->update($payload);
+
+                    ActivityLogger::log('Edited', 'Quotation', $existing->rfq_number ?: 'Quotation #'.$existing->id, $existing);
                 } else {
-                    Quotation::query()->create(array_merge($payload, [
+                    $quotation = Quotation::query()->create(array_merge($payload, [
                         'preplist_id' => $preplist->id,
                         'supplier_id' => $supplier->id,
                         'created_by' => $request->user()->id,
                         'rfq_number' => $this->nextRfqNumber(),
                     ]));
+
+                    ActivityLogger::log('Created', 'Quotation', $quotation->rfq_number ?: 'Quotation #'.$quotation->id, $quotation);
                 }
             }
             unset($workbook);

@@ -9,9 +9,11 @@ use App\Models\PreplistItem;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
+use App\Support\ActivityLogger;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
@@ -85,8 +87,14 @@ class ProjectController extends Controller
         $validated['created_by'] = $request->user()->id;
         $validated['delivery_due_date'] = $this->deliveryDueDate($validated);
 
-        $project = Project::query()->create($validated);
-        $this->syncItems($project, $items);
+        $project = DB::transaction(function () use ($validated, $items) {
+            $project = Project::query()->create($validated);
+            $this->syncItems($project, $items);
+
+            ActivityLogger::log('Created', 'Projects', $project->title, $project);
+
+            return $project;
+        });
 
         return redirect()
             ->route('projects.show', ['project' => $project->id])
@@ -128,8 +136,12 @@ class ProjectController extends Controller
 
         $validated['delivery_due_date'] = $this->deliveryDueDate($validated);
 
-        $project->update($validated);
-        $this->syncItems($project, $items);
+        DB::transaction(function () use ($validated, $items, $project) {
+            $project->update($validated);
+            $this->syncItems($project, $items);
+
+            ActivityLogger::log('Edited', 'Projects', $project->title, $project);
+        });
 
         return redirect()
             ->route('projects.show', ['project' => $project->id])
@@ -153,7 +165,11 @@ class ProjectController extends Controller
                 ->withErrors(['project' => 'This project can no longer be deleted because it is used by the prep list(s): '.$names.'.']);
         }
 
-        $project->delete();
+        DB::transaction(function () use ($project) {
+            $project->delete();
+
+            ActivityLogger::log('Deleted', 'Projects', $project->title, $project);
+        });
 
         return redirect()
             ->route('projects')

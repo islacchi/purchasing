@@ -9,6 +9,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderItemAllocation;
 use App\Models\PurchaseOrderReceipt;
 use App\Models\Quotation;
+use App\Support\ActivityLogger;
 use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -183,63 +184,65 @@ class PurchaseOrderController extends Controller
 
         try {
             $purchaseOrder = DB::transaction(function () use ($request, $validated, $quotation, $lines) {
-            $purchaseOrder = PurchaseOrder::create([
-                'quotation_id' => $quotation->id,
-                'supplier_id' => $quotation->supplier_id,
-                'created_by' => $request->user()->id,
-                'po_number' => $this->nextPoNumber(),
-                'status' => PurchaseOrder::STATUS_DRAFT,
-                'expected_delivery_on' => $validated['expected_delivery'] ?? null,
-                'payment_terms' => $validated['payment_terms'] ?? null,
-                'deliver_to' => $validated['deliver_to'] ?? null,
-                'delivery_fee' => 0,
-                'notes' => $validated['notes'] ?? null,
-            ]);
-
-            foreach ($lines as $line) {
-                /** @var PreplistItem $preplistItem */
-                $preplistItem = $line['preplist_item'];
-
-                $purchaseOrderItem = PurchaseOrderItem::create([
-                    'purchase_order_id' => $purchaseOrder->id,
-                    'quotation_item_id' => $line['quotation_item']->id,
-                    'item_id' => $preplistItem->item_id,
-                    'qty' => $line['qty'],
-                    'unit_price' => $line['unit_price'],
-                    'min_remaining_months' => $line['min_remaining_months'],
+                $purchaseOrder = PurchaseOrder::create([
+                    'quotation_id' => $quotation->id,
+                    'supplier_id' => $quotation->supplier_id,
+                    'created_by' => $request->user()->id,
+                    'po_number' => $this->nextPoNumber(),
+                    'status' => PurchaseOrder::STATUS_DRAFT,
+                    'expected_delivery_on' => $validated['expected_delivery'] ?? null,
+                    'payment_terms' => $validated['payment_terms'] ?? null,
+                    'deliver_to' => $validated['deliver_to'] ?? null,
+                    'delivery_fee' => 0,
+                    'notes' => $validated['notes'] ?? null,
                 ]);
 
-                // Allocate the ordered quantity across the prep list's project
-                // sources proportionally, keeping the remainder on the last one.
-                $sources = $preplistItem->sources->values();
-                $totalRequested = (int) $sources->sum('qty');
-                $remaining = $line['qty'];
+                foreach ($lines as $line) {
+                    /** @var PreplistItem $preplistItem */
+                    $preplistItem = $line['preplist_item'];
 
-                foreach ($sources as $index => $source) {
-                    if ($totalRequested > 0) {
-                        $share = $index === $sources->count() - 1
-                            ? $remaining
-                            : (int) floor($line['qty'] * $source->qty / $totalRequested);
-                    } else {
-                        $share = $index === 0 ? $line['qty'] : 0;
-                    }
-
-                    $remaining -= $share;
-
-                    if ($share <= 0) {
-                        continue;
-                    }
-
-                    PurchaseOrderItemAllocation::create([
-                        'purchase_order_item_id' => $purchaseOrderItem->id,
-                        'project_item_id' => $source->project_item_id,
-                        'qty' => $share,
+                    $purchaseOrderItem = PurchaseOrderItem::create([
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'quotation_item_id' => $line['quotation_item']->id,
+                        'item_id' => $preplistItem->item_id,
+                        'qty' => $line['qty'],
+                        'unit_price' => $line['unit_price'],
+                        'min_remaining_months' => $line['min_remaining_months'],
                     ]);
-                }
-            }
 
-            return $purchaseOrder;
-        });
+                    // Allocate the ordered quantity across the prep list's project
+                    // sources proportionally, keeping the remainder on the last one.
+                    $sources = $preplistItem->sources->values();
+                    $totalRequested = (int) $sources->sum('qty');
+                    $remaining = $line['qty'];
+
+                    foreach ($sources as $index => $source) {
+                        if ($totalRequested > 0) {
+                            $share = $index === $sources->count() - 1
+                                ? $remaining
+                                : (int) floor($line['qty'] * $source->qty / $totalRequested);
+                        } else {
+                            $share = $index === 0 ? $line['qty'] : 0;
+                        }
+
+                        $remaining -= $share;
+
+                        if ($share <= 0) {
+                            continue;
+                        }
+
+                        PurchaseOrderItemAllocation::create([
+                            'purchase_order_item_id' => $purchaseOrderItem->id,
+                            'project_item_id' => $source->project_item_id,
+                            'qty' => $share,
+                        ]);
+                    }
+                }
+
+                ActivityLogger::log('Created', 'Purchase Order', $purchaseOrder->po_number, $purchaseOrder);
+
+                return $purchaseOrder;
+            });
         } catch (QueryException $exception) {
             $this->throwIfUniqueViolation($exception);
         }
@@ -288,7 +291,11 @@ class PurchaseOrderController extends Controller
                 ->withErrors(['purchase_order' => 'Only draft or cancelled purchase orders can be deleted.']);
         }
 
-        $purchaseOrder->delete();
+        DB::transaction(function () use ($purchaseOrder) {
+            $purchaseOrder->delete();
+
+            ActivityLogger::log('Deleted', 'Purchase Order', $purchaseOrder->po_number, $purchaseOrder);
+        });
 
         return redirect()
             ->route('purchase-order')
@@ -306,10 +313,14 @@ class PurchaseOrderController extends Controller
                 ->withErrors(['purchase_order' => 'Only a draft purchase order can be sent to the supplier.']);
         }
 
-        $purchaseOrder->update([
-            'status' => PurchaseOrder::STATUS_SENT,
-            'issued_on' => today(),
-        ]);
+        DB::transaction(function () use ($purchaseOrder) {
+            $purchaseOrder->update([
+                'status' => PurchaseOrder::STATUS_SENT,
+                'issued_on' => today(),
+            ]);
+
+            ActivityLogger::log('Edited', 'Purchase Order', $purchaseOrder->po_number, $purchaseOrder);
+        });
 
         return redirect()
             ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
@@ -331,11 +342,15 @@ class PurchaseOrderController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $purchaseOrder->update([
-            'status' => PurchaseOrder::STATUS_CANCELLED,
-            'cancelled_at' => now(),
-            'cancel_reason' => $validated['reason'] ?? null,
-        ]);
+        DB::transaction(function () use ($purchaseOrder, $validated) {
+            $purchaseOrder->update([
+                'status' => PurchaseOrder::STATUS_CANCELLED,
+                'cancelled_at' => now(),
+                'cancel_reason' => $validated['reason'] ?? null,
+            ]);
+
+            ActivityLogger::log('Edited', 'Purchase Order', $purchaseOrder->po_number, $purchaseOrder);
+        });
 
         return redirect()
             ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
@@ -370,6 +385,8 @@ class PurchaseOrderController extends Controller
             }
 
             $this->refreshReceiptStatus($purchaseOrder);
+
+            ActivityLogger::log('Edited', 'Purchase Order', $purchaseOrder->po_number, $purchaseOrder);
         });
 
         return redirect()

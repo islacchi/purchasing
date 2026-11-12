@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PreplistItem;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
+use App\Support\ActivityLogger;
 use App\Support\QuotationWorkbookParser;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -227,6 +228,8 @@ class QuotationController extends Controller
                         ],
                     );
                 }
+
+                ActivityLogger::log('Edited', 'Quotation', $quotation->rfq_number ?: 'Quotation #'.$quotation->id, $quotation);
             });
         } catch (QueryException $exception) {
             $this->throwIfUniqueViolation($exception);
@@ -286,6 +289,8 @@ class QuotationController extends Controller
                 'document_name' => null,
                 'document_size' => null,
             ]);
+
+            ActivityLogger::log('Deleted', 'Quotation', ($quotation->rfq_number ?: 'Quotation #'.$quotation->id).' (document)', $quotation);
         });
 
         return redirect()
@@ -312,7 +317,11 @@ class QuotationController extends Controller
             Storage::disk('local')->delete($quotation->document_path);
         }
 
-        $quotation->delete();
+        DB::transaction(function () use ($quotation) {
+            $quotation->delete();
+
+            ActivityLogger::log('Deleted', 'Quotation', $quotation->rfq_number ?: 'Quotation #'.$quotation->id, $quotation);
+        });
 
         return redirect()
             ->route('quotation')
