@@ -79,7 +79,7 @@ class PurchaseOrderController extends Controller
                     'unit' => $unit,
                     'unit_price' => $quotationItem?->unit_price,
                     'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,
-                    'offered_shelf_life_months' => $quotationItem?->offered_shelf_life_months,
+                    'expiry' => $quotationItem?->expiry?->toDateString(),
                     'allocations' => $preplistItem->sources
                         ->map(fn ($source) => $source->projectItem?->project?->title ?? 'Project removed')
                         ->unique()
@@ -163,7 +163,6 @@ class PurchaseOrderController extends Controller
                 'qty' => $qty,
                 'unit_price' => $quotationItem->unit_price,
                 'min_remaining_months' => (int) ($row['min_remaining_months'] ?? $quotationItem->min_remaining_months ?? 0),
-                'offered_shelf_life_months' => $quotationItem->offered_shelf_life_months,
             ];
         }
 
@@ -192,7 +191,6 @@ class PurchaseOrderController extends Controller
                     'qty' => $line['qty'],
                     'unit_price' => $line['unit_price'],
                     'min_remaining_months' => $line['min_remaining_months'],
-                    'offered_shelf_life_months' => $line['offered_shelf_life_months'],
                 ]);
 
                 // Allocate the ordered quantity across the prep list's project

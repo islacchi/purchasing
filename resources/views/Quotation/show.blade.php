@@ -21,22 +21,6 @@
             ->filter(fn ($item) => $quotationItems->get((int) $item['key'])?->unit_price !== null)
             ->sum(fn ($item) => (float) $quotationItems->get((int) $item['key'])->unit_price * $item['requested']);
 
-        // Offers whose shelf life is below the required minimum. A cheap
-        // short-dated quote should not win silently, so these are flagged.
-        $shortDatedCount = $items
-            ->filter(function ($item) use ($quotationItems) {
-                $quotedItem = $quotationItems->get((int) $item['key']);
-                $required = $item['min_remaining_months'] ?? 0;
-                $offered = $quotedItem?->offered_shelf_life_months;
-
-                return $quotedItem !== null
-                    && $quotedItem->unit_price !== null
-                    && $required > 0
-                    && $offered !== null
-                    && $offered < $required;
-            })
-            ->count();
-
         $status = $itemsQuoted > 0 ? 'Quoted' : 'Awaiting quote';
 
         $fractionColor = $itemsQuoted === 0
@@ -56,52 +40,6 @@
         };
 
         $peso = fn ($amount) => '₱ '.number_format((float) $amount, 2);
-
-        // Excel dates are stored as Y-m-d by the upload parser; show them in a
-        // friendlier form while leaving free-typed values untouched.
-        $formatExpiry = function (?string $expiry): ?string {
-            if (! $expiry) {
-                return null;
-            }
-
-            $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $expiry);
-
-            if ($date !== false && $date->format('Y-m-d') === $expiry) {
-                return $date->format('M j, Y');
-            }
-
-            return $expiry;
-        };
-
-        // Interpret the supplier's free-typed expiry so it can be compared
-        // with the project's delivery due date. Month/year-only values are
-        // treated as valid through the end of that month.
-        $parseExpiryDate = function (?string $expiry): ?\Carbon\CarbonImmutable {
-            if (! $expiry) {
-                return null;
-            }
-
-            $value = trim($expiry);
-
-            try {
-                // Month/year-only values are valid through the end of that month.
-                if (preg_match('/^(0?[1-9]|1[0-2])\/(\d{4})$/', $value)) {
-                    return \Carbon\CarbonImmutable::createFromFormat('!m/Y', $value)->endOfMonth();
-                }
-
-                if (preg_match('/^\d{4}-(0?[1-9]|1[0-2])$/', $value)) {
-                    return \Carbon\CarbonImmutable::createFromFormat('!Y-m', $value)->endOfMonth();
-                }
-
-                if (preg_match('/^[A-Za-z]+\.?\s+\d{4}$/', $value)) {
-                    return \Carbon\CarbonImmutable::parse('first day of '.$value)->endOfMonth();
-                }
-
-                return \Carbon\CarbonImmutable::parse($value)->startOfDay();
-            } catch (\Throwable) {
-                return null;
-            }
-        };
 
         // Difference (in days) between the required expiry date and the
         // supplier's expiry that still counts as "close" rather than "good".
@@ -230,23 +168,6 @@
             </div>
         </div>
 
-        @if ($shortDatedCount > 0)
-            {{-- Shelf-life warning: this supplier offered stock shorter than required. --}}
-            <div class="mb-6 flex shrink-0 items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
-                </svg>
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold text-amber-800">
-                        {{ $shortDatedCount }} {{ $shortDatedCount === 1 ? 'item' : 'items' }} below the required shelf life
-                    </p>
-                    <p class="mt-0.5 text-xs text-amber-700">
-                        The supplier offered stock with less remaining shelf life than requested. Confirm before awarding, or ask for fresher stock.
-                    </p>
-                </div>
-            </div>
-        @endif
-
         {{-- Item breakdown --}}
         <p class="mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Item breakdown</p>
 
@@ -256,14 +177,9 @@
                     $quotedItem = $quotationItems->get((int) $item['key']);
                     $isQuoted = $quotedItem?->unit_price !== null;
                     $requiredShelf = $item['min_remaining_months'] ?? 0;
-                    $offeredShelf = $quotedItem?->offered_shelf_life_months;
                     $brand = $quotedItem?->brand;
-                    $expiry = $formatExpiry($quotedItem?->expiry);
-                    $expiryDate = $parseExpiryDate($quotedItem?->expiry);
-                    $isShortDated = $isQuoted
-                        && $requiredShelf > 0
-                        && $offeredShelf !== null
-                        && $offeredShelf < $requiredShelf;
+                    $expiryDate = $quotedItem?->expiry;
+                    $expiry = $expiryDate?->format('M j, Y');
                 @endphp
 
                 <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -271,11 +187,6 @@
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <p class="font-bold text-gray-900">{{ $item['name'] }}</p>
-                                @if ($isShortDated)
-                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                                        Short-dated
-                                    </span>
-                                @endif
                             </div>
                             <p class="mt-1 text-xs text-gray-500">
                                 {{ $item['requested'] }} {{ $item['unit'] }} requested
@@ -311,18 +222,6 @@
                                 <p class="mt-1 text-xs text-gray-500">
                                     {{ $peso($quotedItem->unit_price * $item['requested']) }} subtotal
                                 </p>
-                                @if ($requiredShelf > 0)
-                                    <p class="mt-1 text-xs {{ $isShortDated ? 'font-semibold text-amber-600' : 'text-gray-500' }}">
-                                        @if ($offeredShelf !== null)
-                                            Offered: {{ $offeredShelf }} months
-                                            @if ($isShortDated)
-                                                &mdash; below requirement
-                                            @endif
-                                        @else
-                                            Offered shelf life not stated
-                                        @endif
-                                    </p>
-                                @endif
                             @else
                                 <p class="text-sm text-gray-400">Pending</p>
                             @endif

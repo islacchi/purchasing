@@ -91,7 +91,13 @@ class QuotationWorkbookParser
             $parsed[] = [
                 'description' => $description,
                 'brand' => self::brandValue(self::findCell($row, 'E'), $sharedStrings),
-                'expiry' => self::expiryValue(self::findCell($row, 'G'), $sharedStrings, $dateStyles),
+                'expiry' => self::expiryFromCell(
+                    self::findCell($row, 'G'),
+                    $sharedStrings,
+                    $dateStyles,
+                    $rowNumber,
+                    $description,
+                ),
                 'unit_price' => self::unitPrice($cells['F'] ?? null),
             ];
         }
@@ -179,9 +185,37 @@ class QuotationWorkbookParser
     }
 
     /**
+     * The supplier's expiry for an item, normalised to a Y-m-d string (or
+     * null). Date-formatted cells are converted from Excel's numeric serial;
+     * free text is parsed via the shared ExpiryParser. An unreadable expiry
+     * aborts the whole upload instead of silently storing garbage.
+     *
+     * @param  array<int, string>  $sharedStrings
+     * @param  array<int, bool>  $dateStyles
+     */
+    private static function expiryFromCell(?\SimpleXMLElement $cell, array $sharedStrings, array $dateStyles, int $rowNumber, string $description): ?string
+    {
+        $raw = self::expiryValue($cell, $sharedStrings, $dateStyles);
+
+        if ($raw === null || trim($raw) === '') {
+            return null;
+        }
+
+        try {
+            return ExpiryParser::parse($raw)?->toDateString();
+        } catch (RuntimeException $exception) {
+            throw new RuntimeException(
+                'Row '.$rowNumber.' ("'.$description.'"): '.$exception->getMessage(),
+                0,
+                $exception,
+            );
+        }
+    }
+
+    /**
      * The supplier's expiry for an item. Date-formatted cells are converted
-     * from Excel's numeric serial to a Y-m-d string; anything else is kept
-     * exactly as the supplier typed it.
+     * from Excel's numeric serial to a Y-m-d string; anything else is returned
+     * exactly as typed.
      *
      * @param  array<int, string>  $sharedStrings
      * @param  array<int, bool>  $dateStyles

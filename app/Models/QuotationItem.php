@@ -26,7 +26,6 @@ class QuotationItem extends Model
         'unit_price',
         'brand',
         'expiry',
-        'offered_shelf_life_months',
         'available_qty',
         'quoted_at',
     ];
@@ -41,7 +40,7 @@ class QuotationItem extends Model
         return [
             'min_remaining_months' => 'integer',
             'unit_price' => 'decimal:2',
-            'offered_shelf_life_months' => 'integer',
+            'expiry' => 'immutable_date:Y-m-d',
             'available_qty' => 'integer',
             'quoted_at' => 'datetime',
         ];

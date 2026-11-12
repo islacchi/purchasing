@@ -184,7 +184,6 @@ class PurchaseOrderTest extends TestCase
             'preplist_item_id' => $preplistItemOne->id,
             'min_remaining_months' => 9,
             'unit_price' => 305.00,
-            'offered_shelf_life_months' => 12,
             'quoted_at' => now(),
         ]);
 
@@ -193,7 +192,6 @@ class PurchaseOrderTest extends TestCase
             'preplist_item_id' => $preplistItemTwo->id,
             'min_remaining_months' => 3,
             'unit_price' => 250.00,
-            'offered_shelf_life_months' => null,
             'quoted_at' => now(),
         ]);
 

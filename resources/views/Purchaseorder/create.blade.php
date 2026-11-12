@@ -142,7 +142,7 @@
                                             data-price="{{ $isQuoted ? $item['unit_price'] : 0 }}"
                                             data-max="{{ $item['requested'] }}"
                                             data-unit="{{ $item['unit'] }}"
-                                            data-offered-shelf-life="{{ $item['offered_shelf_life_months'] ?? '' }}">
+                                            data-supplier-expiry="{{ $item['expiry'] ?? '' }}">
                                             <td class="px-4 py-4 text-center">
                                                 <input type="hidden" class="po-included" name="items[{{ $rowKey }}][included]" value="{{ $isQuoted ? 1 : 0 }}">
                                                 <input type="hidden" name="items[{{ $rowKey }}][quotation_item_id]" value="{{ $item['quotation_item_id'] }}">
@@ -158,9 +158,9 @@
                                                     <span class="mx-1 text-gray-300">&middot;</span>
                                                     {{ implode(' · ', $item['allocations']) }}
                                                 </p>
-                                                @if ($item['offered_shelf_life_months'] !== null)
+                                                @if (! empty($item['expiry']))
                                                     <p class="mt-1 text-xs text-gray-500">
-                                                        Supplier offered {{ $item['offered_shelf_life_months'] }} months
+                                                        Supplier expiry {{ \Carbon\CarbonImmutable::parse($item['expiry'])->format('M j, Y') }}
                                                     </p>
                                                 @endif
                                             </td>
@@ -395,12 +395,10 @@
                 return value;
             }
 
-            function offeredMonths(row) {
-                const raw = row.dataset.offeredShelfLife;
-                if (raw === undefined || raw === '') return null;
-
-                const value = parseInt(raw, 10);
-                return isNaN(value) ? null : value;
+            function supplierExpiry(row) {
+                const raw = (row.dataset.supplierExpiry || '').trim();
+                if (!raw) return null;
+                return parseIsoDate(raw);
             }
 
             function parseIsoDate(value) {
@@ -452,12 +450,16 @@
                 }
 
                 if (warningEl) {
-                    const offered = offeredMonths(row);
-                    const shortDated = offered !== null && required > 0 && offered < required;
+                    const expiryDate = supplierExpiry(row);
+                    const expectedDate = parseIsoDate(expectedInput ? expectedInput.value : '');
+                    const isShortDated = expiryDate !== null
+                        && expectedDate !== null
+                        && required > 0
+                        && expiryDate < addMonths(expectedDate, required);
 
-                    warningEl.classList.toggle('hidden', !shortDated);
-                    warningEl.textContent = shortDated
-                        ? 'Supplier offered ' + offered + ' months \u2014 below requirement'
+                    warningEl.classList.toggle('hidden', !isShortDated);
+                    warningEl.textContent = isShortDated
+                        ? 'Supplier expiry ' + formatDate(expiryDate) + ' — below the required ' + formatDate(addMonths(expectedDate, required))
                         : '';
                 }
             }
@@ -509,8 +511,9 @@
                         count++;
 
                         const required = readRequiredMonths(row);
-                        const offered = offeredMonths(row);
-                        if (offered !== null && required > 0 && offered < required) {
+                        const expiryDate = supplierExpiry(row);
+                        const expectedDate = parseIsoDate(expectedInput ? expectedInput.value : '');
+                        if (expiryDate !== null && expectedDate !== null && required > 0 && expiryDate < addMonths(expectedDate, required)) {
                             shortDated++;
                         }
 

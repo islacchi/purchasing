@@ -335,7 +335,7 @@ class QuotationTest extends TestCase
             ->assertSee($project->reference_no);
     }
 
-    public function test_quotation_show_displays_quoted_items_and_short_dated_warning(): void
+    public function test_quotation_show_displays_quoted_items_and_flags_the_expiry(): void
     {
         Storage::fake('local');
 
@@ -362,7 +362,6 @@ class QuotationTest extends TestCase
             'unit_price' => 305.00,
             'brand' => 'MediCore',
             'expiry' => '2028-01-01',
-            'offered_shelf_life_months' => 6,
             'quoted_at' => now(),
         ]);
 
@@ -374,9 +373,6 @@ class QuotationTest extends TestCase
             ->assertSee('₱ 305.00 / Box')
             ->assertSee('₱ 12,200.00 subtotal')
             ->assertSee('₱ 12,200.00')
-            ->assertSee('1 item below the required shelf life')
-            ->assertSee('Short-dated')
-            ->assertSee('Offered: 6 months')
             ->assertSee('data-expiry-status="good"', false)
             ->assertDontSee('data-expiry-status="short"', false)
             ->assertDontSee('data-expiry-status="close"', false)
@@ -511,21 +507,21 @@ class QuotationTest extends TestCase
         $quotation = $this->createQuotation($user, $preplist, $supplier);
         $preplistItem = PreplistItem::firstOrFail();
 
-        // Delivery is due 2027-01-15; "12/2026" ends 2026-12-31, which is too early.
+        // Delivery is due 2027-01-15; Dec 31, 2026 is too early.
         QuotationItem::create([
             'quotation_id' => $quotation->id,
             'preplist_item_id' => $preplistItem->id,
             'min_remaining_months' => 0,
             'unit_price' => 305.00,
             'brand' => 'MediCore',
-            'expiry' => '12/2026',
+            'expiry' => '2026-12-31',
             'quoted_at' => now(),
         ]);
 
         $this->actingAs($user)
             ->get(route('quotation.show', ['quotation' => $quotation->id]))
             ->assertOk()
-            ->assertSee('12/2026')
+            ->assertSee('Dec 31, 2026')
             ->assertSee('data-expiry-status="short"', false);
     }
 
@@ -714,7 +710,7 @@ class QuotationTest extends TestCase
             'unit_price' => 305.50,
             'min_remaining_months' => 9,
             'brand' => 'MediCore',
-            'expiry' => 'December 2027',
+            'expiry' => '2027-12-31',
         ]);
 
         $this->assertSame('305.50', QuotationItem::firstOrFail()->unit_price);
@@ -731,8 +727,101 @@ class QuotationTest extends TestCase
             ->assertSee('1 / 1')
             ->assertSee('Quoted')
             ->assertSee('MediCore')
-            ->assertSee('December 2027')
+            ->assertSee('Dec 31, 2027')
             ->assertSee('₱ 305.50 / Box');
+    }
+
+    public function test_quotation_upload_normalizes_month_only_and_keeps_na(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+
+        $firstItem = $this->item(['name' => 'AlphaItemAlpha']);
+        $secondItem = $this->item(['name' => 'BetaItemBeta', 'category' => 'supplies and equipments']);
+
+        $firstSource = $this->projectItem($project, $firstItem);
+        $secondSource = $this->projectItem($project, $secondItem);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$firstSource->id, $secondSource->id],
+            'shelf_life' => [$firstSource->id => 9, $secondSource->id => 12],
+        ]);
+
+        $preplistItems = PreplistItem::query()->orderBy('item_id')->get()->keyBy('item_id');
+        $firstPreplistItem = $preplistItems[$firstItem->id];
+        $secondPreplistItem = $preplistItems[$secondItem->id];
+
+        $binary = $this->generatedWorkbook(
+            $user,
+            $preplist,
+            $supplier,
+            [$firstPreplistItem->id, $secondPreplistItem->id],
+        );
+        $binary = $this->fillUnitPrices($binary, [18 => 250, 19 => 305]);
+        $binary = $this->fillItemDetails($binary, 18, 'MediCore', 'December 2027');
+        $binary = $this->fillItemDetails($binary, 19, 'DashCore', 'N/A');
+
+        $quotation = Quotation::query()->firstOrFail();
+
+        $this->upload($user, $quotation, $binary)
+            ->assertRedirect(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('quotation_items', [
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $firstPreplistItem->id,
+            'brand' => 'MediCore',
+            'expiry' => '2027-12-31',
+        ]);
+
+        $this->assertDatabaseHas('quotation_items', [
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $secondPreplistItem->id,
+            'brand' => 'DashCore',
+            'expiry' => null,
+        ]);
+    }
+
+    public function test_quotation_upload_rejects_an_ambiguous_expiry_with_row_and_description(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'AlphaItemAlpha']);
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->fillUnitPrices($binary, [18 => '305.50']);
+        $binary = $this->fillItemDetails($binary, 18, 'MediCore', '03/04/2027');
+
+        $quotation = Quotation::query()->firstOrFail();
+
+        $this->upload($user, $quotation, $binary)
+            ->assertRedirect()
+            ->assertSessionHasErrors('document');
+
+        $this->assertDatabaseMissing('quotation_items', ['quotation_id' => $quotation->id]);
+        $this->assertNull($quotation->fresh()->document_path);
+
+        // The validation message names the row and the item description.
+        $errors = session()->get('errors');
+        $this->assertStringContainsString('Row 18', $errors->first('document'));
+        $this->assertStringContainsString('AlphaItemAlpha', $errors->first('document'));
     }
 
     public function test_quotation_upload_keeps_unquoted_items_pending(): void

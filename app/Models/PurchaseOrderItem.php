@@ -27,7 +27,6 @@ class PurchaseOrderItem extends Model
         'qty',
         'unit_price',
         'min_remaining_months',
-        'offered_shelf_life_months',
     ];
 
     /**
@@ -41,7 +40,6 @@ class PurchaseOrderItem extends Model
             'qty' => 'integer',
             'unit_price' => 'decimal:2',
             'min_remaining_months' => 'integer',
-            'offered_shelf_life_months' => 'integer',
         ];
     }
 
