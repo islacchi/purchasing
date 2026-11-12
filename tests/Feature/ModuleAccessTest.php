@@ -263,20 +263,25 @@ class ModuleAccessTest extends TestCase
         ]);
     }
 
-    public function test_viewer_sees_disabled_add_project_and_edit_uses_restricted_modal(): void
+    public function test_viewer_sees_inert_add_and_edit_affordances_in_projects(): void
     {
         $admin = $this->admin();
         $viewer = $this->viewer();
         $project = $this->basicProject($admin);
 
+        // Note: the shared access-restricted-modal component's inline
+        // script references the toggle attribute, so asserting on the
+        // raw string proves nothing. The inert affordances are pinned
+        // by the greyed spans and the absence of every edit href.
         $this->actingAs($viewer)
             ->get(route('projects'))
             ->assertOk()
             ->assertDontSee('href="'.route('projects.create').'"', false)
             ->assertDontSee('href="http://localhost/projects/'.$project->id.'/edit"', false)
-            ->assertSee('data-access-restricted-modal-toggle', false)
+            ->assertSee('cursor-not-allowed', false)
             ->assertSee('id="accessRestrictedModal"', false);
 
+        // Admin keeps active edit affordances.
         $this->actingAs($admin)
             ->get(route('projects'))
             ->assertOk()
@@ -284,28 +289,32 @@ class ModuleAccessTest extends TestCase
             ->assertSee('href="http://localhost/projects/'.$project->id.'/edit"', false);
     }
 
-    public function test_viewer_sees_disabled_add_entity_and_add_supplier(): void
+    public function test_viewer_sees_disabled_add_and_edit_entity_affordances(): void
     {
         $admin = $this->admin();
         $viewer = $this->viewer();
 
-        ProcuringEntity::create(['name' => 'DOH Region VII', 'type' => 'Regional Office']);
-        Supplier::create(['name' => 'Triple Tact']);
+        $entity = ProcuringEntity::create(['name' => 'DOH Region VII', 'type' => 'Regional Office']);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
 
         $this->actingAs($viewer)
             ->get(route('entities'))
             ->assertOk()
-            ->assertDontSee('href="'.route('entities.create', ['type' => 'procuring_entity']).'"', false);
+            ->assertDontSee('href="'.route('entities.create', ['type' => 'procuring_entity']).'"', false)
+            ->assertDontSee('href="http://localhost/entities/procuring_entity/'.$entity->id.'/edit"', false);
 
         $this->actingAs($viewer)
             ->get(route('entities', ['tab' => 'suppliers']))
             ->assertOk()
-            ->assertDontSee('href="'.route('entities.create', ['type' => 'supplier']).'"', false);
+            ->assertDontSee('href="'.route('entities.create', ['type' => 'supplier']).'"', false)
+            ->assertDontSee('href="http://localhost/entities/supplier/'.$supplier->id.'/edit"', false);
 
+        // Admin keeps the real edit links.
         $this->actingAs($admin)
             ->get(route('entities'))
             ->assertOk()
-            ->assertSee('href="'.route('entities.create', ['type' => 'procuring_entity']).'"', false);
+            ->assertSee('href="'.route('entities.create', ['type' => 'procuring_entity']).'"', false)
+            ->assertSee('href="http://localhost/entities/procuring_entity/'.$entity->id.'/edit"', false);
     }
 
     public function test_viewer_sees_disabled_compile_preplist_and_restricted_modal_actions(): void

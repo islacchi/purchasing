@@ -90,13 +90,23 @@
                                         </svg>
                                     </button>
                                     <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
-                                        <a href="{{ route('entities.edit', ['type' => 'procuring_entity', 'id' => $entity['id']]) }}"
-                                           class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                            </svg>
-                                            Edit
-                                        </a>
+                                        @if (auth()->user()?->canModule('entities', 'manage'))
+                                            <a href="{{ route('entities.edit', ['type' => 'procuring_entity', 'id' => $entity['id']]) }}"
+                                               class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                                Edit
+                                            </a>
+                                        @else
+                                            <span class="dropdown-action w-full flex cursor-not-allowed items-center gap-2 px-3 py-2 text-sm text-gray-400"
+                                                  title="Your role does not have access to that module.">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                                Edit
+                                            </span>
+                                        @endif
                                         <form method="POST" action="{{ route('entities.destroy', ['type' => 'procuring_entity', 'id' => $entity['id']]) }}">
                                             @csrf
                                             @method('DELETE')
@@ -186,13 +196,23 @@
                                         </svg>
                                     </button>
                                     <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
-                                        <a href="{{ route('entities.edit', ['type' => 'supplier', 'id' => $supplier['id']]) }}"
-                                           class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                            </svg>
-                                            Edit
-                                        </a>
+                                        @if (auth()->user()?->canModule('entities', 'manage'))
+                                            <a href="{{ route('entities.edit', ['type' => 'supplier', 'id' => $supplier['id']]) }}"
+                                               class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                                Edit
+                                            </a>
+                                        @else
+                                            <span class="dropdown-action w-full flex cursor-not-allowed items-center gap-2 px-3 py-2 text-sm text-gray-400"
+                                                  title="Your role does not have access to that module.">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                                Edit
+                                            </span>
+                                        @endif
                                         <form method="POST" action="{{ route('entities.destroy', ['type' => 'supplier', 'id' => $supplier['id']]) }}">
                                             @csrf
                                             @method('DELETE')
