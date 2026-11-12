@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\ActivityLogger;
@@ -31,132 +32,58 @@ class SettingsController extends Controller
     /**
      * Show the activity logs page.
      *
-     * Displays dummy activity records of user actions across modules
-     * (create, edit, delete). Pending real audit-log table integration.
-     *
-     * @return Response
+     * Reads the real activity_logs table (written by App\Support\ActivityLogger
+     * from every create/edit/delete path), newest first, 50 per page.
+     * Filters: search, action, module, user, and a created_at date range.
      */
     public function logs(Request $request)
     {
-        $activityLogs = [
-            [
-                'user' => 'J. Santos',
-                'role' => 'Procurement officer',
-                'action' => 'Created',
-                'module' => 'Projects',
-                'record' => 'Purchase of pharma supplies Q3',
-                'time' => '2026-07-18 09:12:00',
-            ],
-            [
-                'user' => 'M. Reyes',
-                'role' => 'Admin',
-                'action' => 'Edited',
-                'module' => 'Purchase Order',
-                'record' => 'PO-2026-0117',
-                'time' => '2026-07-18 08:45:00',
-            ],
-            [
-                'user' => 'A. Cruz',
-                'role' => 'Procurement officer',
-                'action' => 'Deleted',
-                'module' => 'Preplist',
-                'record' => 'Office Equipment FY2026',
-                'time' => '2026-07-17 16:30:00',
-            ],
-            [
-                'user' => 'J. Santos',
-                'role' => 'Procurement officer',
-                'action' => 'Created',
-                'module' => 'Quotation',
-                'record' => 'RFQ-2026-0090',
-                'time' => '2026-07-17 14:15:00',
-            ],
-            [
-                'user' => 'M. Reyes',
-                'role' => 'Admin',
-                'action' => 'Edited',
-                'module' => 'Entities',
-                'record' => 'PGH Manila',
-                'time' => '2026-07-16 11:05:00',
-            ],
-            [
-                'user' => 'A. Cruz',
-                'role' => 'Procurement officer',
-                'action' => 'Created',
-                'module' => 'Purchase Order',
-                'record' => 'PO-2026-0116',
-                'time' => '2026-07-15 10:22:00',
-            ],
-            [
-                'user' => 'J. Santos',
-                'role' => 'Procurement officer',
-                'action' => 'Deleted',
-                'module' => 'Quotation',
-                'record' => 'RFQ-2026-0088',
-                'time' => '2026-07-14 09:48:00',
-            ],
-            [
-                'user' => 'M. Reyes',
-                'role' => 'Admin',
-                'action' => 'Created',
-                'module' => 'Entities',
-                'record' => 'Triple Tact',
-                'time' => '2026-07-13 15:10:00',
-            ],
-        ];
-
-        // Get filter values from request
-        $search = $request->get('search', '');
+        $search = trim((string) $request->get('search', ''));
         $filterAction = $request->get('action', 'all');
         $filterModule = $request->get('module', 'all');
         $filterUser = $request->get('user', 'all');
         $filterFrom = $request->get('from_date', '');
         $filterTo = $request->get('to_date', '');
 
-        // Apply filters
-        $activityLogs = array_filter($activityLogs, function ($log) use ($search, $filterAction, $filterModule, $filterUser, $filterFrom, $filterTo) {
-            $matchSearch = empty($search) ||
-                stripos($log['user'], $search) !== false ||
-                stripos($log['module'], $search) !== false ||
-                stripos($log['record'], $search) !== false ||
-                stripos($log['action'], $search) !== false;
+        $logs = ActivityLog::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('user_name', 'like', "%{$search}%")
+                        ->orWhere('module', 'like', "%{$search}%")
+                        ->orWhere('record_label', 'like', "%{$search}%")
+                        ->orWhere('action', 'like', "%{$search}%");
+                });
+            })
+            ->when($filterAction !== 'all', fn ($query) => $query->where('action', $filterAction))
+            ->when($filterModule !== 'all', fn ($query) => $query->where('module', $filterModule))
+            ->when($filterUser !== 'all', fn ($query) => $query->where('user_name', $filterUser))
+            ->when($filterFrom !== '', fn ($query) => $query->whereDate('created_at', '>=', $filterFrom))
+            ->when($filterTo !== '', fn ($query) => $query->whereDate('created_at', '<=', $filterTo))
+            ->latest('created_at')
+            ->paginate(50)
+            ->withQueryString();
 
-            $matchAction = $filterAction === 'all' || $log['action'] === $filterAction;
-            $matchModule = $filterModule === 'all' || $log['module'] === $filterModule;
-            $matchUser = $filterUser === 'all' || $log['user'] === $filterUser;
+        $activityLogs = $logs->getCollection()->map(fn (ActivityLog $log) => [
+            'time' => $log->created_at?->format('Y-m-d H:i:s'),
+            'user' => $log->user_name,
+            'role' => $log->role_name,
+            'action' => $log->action,
+            'module' => $log->module,
+            'record' => $log->record_label,
+        ]);
 
-            // Date range filtering
-            $matchDateRange = true;
-            if (! empty($filterFrom) || ! empty($filterTo)) {
-                $logDate = date('Y-m-d', strtotime($log['time']));
-                if (! empty($filterFrom) && $logDate < $filterFrom) {
-                    $matchDateRange = false;
-                }
-                if (! empty($filterTo) && $logDate > $filterTo) {
-                    $matchDateRange = false;
-                }
-            }
-
-            return $matchSearch && $matchAction && $matchModule && $matchUser && $matchDateRange;
-        });
-
-        // Re-index array after filtering
-        $activityLogs = array_values($activityLogs);
-
-        // Unique values for filter dropdowns
-        $actions = array_unique(array_column($activityLogs, 'action'));
-        $modules = array_unique(array_column($activityLogs, 'module'));
-        $users = array_unique(array_column($activityLogs, 'user'));
+        $modules = ActivityLog::query()->distinct()->orderBy('module')->pluck('module');
+        $users = ActivityLog::query()->distinct()->orderBy('user_name')->pluck('user_name');
 
         return view('settings.logs', compact(
             'activityLogs',
+            'logs',
             'search',
             'filterAction',
             'filterModule',
             'filterUser',
             'filterFrom',
             'filterTo',
-            'actions',
             'modules',
             'users'
         ));

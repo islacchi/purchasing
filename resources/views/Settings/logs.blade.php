@@ -14,7 +14,7 @@
         </div>
         <div class="flex items-center gap-3">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                {{ count($activityLogs ?? []) }} records
+                {{ $logs->total() }} records
             </span>
             <button onclick="window.print()"
                     class="no-print flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -55,10 +55,6 @@
             }
             th, td {
                 border: 1px solid #ccc !important;
-            }
-            .placeholder-notice,
-            .mt-8 > p {
-                display: none !important;
             }
         }
     </style>
@@ -134,7 +130,7 @@
                 {{-- Form actions --}}
                 <div class="flex items-center justify-between pt-2 border-t border-gray-100">
                     <span class="text-xs font-medium text-gray-500">
-                        Showing <strong>{{ count($activityLogs ?? []) }}</strong> record(s)
+                        Showing <strong>{{ $logs->firstItem() ?? 0 }}–{{ $logs->lastItem() ?? 0 }}</strong> of <strong>{{ $logs->total() }}</strong> record(s)
                     </span>
                     <div class="flex items-center gap-2">
                         <button type="reset"
@@ -166,9 +162,9 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 bg-white">
-                    @if (empty($activityLogs ?? []))
+                    @if ($activityLogs->isEmpty())
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center text-gray-500">No activity records found.</td>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">No activity records found.</td>
                         </tr>
                     @else
                         @foreach ($activityLogs as $log)
@@ -177,7 +173,7 @@
                                 <td class="px-6 py-4 text-sm text-gray-900 font-medium">{{ $log['user'] }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-900">
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
-                                        @if($log['role'] === 'Admin') bg-blue-100 text-blue-700
+                                        @if($log['role'] === 'Administrator') bg-blue-100 text-blue-700
                                         @else bg-gray-100 text-gray-700 @endif">
                                         {{ $log['role'] }}
                                     </span>
@@ -203,11 +199,8 @@
         </div>
     </div>
 
-    {{-- Placeholder notice --}}
-    <div class="mt-8 no-print placeholder-notice">
-        <p class="text-xs text-gray-400 text-center">
-            Activity log is currently displaying dummy data. A real audit-log table and middleware
-            will be implemented once user and module models are integrated.
-        </p>
+    {{-- Pagination --}}
+    <div class="mt-4 no-print">
+        {{ $logs->links() }}
     </div>
 @endsection

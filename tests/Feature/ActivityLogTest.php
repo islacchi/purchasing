@@ -106,6 +106,23 @@ class ActivityLogTest extends TestCase
         $this->assertSame($user->id, $log->user_id);
     }
 
+    public function test_settings_logs_page_shows_real_activity_rows(): void
+    {
+        $user = $this->admin();
+
+        $this->actingAs($user)->post(route('entities.store', ['type' => 'supplier']), [
+            'name' => 'Triple Tact',
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->get(route('settings.logs'))
+            ->assertOk()
+            ->assertSee('Triple Tact')
+            ->assertSee('Entities')
+            ->assertSee('Created')
+            ->assertDontSee('dummy data');
+    }
+
     public function test_failed_preplist_create_writes_no_activity_log_row(): void
     {
         $user = $this->admin();
