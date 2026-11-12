@@ -47,7 +47,7 @@ CREATE TABLE `activity_logs` (
   KEY `activity_logs_user_id_foreign` (`user_id`),
   KEY `activity_logs_subject_type_subject_id_index` (`subject_type`,`subject_id`),
   CONSTRAINT `activity_logs_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -190,7 +190,7 @@ CREATE TABLE `migrations` (
   `migration` varchar(255) NOT NULL,
   `batch` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -258,8 +258,9 @@ CREATE TABLE `preplist_items` (
   `item_id` bigint(20) unsigned NOT NULL,
   `min_shelf_life_months` smallint(6) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `preplist_items_preplist_id_foreign` (`preplist_id`),
+  UNIQUE KEY `preplist_items_preplist_item_id_unique` (`preplist_id`,`item_id`),
   KEY `preplist_items_item_id_foreign` (`item_id`),
+  KEY `preplist_items_preplist_id_foreign` (`preplist_id`),
   CONSTRAINT `preplist_items_item_id_foreign` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`),
   CONSTRAINT `preplist_items_preplist_id_foreign` FOREIGN KEY (`preplist_id`) REFERENCES `preplists` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -305,7 +306,7 @@ CREATE TABLE `procuring_entities` (
   `email` varchar(255) DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -320,6 +321,7 @@ CREATE TABLE `project_items` (
   `project_id` bigint(20) unsigned NOT NULL,
   `item_id` bigint(20) unsigned NOT NULL,
   `quantity` int(11) NOT NULL,
+  `in_stock` int(10) unsigned NOT NULL DEFAULT 0,
   `unit_cost` decimal(15,2) NOT NULL,
   `awarded_unit_price` decimal(15,2) DEFAULT NULL,
   `fulfillment_status` varchar(255) NOT NULL DEFAULT 'pending',
@@ -328,7 +330,7 @@ CREATE TABLE `project_items` (
   KEY `project_items_item_id_foreign` (`item_id`),
   CONSTRAINT `project_items_item_id_foreign` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`),
   CONSTRAINT `project_items_project_id_foreign` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -395,11 +397,11 @@ CREATE TABLE `purchase_order_items` (
   `qty` int(11) NOT NULL,
   `unit_price` decimal(15,2) NOT NULL,
   `min_remaining_months` smallint(6) DEFAULT NULL,
-  `offered_shelf_life_months` smallint(6) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `purchase_order_items_purchase_order_id_foreign` (`purchase_order_id`),
+  UNIQUE KEY `purchase_order_items_purchase_order_quote_item_unique` (`purchase_order_id`,`quotation_item_id`),
   KEY `purchase_order_items_quotation_item_id_foreign` (`quotation_item_id`),
   KEY `purchase_order_items_item_id_foreign` (`item_id`),
+  KEY `purchase_order_items_purchase_order_id_foreign` (`purchase_order_id`),
   CONSTRAINT `purchase_order_items_item_id_foreign` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`),
   CONSTRAINT `purchase_order_items_purchase_order_id_foreign` FOREIGN KEY (`purchase_order_id`) REFERENCES `purchase_orders` (`id`) ON DELETE CASCADE,
   CONSTRAINT `purchase_order_items_quotation_item_id_foreign` FOREIGN KEY (`quotation_item_id`) REFERENCES `quotation_items` (`id`)
@@ -476,13 +478,13 @@ CREATE TABLE `quotation_items` (
   `min_remaining_months` smallint(6) DEFAULT NULL,
   `unit_price` decimal(15,2) DEFAULT NULL,
   `brand` varchar(255) DEFAULT NULL,
-  `expiry` varchar(255) DEFAULT NULL,
-  `offered_shelf_life_months` smallint(6) DEFAULT NULL,
+  `expiry` date DEFAULT NULL,
   `available_qty` int(11) DEFAULT NULL,
   `quoted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `quotation_items_quotation_id_foreign` (`quotation_id`),
+  UNIQUE KEY `quotation_items_quotation_preplist_item_unique` (`quotation_id`,`preplist_item_id`),
   KEY `quotation_items_preplist_item_id_foreign` (`preplist_item_id`),
+  KEY `quotation_items_quotation_id_foreign` (`quotation_id`),
   CONSTRAINT `quotation_items_preplist_item_id_foreign` FOREIGN KEY (`preplist_item_id`) REFERENCES `preplist_items` (`id`),
   CONSTRAINT `quotation_items_quotation_id_foreign` FOREIGN KEY (`quotation_id`) REFERENCES `quotations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -570,7 +572,7 @@ CREATE TABLE `suppliers` (
   `deleted_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `suppliers_name_unique` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -609,7 +611,7 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-11 16:14:07
+-- Dump completed on 2026-11-12 14:03:25
 -- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
 --
 -- Host: 127.0.0.1    Database: purchasing_db
@@ -632,6 +634,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `activity_logs` WRITE;
 /*!40000 ALTER TABLE `activity_logs` DISABLE KEYS */;
+INSERT INTO `activity_logs` VALUES (1,3,'user1','Procurement Officer','Created','Entities','LGU - BISAYA','App\\Models\\ProcuringEntity',2,'2026-11-11 18:27:08'),(2,2,'admin','Administrator','Edited','Projects','wewew','App\\Models\\Project',5,'2026-11-11 21:35:11'),(3,2,'admin','Administrator','Edited','Projects','wewew','App\\Models\\Project',5,'2026-11-11 21:35:32'),(4,2,'admin','Administrator','Edited','Projects','wewew','App\\Models\\Project',5,'2026-11-11 21:37:44'),(5,2,'admin','Administrator','Edited','Projects','wewew','App\\Models\\Project',5,'2026-11-11 21:48:06');
 /*!40000 ALTER TABLE `activity_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -661,7 +664,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `migrations` WRITE;
 /*!40000 ALTER TABLE `migrations` DISABLE KEYS */;
-INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_roles_table',1),(2,'0001_01_01_000000_create_users_table',1),(3,'0001_01_01_000001_create_cache_table',1),(4,'0001_01_01_000002_create_jobs_table',1),(5,'2026_11_09_000001_create_number_sequences_table',1),(6,'2026_11_09_000002_create_procuring_entities_table',1),(7,'2026_11_09_000003_create_item_categories_table',1),(8,'2026_11_09_000004_create_items_table',1),(9,'2026_11_09_000005_create_suppliers_table',1),(10,'2026_11_09_000006_create_projects_table',1),(11,'2026_11_09_000007_create_preplists_table',1),(12,'2026_11_09_000008_create_preplist_items_table',1),(13,'2026_11_09_000009_create_activity_logs_table',1),(14,'2026_11_09_000010_create_project_items_table',1),(15,'2026_11_09_000011_create_preplist_item_sources_table',1),(16,'2026_11_09_000012_create_quotations_table',1),(17,'2026_11_09_000013_create_quotation_items_table',1),(18,'2026_11_09_000014_create_purchase_orders_table',1),(19,'2026_11_09_000015_create_purchase_order_items_table',1),(20,'2026_11_09_000016_create_purchase_order_receipts_table',1),(21,'2026_11_09_000017_create_purchase_order_item_allocations_table',1),(22,'2026_11_09_000018_add_timestamps_to_users_table',2),(23,'2026_11_10_000001_add_timestamps_to_preplists_table',3),(24,'2026_11_11_000001_add_brand_and_expiry_to_quotation_items_table',4);
+INSERT INTO `migrations` VALUES (1,'0001_01_01_000000_create_roles_table',1),(2,'0001_01_01_000000_create_users_table',1),(3,'0001_01_01_000001_create_cache_table',1),(4,'0001_01_01_000002_create_jobs_table',1),(5,'2026_11_09_000001_create_number_sequences_table',1),(6,'2026_11_09_000002_create_procuring_entities_table',1),(7,'2026_11_09_000003_create_item_categories_table',1),(8,'2026_11_09_000004_create_items_table',1),(9,'2026_11_09_000005_create_suppliers_table',1),(10,'2026_11_09_000006_create_projects_table',1),(11,'2026_11_09_000007_create_preplists_table',1),(12,'2026_11_09_000008_create_preplist_items_table',1),(13,'2026_11_09_000009_create_activity_logs_table',1),(14,'2026_11_09_000010_create_project_items_table',1),(15,'2026_11_09_000011_create_preplist_item_sources_table',1),(16,'2026_11_09_000012_create_quotations_table',1),(17,'2026_11_09_000013_create_quotation_items_table',1),(18,'2026_11_09_000014_create_purchase_orders_table',1),(19,'2026_11_09_000015_create_purchase_order_items_table',1),(20,'2026_11_09_000016_create_purchase_order_receipts_table',1),(21,'2026_11_09_000017_create_purchase_order_item_allocations_table',1),(22,'2026_11_09_000018_add_timestamps_to_users_table',2),(23,'2026_11_10_000001_add_timestamps_to_preplists_table',3),(24,'2026_11_11_000001_add_brand_and_expiry_to_quotation_items_table',4),(25,'2026_11_12_000001_convert_quotation_items_expiry_to_date_table',5),(26,'2026_11_12_000002_drop_offered_shelf_life_months_from_items_tables',6),(28,'2026_11_12_000003_add_unique_indexes_to_junction_items_tables',7),(30,'2026_11_12_000004_add_in_stock_to_project_items_table',8);
 /*!40000 ALTER TABLE `migrations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -720,7 +723,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `procuring_entities` WRITE;
 /*!40000 ALTER TABLE `procuring_entities` DISABLE KEYS */;
-INSERT INTO `procuring_entities` VALUES (1,'LGU - ANDA','Government Hospital','asdsdad','Joyce Espejo','Call my name and i\'ll be there','asdasdasd@gmail.com',NULL);
+INSERT INTO `procuring_entities` VALUES (1,'LGU - ANDA','Government Hospital','asdsdad','Joyce Espejo','Call my name and i\'ll be there','asdasdasd@gmail.com',NULL),(2,'LGU - BISAYA','Government Hospital',NULL,'Peter gihapon','62626523625','kyle@gmail.com',NULL);
 /*!40000 ALTER TABLE `procuring_entities` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -730,7 +733,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `project_items` WRITE;
 /*!40000 ALTER TABLE `project_items` DISABLE KEYS */;
-INSERT INTO `project_items` VALUES (3,2,2,21,21.00,21.00,'pending'),(4,2,3,21,21.00,21.00,'pending'),(5,3,1,12,12.00,12.00,'pending'),(6,4,1,12,12.00,12.00,'pending'),(8,5,4,500,5000.00,500.00,'pending');
+INSERT INTO `project_items` VALUES (3,2,2,21,0,21.00,21.00,'pending'),(4,2,3,21,0,21.00,21.00,'pending'),(5,3,1,12,0,12.00,12.00,'pending'),(6,4,1,12,0,12.00,12.00,'pending'),(12,5,4,500,500,5000.00,500.00,'pending');
 /*!40000 ALTER TABLE `project_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -760,7 +763,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `purchase_order_items` WRITE;
 /*!40000 ALTER TABLE `purchase_order_items` DISABLE KEYS */;
-INSERT INTO `purchase_order_items` VALUES (9,6,17,2,21,2530.00,1,NULL),(10,6,18,3,21,300.00,1,NULL);
+INSERT INTO `purchase_order_items` VALUES (9,6,17,2,21,2530.00,1),(10,6,18,3,21,300.00,1);
 /*!40000 ALTER TABLE `purchase_order_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -789,7 +792,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `quotation_items` WRITE;
 /*!40000 ALTER TABLE `quotation_items` DISABLE KEYS */;
-INSERT INTO `quotation_items` VALUES (17,17,31,1,2530.00,'AYASIB','2027-02-02',NULL,NULL,'2026-11-10 22:29:20'),(18,17,32,1,300.00,'RENE','2027-02-02',NULL,NULL,'2026-11-10 22:29:20');
+INSERT INTO `quotation_items` VALUES (17,17,31,1,2530.00,'AYASIB','2027-02-02',NULL,'2026-11-10 22:29:20'),(18,17,32,1,300.00,'RENE','2027-02-02',NULL,'2026-11-10 22:29:20');
 /*!40000 ALTER TABLE `quotation_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -841,4 +844,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-11 16:14:07
+-- Dump completed on 2026-11-12 14:03:26
