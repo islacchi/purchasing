@@ -335,6 +335,42 @@ class QuotationTest extends TestCase
             ->assertSee($project->reference_no);
     }
 
+    public function test_viewer_sees_the_submit_quotation_button_disabled(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 30]);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 12],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+
+        $viewer = User::where('name', 'user2')->firstOrFail();
+
+        $this->actingAs($viewer)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('Your role does not have access to upload files.')
+            ->assertDontSee('for="supplierQuotationFile"', false)
+            ->assertDontSee('supplierQuotationForm', false);
+
+        // An administrator still sees the real upload label.
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('for="supplierQuotationFile"', false)
+            ->assertSee('supplierQuotationForm', false);
+    }
+
     public function test_quotation_show_displays_quoted_items_and_flags_the_expiry(): void
     {
         Storage::fake('local');

@@ -45,14 +45,20 @@
         // supplier's expiry that still counts as "close" rather than "good".
         $expiryCloseWindow = 30;
 
+        // Uploading the supplier's file requires Manage access for the
+        // Quotation module; View-only roles see the buttons disabled.
+        $canManageQuotation = auth()->user()?->canModule('quotation', 'manage') ?? false;
+
         $documentSize = $formatDocumentSize($quotation->document_size);
     @endphp
 
+    @if ($canManageQuotation)
     {{-- The file chooser lives in this hidden form; the Replace / Submit buttons open it and submit on selection. --}}
     <form id="supplierQuotationForm" method="POST" action="{{ route('quotation.store-document', ['quotation' => $quotation->id]) }}" enctype="multipart/form-data" class="hidden">
         @csrf
         <input id="supplierQuotationFile" type="file" name="document" accept=".xlsx" required onchange="this.form.requestSubmit()">
     </form>
+    @endif
 
     <div class="flex h-full min-h-0 flex-col">
         @if (! $preplist)
@@ -61,7 +67,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
                 </svg>
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold text-red-800">This quotation's prep list has been deleted</p>
+                    <p class="text-sm font-semibold text-red-800">This quotation’s prep list has been deleted</p>
                     <p class="mt-0.5 text-xs text-red-700">
                         Quoted prices are preserved, but this quotation can no longer be compared against the requested items or re-uploaded.
                     </p>
@@ -136,11 +142,13 @@
                             </div>
 
                             <div class="flex shrink-0 items-center gap-3">
-                                @if ($preplist)
+                                @if ($preplist && $canManageQuotation)
                                     <label for="supplierQuotationFile"
                                            class="cursor-pointer text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94] hover:underline">
                                         Replace
                                     </label>
+                                @elseif ($preplist)
+                                    <span class="cursor-not-allowed text-sm font-medium text-gray-300" title="Your role does not have access to upload files.">Replace</span>
                                 @else
                                     <span class="cursor-not-allowed text-sm font-medium text-gray-300">Replace</span>
                                 @endif
@@ -354,12 +362,12 @@
                         </a>
                     @else
                         <span class="flex cursor-not-allowed items-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
-                              title="This quotation's prep list has been deleted">
+                              title="This quotation’s prep list has been deleted">
                             Proceed to PO
                         </span>
                     @endif
                 @else
-                    @if ($preplist)
+                    @if ($preplist && $canManageQuotation)
                         <label for="supplierQuotationFile"
                                class="flex cursor-pointer items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -369,7 +377,7 @@
                         </label>
                     @else
                         <span class="flex cursor-not-allowed items-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
-                              title="This quotation's prep list has been deleted">
+                              title="{{ $preplist ? 'Your role does not have access to upload files.' : 'This quotation’s prep list has been deleted' }}">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                             </svg>
