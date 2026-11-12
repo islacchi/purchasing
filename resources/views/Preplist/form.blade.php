@@ -125,6 +125,7 @@
                             @php
                                 $isSelected = in_array((string) $projectItem->id, $selectedSourceIds, true);
                                 $selectedPreplistItem = $selectedSources[$projectItem->id] ?? null;
+                                $isFulfilled = $projectItem->isFulfilled();
                                 $shelfLife = old(
                                     'shelf_life.'.$projectItem->id,
                                     $selectedPreplistItem?->min_shelf_life_months
@@ -142,6 +143,9 @@
                                            {{ $isSelected ? 'checked' : '' }}>
                                     <div class="min-w-0">
                                         <span class="item-name text-sm text-gray-700">{{ $projectItem->item?->name ?? 'Item' }}</span>
+                                        @if ($isFulfilled)
+                                            <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-green-700">Fulfilled</span>
+                                        @endif
 
                                         {{-- Shelf life required at delivery (per item) --}}
                                         <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -169,7 +173,7 @@
             @empty
                 <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
                     <h3 class="text-base font-semibold text-gray-900">No project items available</h3>
-                    <p class="mt-1 text-sm text-gray-500">Add items to a project before compiling a prep list.</p>
+                    <p class="mt-1 text-sm text-gray-500">Nothing to compile — items already fulfilled from on-hand stock or by receiving are hidden.</p>
                     <a href="{{ route('projects.create') }}" class="mt-4 inline-flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80]">
                         Add project
                     </a>

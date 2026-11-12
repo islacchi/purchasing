@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\ItemCategory;
 use App\Models\Preplist;
 use App\Models\PreplistItem;
+use App\Models\PreplistItemSource;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
@@ -164,6 +165,92 @@ class InStockTest extends TestCase
         $this->assertSame('Completed', $project->statusLabel());
     }
 
+    public function test_fulfilled_items_are_hidden_on_the_compile_page(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $coveredItem = $this->item(['name' => 'CoveredItemCompileHide']);
+        $openItem = $this->item(['name' => 'OpenItemCompileShow', 'category' => 'supplies and equipments']);
+
+        // Project A is fully covered — it must vanish from the compile page entirely.
+        $projectA = $this->project($user, $entity, [
+            'title' => 'All Covered Project',
+            'reference_no' => 'RF-2026-A1',
+        ]);
+        $this->projectItem($projectA, $coveredItem, ['quantity' => 30, 'in_stock' => 30]);
+
+        // Project B is mixed — only the open item stays selectable.
+        $projectB = $this->project($user, $entity, [
+            'title' => 'Mixed Project',
+            'reference_no' => 'RF-2026-B2',
+        ]);
+        $this->projectItem($projectB, $coveredItem, ['quantity' => 30, 'in_stock' => 30]);
+        $this->projectItem($projectB, $openItem, ['quantity' => 15, 'in_stock' => 0]);
+
+        $this->actingAs($user)
+            ->get(route('preplist.create'))
+            ->assertOk()
+            ->assertSee('Mixed Project')
+            ->assertSee('OpenItemCompileShow')
+            ->assertDontSee('CoveredItemCompileHide')
+            ->assertDontSee('All Covered Project');
+    }
+
+    public function test_fulfilled_source_is_rejected_on_compile(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+
+        $coveredItem = $this->item(['name' => 'CoveredItemRejectMe']);
+        $coveredSource = $this->projectItem($project, $coveredItem, ['quantity' => 30, 'in_stock' => 30]);
+
+        $this->actingAs($user)->post(route('preplist.store'), [
+            'name' => 'Rejected compile',
+            'sources' => [$coveredSource->id],
+        ])->assertSessionHasErrors('sources');
+
+        $this->assertDatabaseCount('preplists', 0);
+        $this->assertDatabaseCount('preplist_items', 0);
+    }
+
+    public function test_item_fulfilled_after_being_added_stays_visible_on_edit_and_is_not_dropped(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+
+        $sourceItem = $this->item(['name' => 'OpenItemThenCovered']);
+        $source = $this->projectItem($project, $sourceItem, ['quantity' => 20, 'in_stock' => 0]);
+
+        $this->actingAs($user)->post(route('preplist.store'), [
+            'name' => 'Keep me honest',
+            'sources' => [$source->id],
+        ])->assertSessionHasNoErrors();
+
+        $preplist = Preplist::query()->firstOrFail();
+
+        // The line becomes fully covered AFTER it was added to the prep list.
+        $source->update(['in_stock' => 20]);
+
+        $this->actingAs($user)
+            ->get(route('preplist.edit', ['preplist' => $preplist->id]))
+            ->assertOk()
+            ->assertSee('OpenItemThenCovered')
+            ->assertSee('Fulfilled')
+            ->assertSeeHtml('value="'.$source->id.'"');
+
+        // Saving the edit without touching the line keeps it sourced.
+        $this->actingAs($user)->put(route('preplist.update', ['preplist' => $preplist->id]), [
+            'name' => 'Keep me honest',
+            'sources' => [$source->id],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('preplists', 1);
+        $this->assertSame(1, PreplistItemSource::query()->where('project_item_id', $source->id)->count());
+    }
+
     public function test_stock_covered_item_is_not_listed_on_the_po_prep_page(): void
     {
         $user = $this->admin();
@@ -173,7 +260,10 @@ class InStockTest extends TestCase
         $coveredItem = $this->item(['name' => 'AlphaItemCovered']);
         $openItem = $this->item(['name' => 'BetaItemOpen', 'category' => 'supplies and equipments']);
 
-        $coveredSource = $this->projectItem($project, $coveredItem, ['quantity' => 30, 'in_stock' => 30]);
+        // Compile first (in_stock = 0); coverage happens afterwards, the
+        // way stock-on-hand typically materialises after a prep list is
+        // built. Fulfilled lines can no longer enter a compile POST.
+        $coveredSource = $this->projectItem($project, $coveredItem, ['quantity' => 30, 'in_stock' => 0]);
         $openSource = $this->projectItem($project, $openItem, ['quantity' => 20, 'in_stock' => 0]);
 
         $supplier = Supplier::firstOrCreate(['name' => 'Triple Tact']);
@@ -185,6 +275,10 @@ class InStockTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $preplist = Preplist::query()->firstOrFail();
+
+        // Stock shows up AFTER the prep list was compiled — the line is now
+        // fulfilled and must not appear on the PO preparation screen.
+        $coveredSource->update(['in_stock' => 30]);
 
         $quotation = Quotation::create([
             'preplist_id' => $preplist->id,

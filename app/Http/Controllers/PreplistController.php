@@ -68,6 +68,7 @@ class PreplistController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validatePreplist($request);
+        $this->assertNoFulfilledSources($validated);
 
         try {
             $preplist = DB::transaction(function () use ($request, $validated) {
@@ -122,7 +123,7 @@ class PreplistController extends Controller
 
         return view('Preplist.form', [
             'prepList' => $preplist,
-            'projects' => $this->projectsWithItems(),
+            'projects' => $this->projectsWithItems($preplist),
             'selectedSources' => $selectedSources,
         ]);
     }
@@ -133,6 +134,7 @@ class PreplistController extends Controller
     public function update(Request $request, Preplist $preplist)
     {
         $validated = $this->validatePreplist($request);
+        $this->assertNoFulfilledSources($validated, $preplist);
 
         try {
             DB::transaction(function () use ($preplist, $validated) {
@@ -371,14 +373,70 @@ class PreplistController extends Controller
 
     /**
      * Available projects that have item rows to compile.
+     *
+     * Fulfilled lines (received via PO, or fully covered by on-hand stock)
+     * never appear on the compile page. Lines already sourced into the prep
+     * being edited stay visible so editing cannot silently drop them.
      */
-    private function projectsWithItems()
+    private function projectsWithItems(?Preplist $prepList = null)
     {
+        $sourcedItemIds = $prepList === null
+            ? []
+            : $prepList->items->flatMap(fn (PreplistItem $item) => $item->sources->pluck('project_item_id'))->all();
+
         return Project::query()
             ->with(['procuringEntity', 'items.item.category'])
-            ->whereHas('items')
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->map(function (Project $project) use ($sourcedItemIds) {
+                $project->setRelation('items', $project->items
+                    ->reject(fn (ProjectItem $item) => $item->isFulfilled() && ! in_array($item->id, $sourcedItemIds, true))
+                    ->values());
+
+                return $project;
+            })
+            ->filter(fn (Project $project) => $project->items->isNotEmpty())
+            ->values();
+    }
+
+    /**
+     * Reject source rows that are already fulfilled (received via PO, or fully
+     * covered by on-hand stock) — they cannot be compiled into a prep list.
+     * Lines already sourced into the same prep list keep working, so editing
+     * never fails on its own previously accepted selections.
+     */
+    private function assertNoFulfilledSources(array $validated, ?Preplist $prepList = null): void
+    {
+        $ids = $validated['sources'] ?? [];
+
+        if ($ids === []) {
+            return;
+        }
+
+        $fulfilled = ProjectItem::query()
+            ->with('item')
+            ->whereIn('id', $ids)
+            ->get()
+            ->filter(fn (ProjectItem $item) => $item->isFulfilled());
+
+        if ($prepList !== null) {
+            $prepList->loadMissing('items.sources');
+
+            $alreadySourced = $prepList->items
+                ->flatMap(fn (PreplistItem $item) => $item->sources->pluck('project_item_id'))
+                ->all();
+
+            $fulfilled = $fulfilled->reject(fn (ProjectItem $item) => in_array($item->id, $alreadySourced, true));
+        }
+
+        if ($fulfilled->isEmpty()) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'sources' => 'Already fulfilled and cannot be compiled: '
+                .$fulfilled->map(fn (ProjectItem $item) => $item->item?->name ?? ('item #'.$item->id))->join(', ').'.',
+        ]);
     }
 
     /**
