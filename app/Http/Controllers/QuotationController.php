@@ -6,6 +6,7 @@ use App\Models\PreplistItem;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\QuotationWorkbookParser;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -14,6 +15,20 @@ use RuntimeException;
 
 class QuotationController extends Controller
 {
+    /**
+     * Convert a unique-violation into a validation error for the user.
+     */
+    private function throwIfUniqueViolation(QueryException $exception): never
+    {
+        if (str_contains($exception->getMessage(), 'UNIQUE') || str_contains($exception->getMessage(), 'unique')) {
+            throw ValidationException::withMessages([
+                'document' => 'This quotation was already submitted in another request. Please refresh the page.',
+            ]);
+        }
+
+        throw $exception;
+    }
+
     /**
      * Show the quotation tracker using real database records.
      */
@@ -184,34 +199,38 @@ class QuotationController extends Controller
             ];
         }
 
-        DB::transaction(function () use ($quotation, $updates) {
-            foreach ($updates as $data) {
-                // A blank price means the supplier did not quote that item;
-                // make sure no stale "quoted" row remains for it.
-                if ($data['unit_price'] === null) {
-                    QuotationItem::query()
-                        ->where('quotation_id', $quotation->id)
-                        ->where('preplist_item_id', $data['preplist_item_id'])
-                        ->delete();
+        try {
+            DB::transaction(function () use ($quotation, $updates) {
+                foreach ($updates as $data) {
+                    // A blank price means the supplier did not quote that item;
+                    // make sure no stale "quoted" row remains for it.
+                    if ($data['unit_price'] === null) {
+                        QuotationItem::query()
+                            ->where('quotation_id', $quotation->id)
+                            ->where('preplist_item_id', $data['preplist_item_id'])
+                            ->delete();
 
-                    continue;
+                        continue;
+                    }
+
+                    QuotationItem::query()->updateOrCreate(
+                        [
+                            'quotation_id' => $quotation->id,
+                            'preplist_item_id' => $data['preplist_item_id'],
+                        ],
+                        [
+                            'min_remaining_months' => $data['min_remaining_months'],
+                            'brand' => $data['brand'],
+                            'expiry' => $data['expiry'],
+                            'unit_price' => $data['unit_price'],
+                            'quoted_at' => now(),
+                        ],
+                    );
                 }
-
-                QuotationItem::query()->updateOrCreate(
-                    [
-                        'quotation_id' => $quotation->id,
-                        'preplist_item_id' => $data['preplist_item_id'],
-                    ],
-                    [
-                        'min_remaining_months' => $data['min_remaining_months'],
-                        'brand' => $data['brand'],
-                        'expiry' => $data['expiry'],
-                        'unit_price' => $data['unit_price'],
-                        'quoted_at' => now(),
-                    ],
-                );
-            }
-        });
+            });
+        } catch (QueryException $exception) {
+            $this->throwIfUniqueViolation($exception);
+        }
 
         $path = 'quotations/'.($quotation->rfq_number ?: 'quotation-'.$quotation->id).'.xlsx';
         $oldPath = $quotation->document_path;

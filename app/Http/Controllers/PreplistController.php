@@ -10,6 +10,7 @@ use App\Models\ProjectItem;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\RfqQuotationWorkbook;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -67,18 +68,22 @@ class PreplistController extends Controller
     {
         $validated = $this->validatePreplist($request);
 
-        $preplist = DB::transaction(function () use ($request, $validated) {
-            $preplist = Preplist::query()->create([
-                'created_by' => $request->user()->id,
-                'name' => $validated['name'],
-                'reference_no' => $this->nextReferenceNumber(),
-                'notes' => $validated['notes'] ?? null,
-            ]);
+        try {
+            $preplist = DB::transaction(function () use ($request, $validated) {
+                $preplist = Preplist::query()->create([
+                    'created_by' => $request->user()->id,
+                    'name' => $validated['name'],
+                    'reference_no' => $this->nextReferenceNumber(),
+                    'notes' => $validated['notes'] ?? null,
+                ]);
 
-            $this->syncItems($preplist, $validated);
+                $this->syncItems($preplist, $validated);
 
-            return $preplist;
-        });
+                return $preplist;
+            });
+        } catch (QueryException $exception) {
+            $this->throwIfUniqueViolation($exception, 'That combination of items has already been compiled into a prep list.');
+        }
 
         return redirect()
             ->route('preplist.show', ['preplist' => $preplist->id])
@@ -126,14 +131,18 @@ class PreplistController extends Controller
     {
         $validated = $this->validatePreplist($request);
 
-        DB::transaction(function () use ($preplist, $validated) {
-            $preplist->update([
-                'name' => $validated['name'],
-                'notes' => $validated['notes'] ?? null,
-            ]);
+        try {
+            DB::transaction(function () use ($preplist, $validated) {
+                $preplist->update([
+                    'name' => $validated['name'],
+                    'notes' => $validated['notes'] ?? null,
+                ]);
 
-            $this->syncItems($preplist, $validated);
-        });
+                $this->syncItems($preplist, $validated);
+            });
+        } catch (QueryException $exception) {
+            $this->throwIfUniqueViolation($exception, 'That combination of items has already been compiled into a prep list.');
+        }
 
         return redirect()
             ->route('preplist.show', ['preplist' => $preplist->id])
@@ -376,6 +385,15 @@ class PreplistController extends Controller
     /**
      * Replace a prep list's compiled items with the selected project items.
      */
+    private function throwIfUniqueViolation(QueryException $exception, string $message): never
+    {
+        if (str_contains($exception->getMessage(), 'UNIQUE') || str_contains($exception->getMessage(), 'unique')) {
+            throw ValidationException::withMessages(['sources' => $message]);
+        }
+
+        throw $exception;
+    }
+
     private function syncItems(Preplist $preplist, array $validated): void
     {
         $preplist->items()->get()->each(function (PreplistItem $item) {

@@ -10,12 +10,27 @@ use App\Models\PurchaseOrderItemAllocation;
 use App\Models\PurchaseOrderReceipt;
 use App\Models\Quotation;
 use App\Support\PurchaseOrderWorkbook;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
 {
+    /**
+     * Convert a unique-violation into a validation error for the user.
+     */
+    private function throwIfUniqueViolation(QueryException $exception): never
+    {
+        if (str_contains($exception->getMessage(), 'UNIQUE') || str_contains($exception->getMessage(), 'unique')) {
+            throw ValidationException::withMessages([
+                'items' => 'Something went wrong while creating the purchase order. Please try again.',
+            ]);
+        }
+
+        throw $exception;
+    }
+
     /**
      * Show the purchase order tracker using real database records.
      */
@@ -166,7 +181,8 @@ class PurchaseOrderController extends Controller
             ];
         }
 
-        $purchaseOrder = DB::transaction(function () use ($request, $validated, $quotation, $lines) {
+        try {
+            $purchaseOrder = DB::transaction(function () use ($request, $validated, $quotation, $lines) {
             $purchaseOrder = PurchaseOrder::create([
                 'quotation_id' => $quotation->id,
                 'supplier_id' => $quotation->supplier_id,
@@ -224,6 +240,9 @@ class PurchaseOrderController extends Controller
 
             return $purchaseOrder;
         });
+        } catch (QueryException $exception) {
+            $this->throwIfUniqueViolation($exception);
+        }
 
         $purchaseOrder->load(['items.item', 'items.allocations']);
 

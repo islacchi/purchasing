@@ -6,6 +6,7 @@ use App\Models\ProcuringEntity;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class EntityController extends Controller
 {
@@ -70,7 +71,15 @@ class EntityController extends Controller
     {
         $this->assertType($type);
 
+        // Normalise the name before validation and storage so a stray space
+        // can no longer produce a duplicate.
+        $request->merge(['name' => trim((string) $request->input('name', ''))]);
+
         $validated = $request->validate($this->rules($type, null));
+
+        if ($type === 'supplier') {
+            $this->assertNoOnlyTrashedSupplier($validated['name']);
+        }
 
         if ($type === 'procuring_entity') {
             ProcuringEntity::query()->create($validated);
@@ -114,7 +123,15 @@ class EntityController extends Controller
         $model = $this->modelForType($type);
         $record = $model::query()->findOrFail($id);
 
+        // Normalise the name before validation and storage so a stray space
+        // can no longer produce a duplicate.
+        $request->merge(['name' => trim((string) $request->input('name', ''))]);
+
         $validated = $request->validate($this->rules($type, (int) $id));
+
+        if ($type === 'supplier') {
+            $this->assertNoOnlyTrashedSupplier($validated['name']);
+        }
 
         if ($type === 'procuring_entity') {
             $record->update($validated);
@@ -149,6 +166,27 @@ class EntityController extends Controller
     }
 
     /**
+     * Ensure no soft-deleted supplier holds the given name.
+     *
+     * The unique index on suppliers.name covers every row including trashed
+     * ones, so the validation rule (which skips soft deletes) can pass while
+     * the INSERT/UPDATE would still explode at the database level. Check
+     * first and give the operator an actionable message instead.
+     */
+    private function assertNoOnlyTrashedSupplier(string $name): void
+    {
+        $existingDeleted = Supplier::onlyTrashed()
+            ->where('name', $name)
+            ->first();
+
+        if ($existingDeleted) {
+            throw ValidationException::withMessages([
+                'name' => 'A supplier named "'.$existingDeleted->name.'" was deleted. Ask an administrator about restoring it.',
+            ]);
+        }
+    }
+
+    /**
      * Validate the request for the selected entity type.
      */
     private function rules(string $type, ?int $ignoreId = null): array
@@ -175,8 +213,8 @@ class EntityController extends Controller
                 'string',
                 'max:255',
                 $ignoreId === null
-                    ? Rule::unique('suppliers', 'name')
-                    : Rule::unique('suppliers', 'name')->ignore($ignoreId),
+                    ? Rule::unique('suppliers', 'name')->withoutTrashed()
+                    : Rule::unique('suppliers', 'name')->withoutTrashed()->ignore($ignoreId),
             ],
             'address' => ['nullable', 'string', 'max:255'],
             'contact_person' => ['nullable', 'string', 'max:255'],
