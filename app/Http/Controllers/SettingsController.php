@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Role;
+use App\Models\RoleModuleAccess;
 use App\Models\User;
 use App\Support\ActivityLogger;
+use App\Support\ModuleAccess;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -144,7 +146,74 @@ class SettingsController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('Settings.privileges', compact('users', 'roles', 'search'));
+        // The matrix editor manages every non-administrator role. Administrator
+        // is implicit full access and is not listed here.
+        $matrixRoles = $roles->reject(fn (Role $role) => $role->name === 'Administrator')->values();
+
+        $moduleAccess = RoleModuleAccess::query()
+            ->whereIn('role_id', $matrixRoles->pluck('id'))
+            ->get()
+            ->groupBy('role_id');
+
+        return view('Settings.privileges', compact(
+            'users',
+            'roles',
+            'matrixRoles',
+            'moduleAccess',
+            'search',
+        ));
+    }
+
+    /**
+     * Persist the role × module access matrix. Administrator is not editable.
+     */
+    public function updateModuleAccess(Request $request)
+    {
+        $validated = $request->validate([
+            'access' => ['required', 'array'],
+            'access.*' => ['array'],
+            'access.*.*' => ['required', 'string', Rule::in([
+                RoleModuleAccess::LEVEL_NONE,
+                RoleModuleAccess::LEVEL_VIEW,
+                RoleModuleAccess::LEVEL_MANAGE,
+            ])],
+        ]);
+
+        $names = ModuleAccess::MODULES;
+        $administratorIds = Role::query()->where('name', 'Administrator')->pluck('id')->all();
+
+        DB::transaction(function () use ($validated, $names, $administratorIds) {
+            foreach ($validated['access'] as $roleId => $modules) {
+                if (! ctype_digit((string) $roleId) || in_array((int) $roleId, $administratorIds, true)) {
+                    continue;
+                }
+
+                $role = Role::query()->find((int) $roleId);
+
+                if (! $role) {
+                    continue;
+                }
+
+                foreach ($modules as $module => $level) {
+                    if (! array_key_exists($module, $names)) {
+                        continue;
+                    }
+
+                    RoleModuleAccess::query()->updateOrCreate(
+                        ['role_id' => $role->id, 'module' => $module],
+                        ['level' => $level],
+                    );
+                }
+            }
+
+            ActivityLogger::log('Edited', 'Users', 'Role module access matrix');
+        });
+
+        ModuleAccess::flush();
+
+        return redirect()
+            ->route('settings.privileges')
+            ->with('status', 'Role access updated.');
     }
 
     /**

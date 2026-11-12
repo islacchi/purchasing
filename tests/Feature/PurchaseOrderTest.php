@@ -49,7 +49,9 @@ class PurchaseOrderTest extends TestCase
 
     private function makePurchaseOrder(User $user, string $status = PurchaseOrder::STATUS_DRAFT): PurchaseOrder
     {
-        $quoted = $this->quotedQuotation($user);
+        // Fixtures are built as an administrator; the $user argument only sets
+        // who owns the created rows (used by the delete tests as the actor).
+        $quoted = $this->quotedQuotation($this->admin());
         $quotation = $quoted['quotation'];
 
         $purchaseOrder = PurchaseOrder::create([

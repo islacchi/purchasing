@@ -34,6 +34,65 @@
         </div>
     @endif
 
+    {{-- Role module access matrix --}}
+    <form method="POST" action="{{ route('settings.privileges.access.update') }}" id="role-access"
+          class="mb-6 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        @csrf
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 px-6 py-4">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Role module access</h2>
+                <p class="mt-1 text-xs text-gray-500">
+                    Administrator is always full access. Set each module to None, View or Manage — View reads the module; Manage also creates, edits and deletes.
+                </p>
+            </div>
+            <button type="submit"
+                    class="flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80] transition-colors">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3m-6 0V3h6v4m-6 0h6"/>
+                </svg>
+                Save role access
+            </button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Module</th>
+                        @foreach ($matrixRoles as $role)
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{{ $role->name }}</th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                    @foreach (\App\Support\ModuleAccess::MODULES as $moduleKey => $moduleLabel)
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-3.5 text-sm font-medium text-gray-900">{{ $moduleLabel }}</td>
+                            @foreach ($matrixRoles as $role)
+                                @php
+                                    $current = $moduleAccess->get($role->id)?->firstWhere('module', $moduleKey)?->level ?? 'none';
+                                @endphp
+                                <td class="px-6 py-3">
+                                    <select name="access[{{ $role->id }}][{{ $moduleKey }}]"
+                                            aria-label="{{ $moduleLabel }} access for {{ $role->name }}"
+                                            class="w-32 rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                        <option value="none" {{ $current === 'none' ? 'selected' : '' }}>None</option>
+                                        <option value="view" {{ $current === 'view' ? 'selected' : '' }}>View</option>
+                                        <option value="manage" {{ $current === 'manage' ? 'selected' : '' }}>Manage</option>
+                                    </select>
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <div class="border-t border-gray-100 px-6 py-3">
+            <p class="text-[11px] text-gray-400">
+                Changes apply immediately to every account of that role. Settings stays administrator-only and cannot be changed here.
+            </p>
+        </div>
+    </form>
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {{-- Users table --}}
         <div class="xl:col-span-2 space-y-4">
@@ -92,8 +151,8 @@
                             </div>
                             <p class="text-xs text-gray-500 mt-1">{{ $role->description }}</p>
                         </div>
-                        {{-- TODO: wire Configure to a role/permission editor once RBAC exists; for now it points to the configuration page. --}}
-                        <a href="{{ route('settings.configuration', ['role' => $role->name]) }}" class="shrink-0 text-xs font-medium text-[#2a7a94] hover:text-[#236b80]">
+                        {{-- Jump straight to the role × module access matrix above --}}
+                        <a href="{{ route('settings.privileges') }}#role-access" class="shrink-0 text-xs font-medium text-[#2a7a94] hover:text-[#236b80]">
                             Configure
                         </a>
                     </div>

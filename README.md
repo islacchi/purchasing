@@ -18,7 +18,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 | **Entities** | Directory of procuring entities (DOH offices, PGH, …) and suppliers with contact details | ✅ Database-backed, working |
 | **Notifications (bell)** | Live delivery-deadline alerts derived from due dates + project fulfillment progress | ✅ Real, data-driven |
 | **Price Index** | Per-item supplier price comparison across quotations | 🚧 Sample data only — not wired to the database |
-| **Settings → Privileges** | Administrator-only user management (create/edit/deactivate accounts, roles) | ✅ Working |
+| **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage) | ✅ Working |
 | **Settings → Logs** | Activity/log viewer | 🚧 Placeholder (no audit-log middleware yet) |
 | **Settings → Backup** | Database backup download | 🚧 Placeholder (hardcoded sample rows) |
 
@@ -107,7 +107,8 @@ Legend: ✅ done · 🚧 in progress / not started.
 | Question | Answer |
 |----------|--------|
 | Who can log in? | Any active account with a role; `admin` / `admin` seeded by `AdminUserSeeder` (change before production) |
-| How do roles map? | `Administrator` → full access including Settings and PO delete; `Procurement Officer` → create/manage POs and workflows; `Viewer` → read-only |
+| How do roles map? | `Administrator` → full access including Settings and PO delete; `Procurement Officer` / `Viewer` → access per module configured in Settings → Privileges |
+| How is module access configured? | Settings → Privileges → "Role module access" matrix: **None / View / Manage** for Projects, Preplist, Quotation, Price Index, Purchase Order, Entities. Administrators are implicit full access and are not editable |
 | What does Settings gate? | `access-settings` gate (administrator only) |
 | Session lifetime | Inactivity + absolute lifetime enforced by custom middleware |
 | Login throttling | `throttle:6,1` on the login POST route |

@@ -95,6 +95,7 @@
             {{-- Navigation icons --}}
             <nav class="flex flex-col items-stretch w-full flex-1">
                 {{-- Projects --}}
+                @if (auth()->user()->canModule('projects'))
                 <a href="{{ route('projects') }}"
                    class="relative flex items-center w-full h-[65px] transition-colors
                           {{ request()->is('projects') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
@@ -108,8 +109,10 @@
                         <span class="label whitespace-nowrap">Projects</span>
                     </div>
                 </a>
+                @endif
 
                             {{-- PrepList --}}
+                @if (auth()->user()->canModule('preplist'))
                 <a href="{{ route('preplist') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
                         {{ request()->is('preplist') || request()->is('preplist/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
@@ -125,8 +128,10 @@
                         <span class="label whitespace-nowrap">Preplist</span>
                     </div>
                 </a>
+                @endif
 
                             {{-- Request for Quotation --}}
+                @if (auth()->user()->canModule('quotation'))
                 <a href="{{ route('quotation') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
                         {{ request()->is('quotation') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
@@ -142,8 +147,10 @@
                         <span class="label whitespace-nowrap">Quotation</span>
                     </div>
                 </a>
+                @endif
 
                 {{-- Price Index --}}
+                @if (auth()->user()->canModule('priceindex'))
                 <a href="{{ route('priceindex') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
                         {{ request()->is('priceindex') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
@@ -158,8 +165,10 @@
                         <span class="label whitespace-nowrap">Price Index</span>
                     </div>
                 </a>
+                @endif
 
                 {{-- Purchase Order --}}
+                @if (auth()->user()->canModule('purchase-order'))
                 <a href="{{ route('purchase-order') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
                         {{ request()->is('purchase-order') || request()->is('purchase-order/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
@@ -175,8 +184,10 @@
                         <span class="label whitespace-nowrap">Purchase Order</span>
                     </div>
                 </a>
+                @endif
 
                 {{-- Entities --}}
+                @if (auth()->user()->canModule('entities'))
                 <a href="{{ route('entities') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
                         {{ request()->is('entities') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
@@ -194,6 +205,7 @@
                         <span class="label whitespace-nowrap">Entities</span>
                     </div>
                 </a>
+                @endif
 
                 {{-- Settings (administrator only) --}}
                 @can('access-settings')

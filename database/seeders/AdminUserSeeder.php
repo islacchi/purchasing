@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Role;
+use App\Models\RoleModuleAccess;
 use App\Models\User;
+use App\Support\ModuleAccess;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -25,6 +27,24 @@ class AdminUserSeeder extends Seeder
                 ['name' => $name],
                 ['description' => $description],
             );
+        }
+
+        // Seed the default module grants for the two non-administrator roles
+        // (administrators always have full access and are not granted rows).
+        $defaultGrants = [
+            'Procurement Officer' => RoleModuleAccess::LEVEL_MANAGE,
+            'Viewer' => RoleModuleAccess::LEVEL_VIEW,
+        ];
+
+        foreach ($defaultGrants as $roleName => $level) {
+            $role = Role::where('name', $roleName)->firstOrFail();
+
+            foreach (array_keys(ModuleAccess::MODULES) as $module) {
+                RoleModuleAccess::updateOrCreate(
+                    ['role_id' => $role->id, 'module' => $module],
+                    ['level' => $level],
+                );
+            }
         }
 
         $users = [
