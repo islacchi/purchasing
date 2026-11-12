@@ -137,19 +137,9 @@
             </div>
         </div>
 
-        {{-- Status progress / cancelled banner --}}
-        @if ($isCancelled)
-            <div class="mb-6 flex shrink-0 items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-4">
-                <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
-                </svg>
-                <div>
-                    <p class="text-sm font-semibold text-red-700">This purchase order was cancelled</p>
-                    <p class="mt-0.5 text-xs text-red-600">{{ $purchaseOrder->cancel_reason ?: 'No reason recorded.' }}</p>
-                </div>
-            </div>
-        @else
-            <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white px-6 py-5 shadow-sm">
+        {{-- Status progress (hidden once cancelled — the cancellation notice lives in the Order details card) --}}
+        @if (! $isCancelled)
+            <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white px-4 py-4 shadow-sm">
                 <ol id="poStatusTracker" class="flex flex-wrap items-center gap-y-3">
                     @foreach ($stages as $index => $stage)
                         @php
@@ -178,15 +168,15 @@
         @endif
 
         {{-- Supplier and delivery --}}
-        <div class="mb-6 grid shrink-0 grid-cols-1 gap-6 md:grid-cols-2">
+        <div class="mb-4 grid shrink-0 grid-cols-1 gap-4 md:grid-cols-2">
 
             <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
-                <div class="border-b border-gray-200 px-3 py-4">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Supplier</h3>
+                <div class="border-b border-gray-200 px-4 py-2.5">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Supplier</h3>
                 </div>
-                <div class="px-6 py-5">
-                    <div class="flex items-center gap-3">
-                        <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#2a7a94]/10 text-sm font-bold text-[#2a7a94]">
+                <div class="px-4 py-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#2a7a94]/10 text-xs font-bold text-[#2a7a94]">
                             {{ $initials }}
                         </span>
                         <div class="min-w-0">
@@ -195,48 +185,58 @@
                         </div>
                     </div>
 
-                    <dl class="mt-4 space-y-2 text-sm">
-                        <div class="flex items-start justify-between gap-4">
+                    <dl class="mt-2.5 space-y-1 text-sm">
+                        <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Email</dt>
-                            <dd class="text-right text-gray-700">{{ $supplier?->email ?? '—' }}</dd>
+                            <dd class="text-right text-xs text-gray-700">{{ $supplier?->email ?? '—' }}</dd>
                         </div>
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Phone</dt>
-                            <dd class="text-right text-gray-700">{{ $supplier?->contact_no ?? '—' }}</dd>
+                            <dd class="text-right text-xs text-gray-700">{{ $supplier?->contact_no ?? '—' }}</dd>
                         </div>
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Address</dt>
-                            <dd class="text-right text-gray-700">{{ $supplier?->address ?? '—' }}</dd>
+                            <dd class="max-w-[70%] truncate text-right text-xs text-gray-700" title="{{ $supplier?->address }}">{{ $supplier?->address ?? '—' }}</dd>
                         </div>
                     </dl>
                 </div>
             </div>
 
             <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
-                <div class="border-b border-gray-200 px-3 py-4">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Order details</h3>
+                <div class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-2.5">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Order details</h3>
+
+                    @if ($isCancelled)
+                        <div class="flex min-w-0 items-center gap-1.5 rounded-md border border-red-100 bg-red-50/70 px-2 py-1">
+                            <svg class="h-3.5 w-3.5 flex-shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
+                            </svg>
+                            <p class="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide text-red-600">Purchase order cancelled</p>
+                            <span class="hidden max-w-[220px] truncate text-[11px] text-red-500/90 md:inline" title="{{ $purchaseOrder->cancel_reason ?: 'No reason recorded.' }}">&middot; {{ $purchaseOrder->cancel_reason ?: 'No reason recorded.' }}</span>
+                        </div>
+                    @endif
                 </div>
-                <div class="px-6 py-5">
-                    <dl class="space-y-2 text-sm">
-                        <div class="flex items-start justify-between gap-4">
+                <div class="px-4 py-3">
+                    <dl class="space-y-1.5 text-sm">
+                        <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Date issued</dt>
-                            <dd class="text-right text-gray-700">{{ $purchaseOrder->issued_on?->format('M j, Y') ?? 'Not issued yet' }}</dd>
+                            <dd class="text-right text-xs text-gray-700">{{ $purchaseOrder->issued_on?->format('M j, Y') ?? 'Not issued yet' }}</dd>
                         </div>
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Expected delivery</dt>
-                            <dd class="text-right text-gray-700">{{ $purchaseOrder->expected_delivery_on?->format('M j, Y') ?? 'Not set' }}</dd>
+                            <dd class="text-right text-xs text-gray-700">{{ $purchaseOrder->expected_delivery_on?->format('M j, Y') ?? 'Not set' }}</dd>
                         </div>
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Payment terms</dt>
-                            <dd class="text-right text-gray-700">{{ $purchaseOrder->payment_terms ?? '—' }}</dd>
+                            <dd class="text-right text-xs text-gray-700">{{ $purchaseOrder->payment_terms ?? '—' }}</dd>
                         </div>
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Deliver to</dt>
-                            <dd class="text-right text-gray-700">{{ $purchaseOrder->deliver_to ?? '—' }}</dd>
+                            <dd class="text-right text-xs text-gray-700">{{ $purchaseOrder->deliver_to ?? '—' }}</dd>
                         </div>
-                        <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Items</dt>
-                            <dd class="text-right text-gray-700">{{ $items->count() }} line items</dd>
+                            <dd class="text-right text-xs text-gray-700">{{ $items->count() }} line items</dd>
                         </div>
                     </dl>
                 </div>
