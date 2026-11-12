@@ -170,13 +170,13 @@
         {{-- Supplier and delivery --}}
         <div class="mb-4 grid shrink-0 grid-cols-1 gap-4 md:grid-cols-2">
 
-            <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
-                <div class="border-b border-gray-200 px-4 py-2.5">
+            <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="flex min-h-[48px] shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-4 py-2.5">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Supplier</h3>
                 </div>
-                <div class="px-4 py-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#2a7a94]/10 text-xs font-bold text-[#2a7a94]">
+                <div class="flex flex-1 flex-col justify-center px-4 py-3">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#2a7a94]/10 text-xs font-bold text-[#2a7a94]">
                             {{ $initials }}
                         </span>
                         <div class="min-w-0">
@@ -185,25 +185,25 @@
                         </div>
                     </div>
 
-                    <dl class="mt-2.5 space-y-1 text-sm">
+                    <dl class="mt-3 space-y-1.5 text-sm">
                         <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Email</dt>
-                            <dd class="text-right text-xs text-gray-700">{{ $supplier?->email ?? '—' }}</dd>
+                            <dd class="text-right text-xs font-medium text-gray-800">{{ $supplier?->email ?? '—' }}</dd>
                         </div>
                         <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Phone</dt>
-                            <dd class="text-right text-xs text-gray-700">{{ $supplier?->contact_no ?? '—' }}</dd>
+                            <dd class="text-right text-xs font-medium text-gray-800">{{ $supplier?->contact_no ?? '—' }}</dd>
                         </div>
                         <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Address</dt>
-                            <dd class="max-w-[70%] truncate text-right text-xs text-gray-700" title="{{ $supplier?->address }}">{{ $supplier?->address ?? '—' }}</dd>
+                            <dd class="max-w-[70%] truncate text-right text-xs font-medium text-gray-800" title="{{ $supplier?->address }}">{{ $supplier?->address ?? '—' }}</dd>
                         </div>
                     </dl>
                 </div>
             </div>
 
-            <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
-                <div class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-2.5">
+            <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="flex min-h-[46px] shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-2.5">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Order details</h3>
 
                     @if ($isCancelled)
@@ -216,27 +216,27 @@
                         </div>
                     @endif
                 </div>
-                <div class="px-4 py-3">
+                <div class="flex flex-1 flex-col justify-center px-4 py-3">
                     <dl class="space-y-1.5 text-sm">
                         <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Date issued</dt>
-                            <dd class="text-right text-xs text-gray-700">{{ $purchaseOrder->issued_on?->format('M j, Y') ?? 'Not issued yet' }}</dd>
+                            <dd class="text-right text-xs font-medium text-gray-800">{{ $purchaseOrder->issued_on?->format('M j, Y') ?? 'Not issued yet' }}</dd>
                         </div>
                         <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Expected delivery</dt>
-                            <dd class="text-right text-xs text-gray-700">{{ $purchaseOrder->expected_delivery_on?->format('M j, Y') ?? 'Not set' }}</dd>
+                            <dd class="text-right text-xs font-medium text-gray-800">{{ $purchaseOrder->expected_delivery_on?->format('M j, Y') ?? 'Not set' }}</dd>
                         </div>
                         <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Payment terms</dt>
-                            <dd class="text-right text-xs text-gray-700">{{ $purchaseOrder->payment_terms ?? '—' }}</dd>
+                            <dd class="text-right text-xs font-medium text-gray-800">{{ $purchaseOrder->payment_terms ?? '—' }}</dd>
                         </div>
                         <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Deliver to</dt>
-                            <dd class="text-right text-xs text-gray-700">{{ $purchaseOrder->deliver_to ?? '—' }}</dd>
+                            <dd class="text-right text-xs font-medium text-gray-800">{{ $purchaseOrder->deliver_to ?? '—' }}</dd>
                         </div>
                         <div class="flex items-start justify-between gap-2">
                             <dt class="text-xs text-gray-500">Items</dt>
-                            <dd class="text-right text-xs text-gray-700">{{ $items->count() }} line items</dd>
+                            <dd class="text-right text-xs font-medium text-gray-800">{{ $items->count() }} line items</dd>
                         </div>
                     </dl>
                 </div>
