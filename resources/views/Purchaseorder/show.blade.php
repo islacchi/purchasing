@@ -245,8 +245,8 @@
 
         {{-- Items ordered --}}
         <div class="flex min-h-[240px] flex-1 flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-3 py-4">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Items ordered</h3>
+            <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-2.5">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Items ordered</h3>
                 <div class="flex flex-wrap items-center gap-2">
                     <span id="receiptSummary" class="inline-flex items-center rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-xs font-medium text-[#2a7a94]">
                         {{ $receivedCount }} of {{ $items->count() }} received
@@ -258,16 +258,16 @@
             </div>
 
             <div class="min-h-[120px] flex-1 overflow-auto">
-                <table class="w-full text-sm">
+                <table class="w-full text-xs">
                     <thead class="sticky top-0 z-10">
                         <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                            <th scope="col" class="w-12 px-3 py-3 text-center">#</th>
-                            <th scope="col" class="px-3 py-3">Item</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-3 text-center">Qty</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-3 text-center">Shelf life req.</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-3 text-center">Received</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-3 text-right">Unit price</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-3 text-right">Extended</th>
+                            <th scope="col" class="w-12 px-3 py-2 text-center">#</th>
+                            <th scope="col" class="px-3 py-2">Item</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-center">Qty</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-center">Shelf life req.</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-center">Received</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-right">Unit price</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-right">Extended</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -277,20 +277,20 @@
                                 $isReceived = $item->isReceived();
                             @endphp
                             <tr class="hover:bg-gray-50">
-                                <td class="px-3 py-4 text-center text-xs text-gray-400">{{ $loop->iteration }}</td>
-                                <td class="px-3 py-4">
+                                <td class="px-3 py-2 text-center text-xs text-gray-400">{{ $loop->iteration }}</td>
+                                <td class="px-3 py-2">
                                     <p class="font-medium text-gray-900">{{ $item->item?->name ?? 'Item removed' }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">{{ $item->item?->unit ?? '' }}</p>
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-4 text-center text-gray-700">{{ $item->qty }}</td>
-                                <td class="whitespace-nowrap px-3 py-4 text-center">
+                                <td class="whitespace-nowrap px-3 py-2 text-center text-gray-700">{{ $item->qty }}</td>
+                                <td class="whitespace-nowrap px-3 py-2 text-center">
                                     @if ($minShelf > 0)
                                         <span class="text-gray-700" title="Minimum {{ $minShelf }} months remaining shelf life at delivery">&ge; {{ $minShelf }} mo</span>
                                     @else
                                         <span class="text-xs text-gray-400" title="Non-perishable">&mdash;</span>
                                     @endif
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-4 text-center">
+                                <td class="whitespace-nowrap px-3 py-2 text-center">
                                     <form method="POST" action="{{ route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]) }}">
                                         @csrf
                                         <input type="checkbox"
@@ -302,31 +302,24 @@
                                                aria-label="Mark {{ $item->item?->name ?? 'line' }} as received">
                                     </form>
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-4 text-right text-gray-700">{{ $peso($item->unit_price) }}</td>
-                                <td class="whitespace-nowrap px-3 py-4 text-right font-semibold text-gray-900">
+                                <td class="whitespace-nowrap px-3 py-2 text-right text-gray-700">{{ $peso($item->unit_price) }}</td>
+                                <td class="whitespace-nowrap px-3 py-2 text-right font-semibold text-gray-900">
                                     {{ $peso($item->extendedTotal()) }}
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
-                    <tfoot class="border-t border-gray-200 bg-gray-50">
-                        <tr>
-                            <td colspan="6" class="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Subtotal</td>
-                            <td class="whitespace-nowrap px-3 py-3 text-right text-sm text-gray-700">{{ $peso($subtotal) }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="6" class="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Delivery</td>
-                            <td class="whitespace-nowrap px-3 py-3 text-right text-sm text-gray-700">{{ $peso($freight) }}</td>
-                        </tr>
-                        <tr class="border-t border-gray-200">
-                            <td colspan="6" class="px-3 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">Total</td>
-                            <td class="whitespace-nowrap px-3 py-4 text-right text-base font-bold text-gray-900">{{ $peso($total) }}</td>
-                        </tr>
-                    </tfoot>
+
                 </table>
             </div>
 
-            <div class="shrink-0 border-t border-gray-100 px-3 py-4">
+            {{-- Fixed summary — visible no matter how many rows scroll --}}
+            <div class="flex shrink-0 items-center justify-between gap-4 border-t border-gray-100 bg-gray-50/60 px-4 py-2.5">
+                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Total &middot; {{ $items->count() }} {{ $items->count() === 1 ? 'line item' : 'line items' }}</p>
+                <p class="text-sm font-bold text-gray-900">{{ $peso($total) }}</p>
+            </div>
+
+            <div class="shrink-0 border-t border-gray-100 px-4 py-2.5">
                 <p class="text-xs text-gray-500">
                     {{ $purchaseOrder->notes ?: 'No notes recorded for the supplier.' }}
                 </p>
