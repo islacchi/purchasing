@@ -48,7 +48,7 @@
     <thead>
         <tr class="bg-gray-100">
             <th class="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-700">Item description</th>
-            <th class="border border-gray-300 px-3 py-2 text-right font-semibold text-gray-700">Quantity</th>
+            <th class="border border-gray-300 px-3 py-2 text-right font-semibold text-gray-700">To procure</th>
             <th class="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-700">Unit</th>
             <th class="border border-gray-300 px-3 py-2 text-right font-semibold text-gray-700">Unit cost</th>
             <th class="border border-gray-300 px-3 py-2 text-right font-semibold text-gray-700">Quoted price</th>
@@ -60,13 +60,14 @@
         @forelse ($project->items as $projectItem)
             @php
                 $unitPrice = $projectItem->awarded_unit_price ?? $projectItem->unit_cost;
-                $lineTotal = $projectItem->quantity * (float) $unitPrice;
-                $fulfillmentStatus = $projectItem->fulfillment_status ?: 'pending';
+                $remaining = $projectItem->remainingQuantity();
+                $lineTotal = $remaining * (float) $unitPrice;
+                $fulfillmentStatus = $projectItem->isFulfilled() ? 'fulfilled' : ($projectItem->fulfillment_status ?: 'pending');
                 $itemStatus = ucfirst(str_replace('_', ' ', $fulfillmentStatus));
             @endphp
             <tr>
                 <td class="border border-gray-300 px-3 py-2 text-gray-900">{{ $projectItem->item?->name ?? '—' }}</td>
-                <td class="border border-gray-300 px-3 py-2 text-right text-gray-900">{{ $projectItem->quantity }}</td>
+                <td class="border border-gray-300 px-3 py-2 text-right text-gray-900">{{ $remaining }}</td>
                 <td class="border border-gray-300 px-3 py-2 text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
                 <td class="border border-gray-300 px-3 py-2 text-right text-gray-900">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
                 <td class="border border-gray-300 px-3 py-2 text-right text-gray-900">{{ $projectItem->awarded_unit_price !== null ? '₱ ' . number_format((float) $projectItem->awarded_unit_price, 2) : '—' }}</td>

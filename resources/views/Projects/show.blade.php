@@ -154,7 +154,7 @@
                         <thead class="bg-gray-100 border-b border-gray-300 sticky top-0 z-10">
                             <tr>
                                 <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Item description</th>
-                                <th class="px-4 py-2 text-right text-xs font-semibold text-gray-700">Quantity</th>
+                                <th class="px-4 py-2 text-right text-xs font-semibold text-gray-700">To procure</th>
                                 <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Unit</th>
                                 <th class="px-4 py-2 text-right text-xs font-semibold text-gray-700">Unit cost</th>
                                 <th class="px-4 py-2 text-right text-xs font-semibold text-gray-700">Quoted price</th>
@@ -166,8 +166,9 @@
                             @forelse ($project->items as $projectItem)
                                 @php
                                     $unitPrice = $projectItem->awarded_unit_price ?? $projectItem->unit_cost;
-                                    $lineTotal = $projectItem->quantity * (float) $unitPrice;
-                                    $fulfillmentStatus = $projectItem->fulfillment_status ?: 'pending';
+                                    $remaining = $projectItem->remainingQuantity();
+                                    $lineTotal = $remaining * (float) $unitPrice;
+                                    $fulfillmentStatus = $projectItem->isFulfilled() ? 'fulfilled' : ($projectItem->fulfillment_status ?: 'pending');
 
                                     $itemStatus = ucfirst(str_replace('_', ' ', $fulfillmentStatus));
                                     $itemStatusClasses = match ($fulfillmentStatus) {
@@ -178,7 +179,7 @@
                                 @endphp
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->name ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ $projectItem->quantity }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ $remaining }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">

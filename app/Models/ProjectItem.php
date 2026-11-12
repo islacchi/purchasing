@@ -23,6 +23,7 @@ class ProjectItem extends Model
         'project_id',
         'item_id',
         'quantity',
+        'in_stock',
         'unit_cost',
         'awarded_unit_price',
         'fulfillment_status',
@@ -37,9 +38,34 @@ class ProjectItem extends Model
     {
         return [
             'quantity' => 'integer',
+            'in_stock' => 'integer',
             'unit_cost' => 'decimal:2',
             'awarded_unit_price' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Quantity still to procure after deducting what the office already has.
+     */
+    public function remainingQuantity(): int
+    {
+        return max(0, $this->quantity - (int) $this->in_stock);
+    }
+
+    /**
+     * Whether on-hand stock alone fully covers the awarded quantity.
+     */
+    public function isFulfilledByStock(): bool
+    {
+        return $this->quantity > 0 && (int) $this->in_stock >= $this->quantity;
+    }
+
+    /**
+     * Whether the line counts as fulfilled (received via PO, or covered by stock).
+     */
+    public function isFulfilled(): bool
+    {
+        return $this->fulfillment_status === 'fulfilled' || $this->isFulfilledByStock();
     }
 
     /**

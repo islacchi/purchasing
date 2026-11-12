@@ -89,7 +89,7 @@ class Project extends Model
     public function fulfilledItemCount(): int
     {
         return $this->items
-            ->filter(fn (ProjectItem $item) => $item->fulfillment_status === 'fulfilled')
+            ->filter(fn (ProjectItem $item) => $item->isFulfilled())
             ->count();
     }
 

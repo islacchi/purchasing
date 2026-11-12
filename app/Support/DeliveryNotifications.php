@@ -33,7 +33,10 @@ class DeliveryNotifications
             ->with('procuringEntity')
             ->withCount([
                 'items',
-                'items as fulfilled_items_count' => fn ($query) => $query->where('fulfillment_status', 'fulfilled'),
+                'items as fulfilled_items_count' => fn ($query) => $query->where(function ($query) {
+                    $query->where('fulfillment_status', 'fulfilled')
+                        ->orWhereColumn('in_stock', '>=', 'quantity');
+                }),
             ])
             ->whereNotNull('delivery_due_date')
             ->get();

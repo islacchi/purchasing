@@ -87,11 +87,16 @@ class PurchaseOrderController extends Controller
                 $quotationItem = $quotationItems->get($preplistItem->id);
                 $unit = $preplistItem->item?->unit ?? '';
 
+                $remaining = (int) $preplistItem->sources->sum(
+                    fn ($source) => max(0, (int) $source->qty - (int) ($source->projectItem?->in_stock ?? 0))
+                );
+
                 return [
                     'id' => $preplistItem->id,
                     'quotation_item_id' => $quotationItem?->id,
                     'name' => $preplistItem->item?->name ?? 'Item',
                     'requested' => (int) $preplistItem->sources->sum('qty'),
+                    'remaining' => $remaining,
                     'unit' => $unit,
                     'unit_price' => $quotationItem?->unit_price,
                     'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,
@@ -103,6 +108,8 @@ class PurchaseOrderController extends Controller
                         ->all(),
                 ];
             })
+            // Lines fully covered by on-hand stock never appear on the PO prep list.
+            ->filter(fn (array $item) => $item['remaining'] > 0)
             ->values();
 
         return view('Purchaseorder.create', [
@@ -132,7 +139,7 @@ class PurchaseOrderController extends Controller
         ]);
 
         $quotation = Quotation::query()
-            ->with(['preplist.items.sources', 'items'])
+            ->with(['preplist.items.sources.projectItem', 'items'])
             ->findOrFail($validated['quotation_id']);
 
         $preplistItems = $quotation->preplist->items->keyBy('id');
@@ -158,6 +165,15 @@ class PurchaseOrderController extends Controller
             }
 
             $preplistItem = $preplistItems->get($quotationItem->preplist_item_id);
+            $remaining = (int) ($preplistItem?->sources ?? collect())->sum(
+                fn ($source) => max(0, (int) $source->qty - (int) ($source->projectItem?->in_stock ?? 0))
+            );
+
+            // Lines fully covered by on-hand stock are never ordered.
+            if ($remaining <= 0) {
+                continue;
+            }
+
             $requested = (int) $preplistItem->sources->sum('qty');
             $qty = (int) ($row['qty'] ?? 0);
 
@@ -180,6 +196,12 @@ class PurchaseOrderController extends Controller
                 'unit_price' => $quotationItem->unit_price,
                 'min_remaining_months' => (int) ($row['min_remaining_months'] ?? $quotationItem->min_remaining_months ?? 0),
             ];
+        }
+
+        if (empty($lines)) {
+            throw ValidationException::withMessages([
+                'items' => 'Every selected item is fully covered by on-hand stock; there is nothing to order.',
+            ]);
         }
 
         try {

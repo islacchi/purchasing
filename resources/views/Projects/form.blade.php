@@ -33,6 +33,7 @@
                         'category' => $projectItem->item?->category?->name ?? '',
                         'unit' => $projectItem->item?->unit ?? '',
                         'quantity' => $projectItem->quantity,
+                        'in_stock' => $projectItem->in_stock,
                         'unit_cost' => $projectItem->unit_cost,
                         'quoted_price' => $projectItem->awarded_unit_price,
                     ])
@@ -40,7 +41,7 @@
                     ->all();
             } else {
                 $items = [
-                    ['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => ''],
+                    ['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'in_stock' => '', 'unit_cost' => '', 'quoted_price' => ''],
                 ];
             }
         }
@@ -208,7 +209,7 @@
                             <input type="number" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
-                        {{-- DUMMY front-end in-stock quantity field; not saved yet --}}
+                        {{-- On-hand quantity; fully covered lines are fulfilled and are excluded from PO --}}
                         <div>
                             <input type="number" min="0" step="1" name="items[{{ $i }}][in_stock]" value="{{ $item['in_stock'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"

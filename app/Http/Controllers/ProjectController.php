@@ -268,6 +268,7 @@ class ProjectController extends Controller
                 'project_id' => $project->id,
                 'item_id' => $item->id,
                 'quantity' => (int) $row['quantity'],
+                'in_stock' => (int) ($row['in_stock'] ?? 0),
                 'unit_cost' => $row['unit_cost'],
                 'awarded_unit_price' => $row['quoted_price'] ?? null,
                 'fulfillment_status' => 'pending',
