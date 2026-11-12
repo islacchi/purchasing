@@ -102,8 +102,8 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [ ] **Fix stale temp files** — root contains `fix_rfq.php` and other one-off scripts that were used during development
 
 ### Known fragility worth addressing
-- Project editing **deletes and re-creates** `project_items` rows, which invalidates any `preplist_item_sources` pointing at them (foreign-key violation risk). Not a crash today because prep-list edits go through their own flow, but it deserves a proper merge/update strategy.
-- Quoted quotations linked to a deleted prep list cannot be uploaded to / sent to PO — the UI shows "this quotation's prep list has been deleted" but the data is unrecoverable except by restoring the prep list row (`withTrashed`).
+- **Project edit hard-fails (500) once any of its items is compiled into a prep list.** `syncItems()` deletes and re-creates `project_items` on every save; `preplist_item_sources.project_item_id` has a restricted FK, so the delete raises an unhandled FK violation and the `PUT projects.update` request 500s. A merge/update strategy (match by identity, update in place, never drop sourced rows) is required — no test covers this path.
+- **A quotation whose prep list is missing renders a fixed error banner and cannot be re-uploaded or sent to PO.** This state is only reachable via DB-level preplist deletion or legacy rows predating the delete guard; `PreplistController::destroy` now blocks deletion of sourced prep lists, and `PurchaseOrderController::create` also refuses. Recovery is `Preplist::withTrashed()->find($id)->restore()` — there is no restore affordance in the UI.
 
 ---
 
