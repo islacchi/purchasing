@@ -8,8 +8,8 @@
 
 @section('content')
     <style>
-        /* Keep the wide table scrolling inside its card instead of widening
-           the shell, which would push the sticky action menu off-screen. */
+        /* Keep the table scrolling inside its card only on very narrow
+           windows; otherwise it fits the 100% zoom width. */
         #mainContent { min-width: 0; }
 
         /* Sticky cells create their own stacking context. Lift the whole cell
@@ -100,7 +100,7 @@
 
         {{-- Purchase order tracker --}}
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-3 py-4">
                 <div>
                     <h2 class="text-sm font-bold uppercase tracking-wider text-gray-700">Purchase orders</h2>
                     <p class="mt-0.5 text-xs text-gray-500">Track issued, partially received, and completed orders.</p>
@@ -111,17 +111,17 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[1040px] text-sm">
+                <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                            <th scope="col" class="whitespace-nowrap px-6 py-3">PO number</th>
-                            <th scope="col" class="whitespace-nowrap px-6 py-3">Supplier</th>
-                            <th scope="col" class="whitespace-nowrap px-6 py-3">Prep list</th>
-                            <th scope="col" class="whitespace-nowrap px-6 py-3 text-center">Items</th>
-                            <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Total</th>
-                            <th scope="col" class="whitespace-nowrap px-6 py-3">Status</th>
-                            <th scope="col" class="whitespace-nowrap px-6 py-3">Date issued</th>
-                            <th scope="col" class="sticky right-0 z-20 bg-gray-50 px-6 py-3 text-center">
+                            <th scope="col" class="whitespace-nowrap px-3 py-3">PO number</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-3">Supplier</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-3">Prep list</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-3 text-center">Items</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-3 text-right">Total</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-3">Status</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-3">Date issued</th>
+                            <th scope="col" class="sticky right-0 z-20 bg-gray-50 px-3 py-3 text-center">
                                 Action
                             </th>
                         </tr>
@@ -133,31 +133,31 @@
                                 data-search="{{ strtolower($po['number'] . ' ' . $po['supplier'] . ' ' . $po['prep_list'] . ' ' . $po['rfq_number']) }}"
                                 data-supplier="{{ $po['supplier'] }}"
                                 data-status="{{ $po['status'] }}">
-                                <td class="whitespace-nowrap px-6 py-4">
+                                <td class="whitespace-nowrap px-3 py-4">
                                     <p class="font-semibold text-gray-900">{{ $po['number'] }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">from quotation {{ $po['rfq_number'] }}</p>
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-gray-700">
+                                <td class="px-3 py-4 text-gray-700">
                                     {{ $po['supplier'] }}
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-gray-700">
+                                <td class="px-3 py-4 text-gray-700">
                                     {{ $po['prep_list'] }}
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-center text-gray-700">
+                                <td class="whitespace-nowrap px-3 py-4 text-center text-gray-700">
                                     {{ $po['items'] }}
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-right font-semibold text-gray-900">
+                                <td class="whitespace-nowrap px-3 py-4 text-right font-semibold text-gray-900">
                                     {{ $peso($po['total']) }}
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4">
+                                <td class="whitespace-nowrap px-3 py-4">
                                     <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $statusStyles[$po['status']] ?? 'bg-gray-100 text-gray-600' }}">
                                         {{ $po['status'] }}
                                     </span>
                                 </td>
-                                <td class="whitespace-nowrap px-6 py-4 text-gray-500">
+                                <td class="whitespace-nowrap px-3 py-4 text-gray-500">
                                     {{ $po['issued'] ?? 'Not issued' }}
                                 </td>
-                                <td class="sticky right-0 z-10 bg-white px-6 py-4 text-center group-hover:bg-gray-50">
+                                <td class="sticky right-0 z-10 bg-white px-3 py-4 text-center group-hover:bg-gray-50">
                                     <div class="relative inline-block text-left">
                                         <button type="button"
                                                 data-po-menu-toggle
@@ -243,7 +243,7 @@
                 <p class="mt-1 text-xs text-gray-500">Try clearing the search or choosing another status.</p>
             </div>
 
-            <div class="border-t border-gray-100 px-6 py-3">
+            <div class="border-t border-gray-100 px-3 py-3">
                 <p id="poCount" class="text-xs text-gray-500">Showing {{ $purchaseOrders->count() }} of {{ $purchaseOrders->count() }} purchase orders</p>
             </div>
         </div>
