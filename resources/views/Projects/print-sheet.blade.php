@@ -47,13 +47,22 @@
 <table class="mt-4 w-full border-collapse text-xs">
     <thead>
         <tr class="bg-gray-100">
-            <th class="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-700">Item description</th>
-            <th class="border border-gray-300 px-3 py-2 text-right font-semibold text-gray-700">To procure</th>
-            <th class="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-700">Unit</th>
-            <th class="border border-gray-300 px-3 py-2 text-right font-semibold text-gray-700">Unit cost</th>
-            <th class="border border-gray-300 px-3 py-2 text-right font-semibold text-gray-700">Quoted price</th>
-            <th class="border border-gray-300 px-3 py-2 text-right font-semibold text-gray-700">Total</th>
-            <th class="border border-gray-300 px-3 py-2 text-center font-semibold text-gray-700">Status</th>
+            {{-- New print-only columns (not sourced from the database) — intentionally blank --}}
+            <th class="border border-gray-300 px-2 py-2 text-center font-semibold text-gray-700">Item<br>No.</th>
+            <th class="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-700">DESCRIPTION</th>
+            <th class="border border-gray-300 px-2 py-2 text-right font-semibold text-gray-700">Qty.</th>
+            <th class="border border-gray-300 px-2 py-2 text-left font-semibold text-gray-700">Unit</th>
+            <th class="border border-gray-300 px-2 py-2 text-center font-semibold text-gray-700">RQ</th>
+            <th class="border border-gray-300 px-2 py-2 text-center font-semibold text-gray-700">Brand for Unit<br>Cost Basis</th>
+            <th class="border border-gray-300 px-2 py-2 text-left font-semibold text-gray-700">Brand</th>
+            <th class="border border-gray-300 px-2 py-2 text-left font-semibold text-gray-700">Lot #</th>
+            <th class="border border-gray-300 px-2 py-2 text-left font-semibold text-gray-700">Exp. Date</th>
+            <th class="border border-gray-300 px-2 py-2 text-right font-semibold text-gray-700">UNIT COST</th>
+            <th class="border border-gray-300 px-2 py-2 text-right font-semibold text-gray-700">UNIT PRICE</th>
+            <th class="border border-gray-300 px-2 py-2 text-right font-semibold text-gray-700">TOTAL UNIT<br>PRICE</th>
+            {{-- New print-only columns (not sourced from the database) — intentionally blank --}}
+            <th class="border border-gray-300 px-2 py-2 text-center font-semibold text-gray-700">COMPLETE/<br>LACKING(S)</th>
+            <th class="border border-gray-300 px-2 py-2 text-center font-semibold text-gray-700">BOX<br>NO.</th>
         </tr>
     </thead>
     <tbody>
@@ -62,21 +71,34 @@
                 $unitPrice = $projectItem->awarded_unit_price ?? $projectItem->unit_cost;
                 $remaining = $projectItem->remainingQuantity();
                 $lineTotal = $remaining * (float) $unitPrice;
-                $fulfillmentStatus = $projectItem->isFulfilled() ? 'fulfilled' : ($projectItem->fulfillment_status ?: 'pending');
-                $itemStatus = ucfirst(str_replace('_', ' ', $fulfillmentStatus));
             @endphp
             <tr>
+                {{-- Increment from 1 across the item rows; not sourced from the database. --}}
+                <td class="border border-gray-300 px-2 py-2 text-center text-gray-900">{{ $loop->iteration }}</td>
                 <td class="border border-gray-300 px-3 py-2 text-gray-900">{{ $projectItem->item?->name ?? '—' }}</td>
-                <td class="border border-gray-300 px-3 py-2 text-right text-gray-900">{{ $remaining }}</td>
-                <td class="border border-gray-300 px-3 py-2 text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
-                <td class="border border-gray-300 px-3 py-2 text-right text-gray-900">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
-                <td class="border border-gray-300 px-3 py-2 text-right text-gray-900">{{ $projectItem->awarded_unit_price !== null ? '₱ ' . number_format((float) $projectItem->awarded_unit_price, 2) : '—' }}</td>
-                <td class="border border-gray-300 px-3 py-2 text-right text-gray-900">₱ {{ number_format($lineTotal, 2) }}</td>
-                <td class="border border-gray-300 px-3 py-2 text-center text-gray-900">{{ $itemStatus }}</td>
+                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900">{{ $remaining }}</td>
+                <td class="border border-gray-300 px-2 py-2 text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
+                {{-- Not sourced from the database — intentionally blank --}}
+                <td class="border border-gray-300 px-2 py-2 text-center text-gray-900"></td>
+                {{-- Not sourced from the database — intentionally blank --}}
+                <td class="border border-gray-300 px-2 py-2 text-center text-gray-900"></td>
+                {{-- Not sourced from the database — intentionally blank --}}
+                <td class="border border-gray-300 px-2 py-2 text-gray-900"></td>
+                {{-- Not sourced from the database — intentionally blank --}}
+                <td class="border border-gray-300 px-2 py-2 text-gray-900"></td>
+                {{-- Not sourced from the database — intentionally blank --}}
+                <td class="border border-gray-300 px-2 py-2 text-gray-900"></td>
+                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
+                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900">{{ $projectItem->awarded_unit_price !== null ? '₱ ' . number_format((float) $projectItem->awarded_unit_price, 2) : '—' }}</td>
+                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900">₱ {{ number_format($lineTotal, 2) }}</td>
+                {{-- Not sourced from the database — intentionally blank --}}
+                <td class="border border-gray-300 px-2 py-2 text-center text-gray-900"></td>
+                {{-- Not sourced from the database — intentionally blank --}}
+                <td class="border border-gray-300 px-2 py-2 text-center text-gray-900"></td>
             </tr>
         @empty
             <tr>
-                <td colspan="7" class="border border-gray-300 px-3 py-6 text-center text-gray-500">No items recorded for this project.</td>
+                <td colspan="14" class="border border-gray-300 px-3 py-6 text-center text-gray-500">No items recorded for this project.</td>
             </tr>
         @endforelse
     </tbody>

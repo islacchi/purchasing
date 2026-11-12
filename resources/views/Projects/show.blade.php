@@ -13,7 +13,8 @@
         .print-sheet { display: none; }
 
         @media print {
-            @page { size: landscape; margin: 10mm; }
+            /* Officio (8.5 × 13 in), landscape — 13 in wide, 8.5 in tall */
+            @page { size: 13in 8.5in; margin: 10mm; }
             #sidebar,
             header,
             .flash-success-overlay,
@@ -293,7 +294,7 @@
             <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
                 <div>
                     <h3 id="printPreviewTitle" class="text-sm font-semibold text-gray-900">Print preview</h3>
-                    <p class="mt-0.5 text-[11px] text-gray-500">Landscape output — generated from the current project data.</p>
+                    <p class="mt-0.5 text-[11px] text-gray-500">8.5 × 13 in officio (landscape) — generated from the current project data.</p>
                 </div>
                 <button type="button" data-close-print-modal aria-label="Close print preview"
                         class="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
@@ -311,6 +312,14 @@
                 <button type="button" data-close-print-modal
                         class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                     Close
+                </button>
+                <button type="button" id="printPreviewSaveBtn"
+                        class="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        title="Save as PDF via your browser">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    Save file
                 </button>
                 <button type="button" id="printPreviewPrintBtn"
                         class="flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80] transition-colors">
@@ -364,6 +373,7 @@
             var openBtn = document.getElementById('printProjectBtn');
             var closeButtons = document.querySelectorAll('[data-close-print-modal]');
             var printBtn = document.getElementById('printPreviewPrintBtn');
+            var saveBtn = document.getElementById('printPreviewSaveBtn');
             var modal = document.getElementById('printPreviewModal');
             var overlay = document.getElementById('printPreviewOverlay');
 
@@ -378,10 +388,35 @@
                 if (openBtn) openBtn.focus();
             }
 
+            function sanitizeFilename(name) {
+                // Keep the suggested "Save as PDF" filename simple and OS-safe.
+                return String(name || 'project')
+                    .replace(/[^a-z0-9 _\-\.]/gi, '')
+                    .trim()
+                    .replace(/\s+/g, '_');
+            }
+
             if (openBtn) openBtn.addEventListener('click', openModal);
             closeButtons.forEach(function (btn) { btn.addEventListener('click', closeModal); });
             if (overlay) overlay.addEventListener('click', closeModal);
             if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+
+            // "Save file" opens the print dialog; the user picks "Save as PDF"
+            // there. Rename the document first so the suggested filename matches
+            // the project's reference number.
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function () {
+                    var originalTitle = document.title;
+                    document.title = sanitizeFilename(@json($project->reference_no . '_Project'));
+                    window.print();
+                    // Restore after the dialog closes (best-effort).
+                    window.addEventListener('afterprint', function restoreTitle() {
+                        document.title = originalTitle;
+                        window.removeEventListener('afterprint', restoreTitle);
+                    });
+                });
+            }
+
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
             });
