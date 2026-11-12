@@ -781,6 +781,37 @@ class QuotationTest extends TestCase
             ->assertDontSee('id="quotationRemoveConfirm"', false);
     }
 
+    public function test_viewer_sees_the_access_restricted_modal_before_the_confirmation(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+
+        $viewer = User::where('name', 'user2')->firstOrFail();
+
+        // A view-only user sees the access-restricted dialog instead of the
+        // destructive confirmation — not even the hidden upload form.
+        $this->actingAs($viewer)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('Access restricted')
+            ->assertSee('Your role does not have access to that module.')
+            ->assertDontSee('id="quotationRemoveConfirm"', false)
+            ->assertDontSee('supplierQuotationForm', false);
+    }
+
     public function test_quotation_upload_parses_unit_prices_and_marks_items_quoted(): void
     {
         Storage::fake('local');

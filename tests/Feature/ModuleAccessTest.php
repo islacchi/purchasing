@@ -216,9 +216,7 @@ class ModuleAccessTest extends TestCase
         $response->assertForbidden();
         $response->assertSee('Access restricted');
         $response->assertSee('Your role does not have access to that module.');
-        // Fallback list points the user at pages they can reach.
-        $response->assertSee('Pages available to you');
-        $response->assertSee('Preplist');
+        $response->assertDontSee('Pages available to you');
     }
 
     public function test_sidebar_hides_modules_the_role_cannot_view(): void

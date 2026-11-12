@@ -49,6 +49,13 @@
         // Quotation module; View-only roles see the buttons disabled.
         $canManageQuotation = auth()->user()?->canModule('quotation', 'manage') ?? false;
 
+        // A view-only user never gets the destructive confirmation — the
+        // same modal shows the access-restriction instead, before any POST.
+        $removeAccessDenied = ! $canManageQuotation;
+        if ($removeAccessDenied) {
+            $removeBlockedReason = 'Your role does not have access to that module.';
+        }
+
         $documentSize = $formatDocumentSize($quotation->document_size);
     @endphp
 
@@ -438,7 +445,7 @@
                             </svg>
                         </span>
                         <div class="min-w-0">
-                            <h3 id="quotationRemoveTitle" class="text-base font-bold text-gray-900">This quotation cannot be removed</h3>
+                            <h3 id="quotationRemoveTitle" class="text-base font-bold text-gray-900">{{ $removeAccessDenied ? 'Access restricted' : 'This quotation cannot be removed' }}</h3>
                             <p class="mt-1 text-sm text-gray-500">{{ $removeBlockedReason }}</p>
                         </div>
                     </div>

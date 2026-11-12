@@ -10,21 +10,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
-    @php
-        $user = auth()->user();
-
-        $modules = [
-            'projects' => ['label' => 'Projects', 'url' => route('projects')],
-            'preplist' => ['label' => 'Preplist', 'url' => route('preplist')],
-            'quotation' => ['label' => 'Quotation', 'url' => route('quotation')],
-            'priceindex' => ['label' => 'Price Index', 'url' => route('priceindex')],
-            'purchase-order' => ['label' => 'Purchase Order', 'url' => route('purchase-order')],
-            'entities' => ['label' => 'Entities', 'url' => route('entities')],
-        ];
-
-        $accessible = array_filter($modules, fn ($key) => $user && $user->canModule($key), ARRAY_FILTER_USE_KEY);
-    @endphp
-
     <main class="min-h-screen flex items-center justify-center px-4">
         <div class="w-full max-w-sm rounded-lg bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="accessRestrictedTitle">
             <div class="flex items-start gap-3 px-5 py-4">
@@ -38,22 +23,6 @@
                     <p class="mt-1 text-sm text-gray-500">{{ $exception->getMessage() ?: 'Your role does not have access to that module.' }}</p>
                 </div>
             </div>
-
-            @if (! empty($accessible))
-                <div class="border-t border-gray-100 px-5 py-4">
-                    <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Pages available to you</p>
-                    <ul class="mt-2 space-y-1.5">
-                        @foreach ($accessible as $module)
-                            <li>
-                                <a href="{{ $module['url'] }}"
-                                   class="text-sm font-medium text-[#2a7a94] hover:underline">
-                                    {{ $module['label'] }}
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
 
             <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
                 <button type="button"
