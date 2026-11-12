@@ -182,8 +182,10 @@
                     $expiry = $expiryDate?->format('M j, Y');
                 @endphp
 
-                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <div class="flex items-start justify-between gap-4 px-5 py-4">
+                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm" data-item-collapsible>
+                    {{-- Item header doubles as the expand/collapse toggle --}}
+                    <button type="button" data-item-toggle aria-expanded="false"
+                            class="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <p class="font-bold text-gray-900">{{ $item['name'] }}</p>
@@ -199,9 +201,17 @@
                                     Non-perishable &mdash; no shelf-life requirement
                                 @endif
                             </p>
+                        </div>
 
+                        <svg class="item-chevron mt-1 h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 18l6-6-6-6"/>
+                        </svg>
+                    </button>
+
+                    <div class="hidden divide-y divide-gray-100 border-t border-gray-100" data-item-details>
+                        <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-3 text-xs text-gray-500">
                             @if ($isQuoted)
-                                <div class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-gray-500">
+                                <div class="flex flex-wrap items-center gap-x-6 gap-y-1">
                                     <p>
                                         Brand:
                                         <span class="font-medium text-gray-700">{{ $brand ?: 'Not stated' }}</span>
@@ -211,24 +221,19 @@
                                         <span class="font-medium text-gray-700">{{ $expiry ?: 'Not stated' }}</span>
                                     </p>
                                 </div>
-                            @endif
-                        </div>
 
-                        <div class="flex-shrink-0 text-right">
-                            @if ($isQuoted)
-                                <p class="text-sm font-bold text-gray-900">
-                                    {{ $peso($quotedItem->unit_price) }} / {{ $item['unit'] }}
-                                </p>
-                                <p class="mt-1 text-xs text-gray-500">
-                                    {{ $peso($quotedItem->unit_price * $item['requested']) }} subtotal
-                                </p>
+                                <div class="flex-shrink-0 text-right">
+                                    <p class="text-sm font-bold text-gray-900">
+                                        {{ $peso($quotedItem->unit_price) }} / {{ $item['unit'] }}
+                                    </p>
+                                    <p class="mt-0.5 text-xs text-gray-500">
+                                        {{ $peso($quotedItem->unit_price * $item['requested']) }} subtotal
+                                    </p>
+                                </div>
                             @else
                                 <p class="text-sm text-gray-400">Pending</p>
                             @endif
                         </div>
-                    </div>
-
-                    <div class="divide-y divide-gray-100 border-t border-gray-100">
                         @foreach ($item['allocations'] as $allocation)
                             @php
                                 // The supplier's expiry is judged against what this
@@ -413,6 +418,29 @@
 
     @push('scripts')
     <script>
+        // Collapsible item rows: clicking the item header toggles its
+        // allocations (source projects) below it.
+        (function () {
+            var toggles = document.querySelectorAll('[data-item-toggle]');
+
+            toggles.forEach(function (toggle) {
+                toggle.addEventListener('click', function () {
+                    var card = toggle.closest('[data-item-collapsible]');
+                    var details = card ? card.querySelector('[data-item-details]') : null;
+                    var expanded = toggle.getAttribute('aria-expanded') === 'true';
+                    var chevron = toggle.querySelector('.item-chevron');
+
+                    toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                    if (details) details.classList.toggle('hidden', expanded);
+                    if (chevron) chevron.style.transform = expanded ? '' : 'rotate(180deg)';
+                });
+            });
+        })();
+    </script>
+    @endpush
+
+    @push('scripts')
+    <script>
         // Remove quotation confirmation modal
         (function () {
             const btn = document.getElementById('quotationRemoveBtn');
@@ -450,5 +478,4 @@
     </script>
     @endpush
 
-    @stack('scripts')
 @endsection
