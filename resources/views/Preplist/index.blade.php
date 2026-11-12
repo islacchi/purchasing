@@ -27,13 +27,23 @@
         </div>
 
         {{-- + Compile prep list button (top right, below the nav bar) --}}
-        <a href="{{ route('preplist.create') }}"
-           class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            <span class="font-medium">Compile prep list</span>
-        </a>
+        @if (auth()->user()?->canModule('preplist', 'manage'))
+            <a href="{{ route('preplist.create') }}"
+               class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span class="font-medium">Compile prep list</span>
+            </a>
+        @else
+            <span class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-lg bg-gray-300 text-gray-500"
+                  title="Your role does not have access to that module.">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span class="font-medium">Compile prep list</span>
+            </span>
+        @endif
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">

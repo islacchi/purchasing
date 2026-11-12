@@ -299,6 +299,9 @@
 
     </div>
 
+    {{-- Access restricted dialog (shared by data-access-restricted-modal-toggle) --}}
+    <x-access-restricted-modal />
+
     {{-- Sign-out confirmation modal --}}
     <div id="signoutModal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="signoutModalTitle">
         <div id="signoutModalOverlay" class="absolute inset-0 bg-gray-900/50"></div>

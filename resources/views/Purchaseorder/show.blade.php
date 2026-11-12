@@ -39,6 +39,7 @@
 
         $receivedCount = $items->filter(fn ($item) => $item->isReceived())->count();
         $canReceive = $purchaseOrder->canReceive();
+        $canManagePurchaseOrder = auth()->user()?->canModule('purchase-order', 'manage') ?? false;
 
         $supplierName = $supplier?->name ?? 'Supplier removed';
 
@@ -278,10 +279,12 @@
                                         @csrf
                                         <input type="checkbox"
                                                class="po-receipt h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:cursor-not-allowed disabled:opacity-40"
-                                               title="{{ $canReceive ? 'Tick when the full quantity for this line has arrived and passed the shelf-life check' : 'Send the PO to the supplier before recording receipts' }}"
+                                               title="{{ $canManagePurchaseOrder
+                                                   ? ($canReceive ? 'Tick when the full quantity for this line has arrived and passed the shelf-life check' : 'Send the PO to the supplier before recording receipts')
+                                                   : 'Your role does not have access to that module.' }}"
                                                {{ $isReceived ? 'checked' : '' }}
-                                               {{ $canReceive ? '' : 'disabled' }}
-                                               onchange="this.form.submit()"
+                                               {{ ($canManagePurchaseOrder && ! $canReceive) ? 'disabled' : '' }}
+                                               {{ $canManagePurchaseOrder ? ($canReceive ? 'onchange="this.form.submit()"' : '') : 'data-access-restricted-modal-toggle' }}
                                                aria-label="Mark {{ $item->item?->name ?? 'line' }} as received">
                                     </form>
                                 </td>

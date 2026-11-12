@@ -685,4 +685,18 @@ class PurchaseOrderTest extends TestCase
             ->get('purchase-order/99999')
             ->assertNotFound();
     }
+
+    public function test_viewer_sees_receive_checkboxes_as_restricted_modal_triggers(): void
+    {
+        $admin = $this->admin();
+        $viewer = $this->viewer();
+
+        $purchaseOrder = $this->makePurchaseOrder($admin, PurchaseOrder::STATUS_SENT);
+
+        $this->actingAs($viewer)
+            ->get(route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertOk()
+            ->assertSee('data-access-restricted-modal-toggle', false)
+            ->assertDontSee('onchange="this.form.submit()"', false);
+    }
 }

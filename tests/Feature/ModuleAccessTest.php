@@ -2,8 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Item;
+use App\Models\ItemCategory;
+use App\Models\Preplist;
+use App\Models\ProcuringEntity;
+use App\Models\Project;
+use App\Models\ProjectItem;
 use App\Models\Role;
 use App\Models\RoleModuleAccess;
+use App\Models\Supplier;
 use App\Models\User;
 use App\Support\ModuleAccess;
 use Database\Seeders\AdminUserSeeder;
@@ -235,5 +242,119 @@ class ModuleAccessTest extends TestCase
             ->get(route('preplist'))
             ->assertOk()
             ->assertDontSee('href="'.route('projects').'"', false);
+    }
+
+    private function basicProject(User $user): Project
+    {
+        $entity = ProcuringEntity::create([
+            'name' => 'DOH Region VII',
+            'type' => 'Regional Office',
+        ]);
+
+        return Project::create([
+            'procuring_entity_id' => $entity->id,
+            'created_by' => $user->id,
+            'title' => 'Purchase of pharma supplies',
+            'reference_no' => 'RF-2026-0042',
+            'mode_of_procurement' => 'small_value',
+            'amount_awarded' => 482000.00,
+            'date_awarded' => '2026-07-03',
+            'delivery_days' => 30,
+        ]);
+    }
+
+    public function test_viewer_sees_disabled_add_project_and_edit_uses_restricted_modal(): void
+    {
+        $admin = $this->admin();
+        $viewer = $this->viewer();
+        $project = $this->basicProject($admin);
+
+        $this->actingAs($viewer)
+            ->get(route('projects'))
+            ->assertOk()
+            ->assertDontSee('href="'.route('projects.create').'"', false)
+            ->assertDontSee('href="http://localhost/projects/'.$project->id.'/edit"', false)
+            ->assertSee('data-access-restricted-modal-toggle', false)
+            ->assertSee('id="accessRestrictedModal"', false);
+
+        $this->actingAs($admin)
+            ->get(route('projects'))
+            ->assertOk()
+            ->assertSee('href="'.route('projects.create').'"', false)
+            ->assertSee('href="http://localhost/projects/'.$project->id.'/edit"', false);
+    }
+
+    public function test_viewer_sees_disabled_add_entity_and_add_supplier(): void
+    {
+        $admin = $this->admin();
+        $viewer = $this->viewer();
+
+        ProcuringEntity::create(['name' => 'DOH Region VII', 'type' => 'Regional Office']);
+        Supplier::create(['name' => 'Triple Tact']);
+
+        $this->actingAs($viewer)
+            ->get(route('entities'))
+            ->assertOk()
+            ->assertDontSee('href="'.route('entities.create', ['type' => 'procuring_entity']).'"', false);
+
+        $this->actingAs($viewer)
+            ->get(route('entities', ['tab' => 'suppliers']))
+            ->assertOk()
+            ->assertDontSee('href="'.route('entities.create', ['type' => 'supplier']).'"', false);
+
+        $this->actingAs($admin)
+            ->get(route('entities'))
+            ->assertOk()
+            ->assertSee('href="'.route('entities.create', ['type' => 'procuring_entity']).'"', false);
+    }
+
+    public function test_viewer_sees_disabled_compile_preplist_and_restricted_modal_actions(): void
+    {
+        $admin = $this->admin();
+        $viewer = $this->viewer();
+        $project = $this->basicProject($admin);
+
+        $category = ItemCategory::firstOrCreate(['name' => 'drugs and medicines']);
+        $item = Item::create([
+            'category_id' => $category->id,
+            'name' => 'Mefenamic Capsule - 500mg',
+            'unit' => 'Box',
+        ]);
+        $projectItem = ProjectItem::create([
+            'project_id' => $project->id,
+            'item_id' => $item->id,
+            'quantity' => 50,
+            'unit_cost' => 320.00,
+            'awarded_unit_price' => 305.00,
+            'fulfillment_status' => 'pending',
+        ]);
+
+        $this->actingAs($admin)->post(route('preplist.store'), [
+            'name' => 'Test compile list',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ])->assertSessionHasNoErrors();
+
+        $preplist = Preplist::query()->latest('id')->firstOrFail();
+
+        // The compile and create routes are hidden for viewers on the list page.
+        $this->actingAs($viewer)
+            ->get(route('preplist'))
+            ->assertOk()
+            ->assertDontSee('href="'.route('preplist.create').'"', false);
+
+        // Edit and Generate RFQ become restricted-modal triggers on the show page.
+        $this->actingAs($viewer)
+            ->get(route('preplist.show', ['preplist' => $preplist->id]))
+            ->assertOk()
+            ->assertDontSee('href="http://localhost/preplist/'.$preplist->id.'/edit"', false)
+            ->assertDontSee('href="http://localhost/preplist/'.$preplist->id.'/generate-rfq"', false)
+            ->assertSee('data-access-restricted-modal-toggle', false);
+
+        // An administrator keeps the real links.
+        $this->actingAs($admin)
+            ->get(route('preplist'))
+            ->assertOk()
+            ->assertSee('href="'.route('preplist.create').'"', false);
     }
 }

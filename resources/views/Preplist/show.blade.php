@@ -34,13 +34,25 @@
             <h2 class="text-2xl font-bold text-gray-900">{{ $preplist->name }}</h2>
             <p class="text-sm text-gray-500 mt-1">{{ $preplist->reference_no }}</p>
         </div>
-        <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
-           class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-            </svg>
-            Edit prep list
-        </a>
+        @if (auth()->user()?->canModule('preplist', 'manage'))
+            <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
+               class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit prep list
+            </a>
+        @else
+            <button type="button"
+                    data-access-restricted-modal-toggle
+                    title="Your role does not have access to that module."
+                    class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit prep list
+            </button>
+        @endif
     </div>
 
     {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
@@ -178,13 +190,25 @@
                 </button>
             </form>
         @endif
-        <a href="{{ route('preplist.generate-rfq', ['preplist' => $preplist->id]) }}"
-           class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-            </svg>
-            Generate RFQ for supplier
-        </a>
+        @if (auth()->user()?->canModule('preplist', 'manage'))
+            <a href="{{ route('preplist.generate-rfq', ['preplist' => $preplist->id]) }}"
+               class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+                Generate RFQ for supplier
+            </a>
+        @else
+            <button type="button"
+                    data-access-restricted-modal-toggle
+                    title="Your role does not have access to that module."
+                    class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-md bg-gray-300 text-sm font-medium text-gray-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+                Generate RFQ for supplier
+            </button>
+        @endif
     </div>
 
     {{-- Delete prep list confirmation modal --}}

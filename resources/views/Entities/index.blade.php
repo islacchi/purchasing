@@ -36,13 +36,23 @@
                            class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
             </div>
-            <a href="{{ route('entities.create', ['type' => 'procuring_entity']) }}"
-               class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                <span class="font-medium">Add entity</span>
-            </a>
+            @if (auth()->user()?->canModule('entities', 'manage'))
+                <a href="{{ route('entities.create', ['type' => 'procuring_entity']) }}"
+                   class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span class="font-medium">Add entity</span>
+                </a>
+            @else
+                <span class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-lg bg-gray-300 text-gray-500"
+                      title="Your role does not have access to that module.">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span class="font-medium">Add entity</span>
+                </span>
+            @endif
         </div>
 
         {{-- Table --}}
@@ -126,13 +136,23 @@
                            class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
             </div>
-            <a href="{{ route('entities.create', ['type' => 'supplier']) }}"
-               class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                <span class="font-medium">Add Supplier</span>
-            </a>
+            @if (auth()->user()?->canModule('entities', 'manage'))
+                <a href="{{ route('entities.create', ['type' => 'supplier']) }}"
+                   class="flex items-center gap-2 px-4 py-2 bg-[#2a7a94] text-white rounded-lg hover:bg-[#236b80] transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span class="font-medium">Add Supplier</span>
+                </a>
+            @else
+                <span class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-lg bg-gray-300 text-gray-500"
+                      title="Your role does not have access to that module.">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span class="font-medium">Add Supplier</span>
+                </span>
+            @endif
         </div>
 
         {{-- Table --}}
