@@ -47,26 +47,45 @@
         }
     @endphp
 
-    <div class="flex h-full min-h-0 flex-col">
-    <h2 class="shrink-0 text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
-
-    @if ($errors->any())
-        <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <ul class="list-disc space-y-1 pl-5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <form action="{{ $isEdit ? route('projects.update', ['project' => $project->id]) : route('projects.store') }}" method="POST" class="flex flex-1 min-h-0 flex-col">
+    <div class="flex flex-col">
+    <form action="{{ $isEdit ? route('projects.update', ['project' => $project->id]) : route('projects.store') }}" method="POST" class="flex min-w-0 flex-col">
         @csrf
         @if ($isEdit)
             @method('PUT')
         @endif
-        {{-- Content holder: project details stay static; only the items table scrolls --}}
-        <div class="flex flex-1 min-h-0 flex-col space-y-6 overflow-hidden rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
+
+        {{-- Page header: title + primary actions, mirroring the Purchase Order layout --}}
+        <div class="mb-6 flex shrink-0 flex-wrap items-center justify-between gap-3">
+            <h2 class="text-xl font-semibold text-gray-900">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('projects') }}"
+                   class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#0e5266] text-sm font-medium text-white hover:bg-[#0c4757] transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0V3h6v4m-6 0h6"/>
+                    </svg>
+                    {{ $isEdit ? 'Update project' : 'Save project' }}
+                </button>
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <ul class="list-disc space-y-1 pl-5">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+        {{-- Content holder: project details are fixed; the items table grows with its rows up to a cap --}}
+        <div class="flex flex-col space-y-6 rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
         {{-- Project fields --}}
         <div class="grid shrink-0 grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
             <div class="space-y-3">
@@ -134,8 +153,8 @@
                 </div>
             </div>
 
-            <div class="space-y-3">
-                <div>
+            <div class="flex flex-col space-y-3">
+                <div class="shrink-0">
                     <label class="block text-sm font-medium text-gray-800 mb-1.5">Entity</label>
                     <select name="procuring_entity_id"
                             class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
@@ -157,19 +176,39 @@
                     @endif
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Notes</label>
-                    <textarea name="notes" rows="10"
-                              class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ $notes }}</textarea>
+                <div class="flex flex-1 flex-col">
+                    <label class="block shrink-0 text-sm font-medium text-gray-800 mb-1.5">Notes</label>
+                    <textarea name="notes"
+                              class="w-full flex-1 min-h-[140px] px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300 resize-y">{{ $notes }}</textarea>
                 </div>
             </div>
         </div>
 
         {{-- Items --}}
-        <div class="flex min-h-0 flex-1 flex-col">
-            <label class="shrink-0 block text-sm font-medium text-gray-800 mb-2">Items</label>
+        <div class="flex flex-col">
+            <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 mb-2">
+                <p class="text-sm font-medium text-gray-800">Items</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" id="addItemBtn"
+                            class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Add item
+                    </button>
+                    <button type="button" id="deleteItemBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Delete<span id="deleteItemCount"></span>
+                    </button>
+                    <button type="button" id="cancelSelectBtn" class="hidden flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                </div>
+            </div>
 
-                <div id="itemRows" class="overflow-y-auto border border-gray-300 rounded-lg">
+            <div id="itemRows" class="min-h-[180px] max-h-[460px] overflow-auto border border-gray-300 rounded-lg">
                 <div class="sticky top-0 z-10 grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
                     <div class="text-xs font-semibold text-gray-700">Description</div>
                     <div class="text-xs font-semibold text-gray-700">Category</div>
@@ -255,44 +294,18 @@
             </div>
         </div>
 
-        {{-- Form actions --}}
-        <div class="flex shrink-0 items-center justify-between gap-3 pt-2">
-            <div class="flex items-center gap-3">
-                <button type="button" id="addItemBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Add item
-                </button>
-                <button type="button" id="deleteItemBtn" class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                    Delete<span id="deleteItemCount"></span>
-                </button>
-                <button type="button" id="cancelSelectBtn" class="hidden flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Cancel
-                </button>
-            </div>
-            <div class="flex items-center gap-3">
-            <a href="{{ route('projects') }}"
-               class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-                Cancel
-            </a>
-            <button type="submit"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#0e5266] text-white text-sm font-medium hover:bg-[#0c4757]">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0V3h6v4m-6 0h6"/>
-                </svg>
-                {{ $isEdit ? 'Update project' : 'Save project' }}
-            </button>
-            </div>
-        </div>
     </form>
+
+    {{-- Bottom-left escape hatch, mirroring the Purchase Order layout --}}
+    <div class="mt-4 flex shrink-0">
+        <a href="{{ route('projects') }}"
+           class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+            </svg>
+            Back to projects
+        </a>
+    </div>
     </div>
 
 @endsection
@@ -407,27 +420,10 @@
             rowsContainer.appendChild(template);
             setDeleteMode(deleteMode);
             syncAddButton();
-            updateItemListHeight();
         });
 
-        // Keep the item list height content-driven: only expand when an item
-        // row actually has data; collapse back when nothing is entered yet.
-        function updateItemListHeight() {
-            const box = document.getElementById('itemRows');
-            const rows = box.querySelectorAll('.item-row');
-            let hasContent = false;
-            for (let i = 0; i < rows.length && ! hasContent; i++) {
-                const row = rows[i];
-                const fields = row.querySelectorAll('input, select');
-                for (let j = 0; j < fields.length; j++) {
-                    const field = fields[j];
-                    if (field.classList.contains('item-select')) continue;
-                    if (String(field.value || '').trim() !== '') { hasContent = true; break; }
-                }
-            }
-            box.classList.toggle('flex-1', hasContent);
-            box.classList.toggle('min-h-[420px]', hasContent);
-        }
+        // Item list height is content-driven, bounded by min-/max-height on
+        // the container.
 
         function openDeleteModal() {
             const n = tickedCheckboxes().length;
@@ -474,12 +470,10 @@
             setDeleteMode(false);
             syncAddButton();
             updateDeleteBtn();
-            updateItemListHeight();
         });
 
         updateDeleteBtn();
         syncAddButton();
-        updateItemListHeight();
     })();
 </script>
 @endpush
