@@ -2,7 +2,7 @@
 
 A Laravel 12 application that runs the procurement cycle end to end: **Projects → Prep Lists → Request for Quotation → Quotation tracking → Purchase Orders → Receiving**, plus the supplier / procuring-entity directory, price-index tracking, and settings & privileges. Built for Philippine government-style procurement but works for any institution.
 
-> **Status:** actively developed. The procurement chain (Projects → Preplist → Quotation → Purchase Order → Receiving) is functional and database-backed. Settings′ audit log and backup pages, and the Price Index module, still render sample data. See [Project status](#project-status) for an exact, honest breakdown.
+> **Status:** actively developed. The procurement chain (Projects → Preplist → Quotation → Purchase Order → Receiving) is functional and database-backed, with role-based access control (None/View/Manage) enforced server-side and reflected in the UI, and an activity log wired across modules. Role × module matrix, settings, and the admin area are Administrator-only. The Price Index module and Settings → Backup still render sample data. See [Project status](#project-status) for an exact, honest breakdown.
 
 ---
 
@@ -17,9 +17,10 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 | **Purchase Order** | Create a PO from an awarded quotation (draft), send it, receive lines (full qty per line), cancel with reason, admin-only delete (draft/cancelled), download PO as `.xlsx` | ✅ Database-backed, working |
 | **Entities** | Directory of procuring entities (DOH offices, PGH, …) and suppliers with contact details | ✅ Database-backed, working |
 | **Notifications (bell)** | Live delivery-deadline alerts derived from due dates + project fulfillment progress | ✅ Real, data-driven |
+| **Role-based access control** | Role × module matrix (None / View / Manage) enforced server-side on every module route, admin bypass, greyed/hidden write affordances for view-only roles, shared access-restricted dialog, friendly 403 page | ✅ Working |
 | **Price Index** | Per-item supplier price comparison across quotations | 🚧 Sample data only — not wired to the database |
-| **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage) | ✅ Working |
-| **Settings → Logs** | Activity/log viewer | 🚧 Placeholder (no audit-log middleware yet) |
+| **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage). Administrator rows are locked full access | ✅ Working |
+| **Settings → Logs** | Activity/log viewer — real rows written by `ActivityLogger` on every module create/edit/delete, plus user/matrix changes | ✅ Working |
 | **Settings → Backup** | Database backup download | 🚧 Placeholder (hardcoded sample rows) |
 
 ---
@@ -80,25 +81,29 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Purchase Order** — create from awarded quotation (proportional allocation across project sources), draft → Sent → Partially received → Completed, cancel with reason, admin-only delete of draft/cancelled POs, Excel download on generation
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days or never started and due ≤ 14 days)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while referenced by a quotation; a quotation cannot be deleted once quoted (upload removal is separate)
-- [x] **Settings → Privileges** — admin-only user/role management with live search
-- [x] **Tests** — 119 passing (696 assertions) on every module above
+- [x] **Unique junction indexes** — composite unique constraints on `preplist_items` / `quotation_items` / `purchase_order_items` to prevent duplicate lines; duplicate key violations surface as validation errors
+- [x] **Expiry normalization** — supplier `.xlsx` expiry cells (`MM/YYYY`, month names, ISO dates) parsed crash-proof by `App\Support\ExpiryParser`; `quotation_items.expiry` and supplier expiry columns are real `DATE` columns
+- [x] **Role-based access control** — `role_module_access` matrix (None / View / Manage) configured from Settings → Privileges; enforced by the `module:{module}` middleware — `GET` requires View, writes require Manage; Administrator is implicit full access and not editable; role lacks View → module hidden from sidebar; writes additionally blocked by middleware (403 page for direct URL hits)
+- [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons (Add project / Add entity / Add Supplier / Compile prep list / Edit project / Edit entity) and access-restricted dialogs for blocked actions (Edit prep list, Generate RFQ, PO receive checkboxes, Delete project, quotation document removal for view-only). Seeded defaults: Procurement Officer = Manage everywhere, Viewer = View everywhere
+- [x] **Activity logging** — `activity_logs` table + `App\Support\ActivityLogger`; every module's create/edit/delete writes a row (who, what, when, record label), plus user/role-matrix changes from Settings; Settings → Logs viewer is live (module/user filters, date range)
+- [x] **Settings → Privileges** — admin-only user/role management with live search **and** the role × module access matrix (changes logged to the activity trail)
+- [x] **Tests** — 173 passing (926 assertions) on every module above, including RBAC (`ModuleAccessTest`) and viewer-affordance coverage (restricted dialogs, inert buttons, receive checkboxes, variation per role)
 
 ### Not yet done
 - [ ] **Price Index** — wiring the price-comparison page to real quotation lines (all rendering is sample data)
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
-- [ ] **Settings → Logs** — audit logging middleware/table; page currently prints placeholder rows
 - [ ] **Settings → Backup** — real database backup (page hardcodes sample filenames)
 - [ ] **Partial receipts** — receiving is all-or-nothing per line; `purchase_order_receipts` already has `received_qty`, `lot_no`, `expiry_date`, but the UI doesn't capture them
 - [ ] **PO re-download** — the PO Excel is produced once at creation; there's no way to re-download it from the detail page
 - [ ] **PO tracking reference numbers** — PO only references the quotation; PO→project links via allocations are not yet surfaced on the PO detail page
 - [ ] **Notifications** are computed on every page view; there's no persisted notification log or read state
-- [ ] **Activity log** — created but not written (see above)
+- [ ] **Activity log retention** — the activity trail is unbounded; no pruning/archival policy yet
 - [ ] **PhpSpreadsheet migration** — if `ext-gd` is enabled later, the manual workbook generator can be replaced
 - [ ] **Fix stale temp files** — root contains `fix_rfq.php` and other one-off scripts that were used during development
 
 ### Known fragility worth addressing
-- Project editing **deletes and re-creates** `project_items` rows, which invalidates any `preplist_item_sources` pointing at them (foreign-key violation risk). Not a crash today because prep-list edits go through their own flow, but it deserves a proper merge/update strategy.
-- Quoted quotations linked to a deleted prep list cannot be uploaded to / sent to PO — the UI shows "this quotation's prep list has been deleted" but the data is unrecoverable except by restoring the prep list row (`withTrashed`).
+- **Project edit hard-fails (500) once any of its items is compiled into a prep list.** `syncItems()` deletes and re-creates `project_items` on every save; `preplist_item_sources.project_item_id` has a restricted FK, so the delete raises an unhandled FK violation and the `PUT projects.update` request 500s. A merge/update strategy (match by identity, update in place, never drop sourced rows) is required — no test covers this path.
+- **A quotation whose prep list is missing renders a fixed error banner and cannot be re-uploaded or sent to PO.** This state is only reachable via DB-level preplist deletion or legacy rows predating the delete guard; `PreplistController::destroy` now blocks deletion of sourced prep lists, and `PurchaseOrderController::create` also refuses. Recovery is `Preplist::withTrashed()->find($id)->restore()` — there is no restore affordance in the UI.
 
 ---
 
@@ -107,9 +112,12 @@ Legend: ✅ done · 🚧 in progress / not started.
 | Question | Answer |
 |----------|--------|
 | Who can log in? | Any active account with a role; `admin` / `admin` seeded by `AdminUserSeeder` (change before production) |
-| How do roles map? | `Administrator` → full access including Settings and PO delete; `Procurement Officer` / `Viewer` → access per module configured in Settings → Privileges |
-| How is module access configured? | Settings → Privileges → "Role module access" matrix: **None / View / Manage** for Projects, Preplist, Quotation, Price Index, Purchase Order, Entities. Administrators are implicit full access and are not editable |
+| How do roles map? | `Administrator` → full access including Settings and PO delete (locked in the matrix, not editable); `Procurement Officer` / `Viewer` → access per module configured in Settings → Privileges |
+| How is module access configured? | Settings → Privileges → "Role module access" matrix: **None / View / Manage** for Projects, Preplist, Quotation, Price Index, Purchase Order, Entities. Seeded defaults: Officer = Manage everywhere, Viewer = View everywhere. Administrator rows are bypassed on every check and not editable |
+| How is the matrix enforced server-side? | The `module:{module}` middleware (`App\Http\Middleware\EnsureModuleAccess`) wraps all six module route groups: `GET`/`HEAD`/`OPTIONS` require **View**, any other verb requires **Manage**. Administrator bypasses. Direct URL hits without access get the friendly 403 page. `Purchase Order → Delete` additionally keeps its admin-only controller guard |
+| How is the matrix reflected in the UI? | View-only roles see inert greyed buttons (cursor-not-allowed) for Add/Edit/Delete actions, modules they cannot view are hidden from the sidebar, and blocked actions (Edit prep list, Generate RFQ, PO receive box, quotation removal) open a shared amber access-restricted dialog |
 | What does Settings gate? | `access-settings` gate (administrator only) |
+| Settings → Logs | Real activity rows: module writes and role-matrix/user changes (`ActivityLogger`), browsable with module/user filters |
 | Session lifetime | Inactivity + absolute lifetime enforced by custom middleware |
 | Login throttling | `throttle:6,1` on the login POST route |
 
@@ -147,6 +155,8 @@ php artisan serve
 | `user1` | user1@example.com | Procurement Officer | `user1` |
 | `user2` | user2@example.com | Viewer | `user2` |
 
+Seeded module grants: **Procurement Officer → Manage** on all six modules, **Viewer → View** on all six modules, **Administrator** bypasses the matrix entirely (no grant rows). Grants are editable under Settings → Privileges and are logged to the activity trail when changed.
+
 ---
 
 ## Testing
@@ -155,7 +165,9 @@ php artisan serve
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **119 passed / 696 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **173 passed / 926 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+
+Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
 ---
 
@@ -165,20 +177,27 @@ Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current
 purchasing/
 ├── app/
 │   ├── Http/Controllers/       # Auth, Entities, Projects, Preplist, Quotation, PurchaseOrder, Settings
-│   ├── Models/                 # 18 models (ProcuringEntity, Project, ProjectItem, Preplist(+Item/Source),
-│   │                           #   Quotation(+Item), PurchaseOrder(+Item/Receipt/Allocation), User, Role, …)
+│   ├── Http/Middleware/        # EnsureSessionIsActive (window), EnsureModuleAccess (module:{module})
+│   ├── Models/                 # 20 models (ProcuringEntity, Project, ProjectItem, Preplist(+Item/Source),
+│   │                           #   Quotation(+Item), PurchaseOrder(+Item/Receipt/Allocation),
+│   │                           #   RoleModuleAccess, ActivityLog, User, Role, …)
 │   ├── Support/                # RfqQuotationWorkbook, PurchaseOrderWorkbook, QuotationWorkbookParser,
-│   │                           #   DeliveryNotifications
+│   │                           #   DeliveryNotifications, ModuleAccess, ActivityLogger, ExpiryParser
 │   └── Providers/              # access-settings gate; view composer feeds the bell icon
 ├── database/
-│   ├── migrations/             # 24 migrations covering the whole domain
-│   └── seeders/                # AdminUserSeeder (admin / user1 / user2)
+│   ├── migrations/             # 29 migrations covering the whole domain (seeded role grants, activity logs,
+│   │                           #   unique junction indexes, expiry → DATE columns)
+│   └── seeders/                # AdminUserSeeder (admin / user1 / user2 + seeded module grants)
 ├── resources/
 │   ├── templates/              # RFQ-Template.xlsx and PO-Template.xlsx (letterhead documents)
-│   └── views/                  # Blade modules mirroring the sidebar
+│   └── views/                  # Blade modules mirroring the sidebar; role-aware affordances via canModule()
+│       ├── components/         # access-restricted-modal (shared amber dialog)
+│       ├── partials/           # restricted-notice (shared amber card), flash-success
+│       └── errors/             # 403 — friendly module-access page
 ├── docs/                       # Procurement-flow PDFs; sample RFQ/PO artifacts
-├── routes/web.php              # All routes (login/logout public; rest behind auth + session.active)
-└── tests/Feature/              # Feature suites per module
+├── routes/web.php              # All routes (login/logout public; rest behind auth + session.active;
+│                               #   six module groups additionally behind module:{module})
+└── tests/Feature/              # Feature suites per module (incl. ModuleAccessTest for RBAC)
 ```
 
 ---
