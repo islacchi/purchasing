@@ -9,6 +9,8 @@ use App\Models\PreplistItem;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\Supplier;
@@ -708,6 +710,75 @@ class QuotationTest extends TestCase
             ->assertSee('0 / 1')
             ->assertSee('Awaiting quote')
             ->assertSee('No supplier quotation submitted yet');
+    }
+
+    public function test_quotation_document_cannot_be_removed_when_a_purchase_order_exists(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $quotationItem = QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 305.00,
+            'quoted_at' => now(),
+        ]);
+
+        // The FK that blocks the delete comes from a purchase order whose
+        // lines reference these quoted prices.
+        $purchaseOrder = PurchaseOrder::create([
+            'quotation_id' => $quotation->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'po_number' => 'PO-'.now()->year.'-9999',
+            'status' => PurchaseOrder::STATUS_DRAFT,
+            'delivery_fee' => 0,
+        ]);
+
+        PurchaseOrderItem::create([
+            'purchase_order_id' => $purchaseOrder->id,
+            'quotation_item_id' => $quotationItem->id,
+            'item_id' => $item->id,
+            'qty' => 5,
+            'unit_price' => 305.00,
+            'min_remaining_months' => 0,
+        ]);
+
+        // Removing the document is refused with a reason, not a 500.
+        $this->actingAs($user)
+            ->delete(route('quotation.destroy-document', ['quotation' => $quotation->id]))
+            ->assertRedirect(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertSessionHas('documentRemoveBlocked');
+
+        $quotation->refresh();
+
+        $this->assertDatabaseHas('quotation_items', ['id' => $quotationItem->id]);
+        $this->assertNotNull($quotation->document_path);
+        Storage::disk('local')->assertExists('quotations/test-'.$supplier->id.'.xlsx');
+
+        // The show page renders the blocked explanation instead of the
+        // confirmation dialog, and mentions the blocking PO.
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('This quotation cannot be removed')
+            ->assertSee($purchaseOrder->po_number)
+            ->assertDontSee('id="quotationRemoveConfirm"', false);
     }
 
     public function test_quotation_upload_parses_unit_prices_and_marks_items_quoted(): void
