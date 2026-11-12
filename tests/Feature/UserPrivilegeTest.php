@@ -37,7 +37,7 @@ class UserPrivilegeTest extends TestCase
             ->assertSee('user2@example.com')
             ->assertSee('Procurement Officer')
             ->assertSee('Viewer')
-            ->assertSee('Available Roles')
+            ->assertSee('Role module access')
             ->assertDontSee('j.santos@company.com')
             ->assertDontSee('dummy data');
     }
