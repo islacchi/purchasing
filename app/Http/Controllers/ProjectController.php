@@ -223,6 +223,7 @@ class ProjectController extends Controller
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.unit_cost' => ['required', 'numeric', 'min:0'],
             'items.*.quoted_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.in_stock' => ['nullable', 'integer', 'min:0'],
         ]);
     }
 

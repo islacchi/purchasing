@@ -7,6 +7,32 @@
 @endsection
 
 @section('content')
+    {{-- Print styles: hide the app chrome so only the project summary prints. --}}
+    <style>
+        /* Print sheet is hidden on screen; visible only for printing. */
+        .print-sheet { display: none; }
+
+        @media print {
+            @page { size: landscape; margin: 10mm; }
+            #sidebar,
+            header,
+            .flash-success-overlay,
+            #signoutModal,
+            #userMenu,
+            .no-print,
+            .screen-only,
+            #printPreviewModal,
+            #projectDeleteModal { display: none !important; }
+            .print-sheet { display: block !important; width: 100% !important; padding: 0 !important; }
+            html, body { overflow: visible !important; height: auto !important; background: #fff !important; }
+            main { overflow: visible !important; background: #fff !important; padding: 0 !important; }
+            .rounded-lg { border-radius: 0 !important; }
+            table thead { display: table-header-group; }
+            table tr { page-break-inside: avoid; }
+        }
+    </style>
+
+    <div class="screen-only">
     <div class="flex h-full min-h-0 flex-col">
 
     @php
@@ -180,7 +206,7 @@
     </div>
 
     {{-- Action Buttons --}}
-    <div class="mt-4 flex shrink-0 items-center justify-end gap-3">
+    <div class="no-print mt-4 flex shrink-0 items-center justify-end gap-3">
         @if ($preplistSources->isNotEmpty())
             <button type="button" disabled
                     class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-400 cursor-not-allowed"
@@ -210,8 +236,59 @@
             </svg>
             Edit project
         </a>
+        <button type="button" id="printProjectBtn"
+                class="no-print flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17m-5 0a2 2 0 104 0 2 2 0 10-4 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 7h12"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 13H4a2 2 0 01-2-2v-2a2 2 0 012-2h16a2 2 0 012 2v2a2 2 0 01-2 2h-2m-12 0v6a1 1 0 001 1h10a1 1 0 001-1v-6"/>
+            </svg>
+            Print Project
+        </button>
     </div>
-    </div><!-- /flex column -->
+    </div>{{-- /screen-only /flex column --}}
+
+    {{-- Print sheet: hidden on screen; what window.print() sends to the printer (landscape). --}}
+    <div id="projectPrintSheet" class="print-sheet">
+        @include('Projects.print-sheet')
+    </div>
+
+    {{-- Print preview modal --}}
+    <div id="printPreviewModal" class="screen-only hidden fixed inset-0 z-[70] items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="printPreviewTitle">
+        <div id="printPreviewOverlay" class="absolute inset-0 bg-gray-900/60"></div>
+        <div class="relative flex h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+            <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+                <div>
+                    <h3 id="printPreviewTitle" class="text-sm font-semibold text-gray-900">Print preview</h3>
+                    <p class="mt-0.5 text-[11px] text-gray-500">Landscape output — generated from the current project data.</p>
+                </div>
+                <button type="button" data-close-print-modal aria-label="Close print preview"
+                        class="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-auto bg-gray-100 p-4 sm:p-6">
+                <div class="mx-auto w-full max-w-[1200px] rounded-md bg-white p-6 shadow-md">
+                    @include('Projects.print-sheet')
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-5 py-3">
+                <button type="button" data-close-print-modal
+                        class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    Close
+                </button>
+                <button type="button" id="printPreviewPrintBtn"
+                        class="flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80] transition-colors">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 17h12M6 13H4a2 2 0 01-2-2v-3a2 2 0 012-2h16a2 2 0 012 2v3a2 2 0 01-2 2h-2m-12 0v6a1 1 0 001 1h10a1 1 0 001-1v-6"/>
+                    </svg>
+                    Print
+                </button>
+            </div>
+        </div>
+    </div>
 
     {{-- Delete project confirmation modal --}}
     <div id="projectDeleteModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="projectDeleteTitle">
@@ -245,6 +322,39 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        // Print preview → click Print Project opens a modal with the print sheet;
+        // only the Print button inside the modal actually sends it to the printer.
+        (function () {
+            var openBtn = document.getElementById('printProjectBtn');
+            var closeButtons = document.querySelectorAll('[data-close-print-modal]');
+            var printBtn = document.getElementById('printPreviewPrintBtn');
+            var modal = document.getElementById('printPreviewModal');
+            var overlay = document.getElementById('printPreviewOverlay');
+
+            function openModal() {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                printBtn.focus();
+            }
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                if (openBtn) openBtn.focus();
+            }
+
+            if (openBtn) openBtn.addEventListener('click', openModal);
+            closeButtons.forEach(function (btn) { btn.addEventListener('click', closeModal); });
+            if (overlay) overlay.addEventListener('click', closeModal);
+            if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+            });
+        })();
+    </script>
+    @endpush
 
     @push('scripts')
     <script>

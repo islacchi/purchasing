@@ -169,17 +169,18 @@
             <label class="shrink-0 block text-sm font-medium text-gray-800 mb-2">Items</label>
 
                 <div id="itemRows" class="overflow-y-auto border border-gray-300 rounded-lg">
-                <div class="sticky top-0 z-10 grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
+                <div class="sticky top-0 z-10 grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
                     <div class="text-xs font-semibold text-gray-700">Description</div>
                     <div class="text-xs font-semibold text-gray-700">Category</div>
                     <div class="text-xs font-semibold text-gray-700">Unit</div>
                     <div class="text-xs font-semibold text-gray-700">Quantity</div>
                     <div class="text-xs font-semibold text-gray-700">Unit cost</div>
                     <div class="text-xs font-semibold text-gray-700">Quoted price</div>
+                    <div class="text-xs font-semibold text-gray-700">In Stocks</div>
                     <div></div>
                 </div>
                 @foreach ($items as $i => $item)
-                    <div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2">
+                    <div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2">
                         <div>
                             <input type="text" name="items[{{ $i }}][description]" value="{{ $item['description'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
@@ -206,6 +207,12 @@
                         <div>
                             <input type="number" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] ?? '' }}"
                                    class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                        </div>
+                        {{-- DUMMY front-end in-stock quantity field; not saved yet --}}
+                        <div>
+                            <input type="number" min="0" step="1" name="items[{{ $i }}][in_stock]" value="{{ $item['in_stock'] ?? '' }}"
+                                   class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                                   placeholder="0">
                         </div>
                         <div class="checkbox-cell pb-2 hidden">
                             <input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300">
@@ -347,6 +354,7 @@
             for (let i = 0; i < fields.length; i++) {
                 const field = fields[i];
                 if (field.classList.contains('item-select')) continue; // tick box is not completeness
+                if ((field.name || '').indexOf('in_stock') !== -1) continue; // stock qty doesn't count as completeness
                 if (String(field.value).trim() === '') return false;
             }
             return true;
