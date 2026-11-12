@@ -366,4 +366,28 @@ class ModuleAccessTest extends TestCase
             ->assertOk()
             ->assertSee('href="'.route('preplist.create').'"', false);
     }
+
+    public function test_viewer_sees_delete_project_as_restricted_modal_trigger(): void
+    {
+        $admin = $this->admin();
+        $viewer = $this->viewer();
+        $project = $this->basicProject($admin);
+
+        // The view-only role never gets the delete confirmation trigger: the
+        // button opens the shared access-restricted dialog instead. The hidden
+        // confirmation modal stays in the DOM but has no way to open.
+        $this->actingAs($viewer)
+            ->get(route('projects.show', ['project' => $project->id]))
+            ->assertOk()
+            ->assertSee('data-access-restricted-modal-toggle', false)
+            ->assertDontSee('id="projectDeleteBtn"', false)
+            ->assertSee('id="accessRestrictedModal"', false);
+
+        // An administrator keeps the working confirmation flow.
+        $this->actingAs($admin)
+            ->get(route('projects.show', ['project' => $project->id]))
+            ->assertOk()
+            ->assertSee('id="projectDeleteBtn"', false)
+            ->assertSee('id="projectDeleteModal"', false);
+    }
 }
