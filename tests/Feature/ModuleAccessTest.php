@@ -200,6 +200,25 @@ class ModuleAccessTest extends TestCase
         $this->actingAs($admin)->get(route('projects'))->assertOk();
     }
 
+    public function test_restricted_module_renders_the_friendly_403_page(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+        $user = User::where('name', 'user2')->firstOrFail();
+        $viewerRole = Role::where('name', 'Viewer')->firstOrFail();
+
+        RoleModuleAccess::query()
+            ->where('role_id', $viewerRole->id)
+            ->where('module', 'projects')
+            ->update(['level' => 'none']);
+
+        $response = $this->actingAs($user)->get(route('projects'));
+
+        $response->assertForbidden();
+        $response->assertSee('Access restricted');
+        $response->assertSee('Your role does not have access to that module.');
+        $response->assertDontSee('Pages available to you');
+    }
+
     public function test_sidebar_hides_modules_the_role_cannot_view(): void
     {
         $this->seed(AdminUserSeeder::class);

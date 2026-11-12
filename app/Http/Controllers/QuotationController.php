@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PreplistItem;
+use App\Models\PurchaseOrder;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\ActivityLogger;
@@ -138,17 +139,49 @@ class QuotationController extends Controller
 
         $quotationItems = $quotation->items->keyBy('preplist_item_id');
 
+        // Why removing the supplier's quotation would be refused — shown by
+        // the Remove quotation modal when non-null.
+        $removeBlockedReason = session('documentRemoveBlocked') ?? $this->blockedRemoveReason($quotation);
+
         return view('Quotation.show', [
             'quotation' => $quotation,
             'items' => $items,
             'quotationItems' => $quotationItems,
+            'removeBlockedReason' => $removeBlockedReason,
         ]);
     }
 
     /**
-     * Store the supplier's completed quotation workbook and read the
-     * unit prices into the quotation's line items.
+     * The reason removing the supplier's quotation document would be refused,
+     * or null when removal is allowed.
+     *
+     * Removing the document deletes the quoted line items together with it.
+     * Once a purchase order was created from this quotation, its lines
+     * reference those items, so deleting them violates a foreign key.
      */
+    private function blockedRemoveReason(Quotation $quotation): ?string
+    {
+        $itemIds = $quotation->items()->pluck('id');
+
+        if ($itemIds->isEmpty()) {
+            return null;
+        }
+
+        $poNumbers = PurchaseOrder::query()
+            ->whereHas('items', fn ($query) => $query->whereIn('quotation_item_id', $itemIds))
+            ->pluck('po_number')
+            ->unique()
+            ->values();
+
+        if ($poNumbers->isEmpty()) {
+            return null;
+        }
+
+        return 'A purchase order was already created from this quotation ('
+            .$poNumbers->join(', ')
+            .'). Its quoted prices and expiry data are already in use, so the quotation file cannot be removed until the purchase order is deleted first.';
+    }
+
     public function storeDocument(Request $request, Quotation $quotation)
     {
         $request->validate([
@@ -277,21 +310,45 @@ class QuotationController extends Controller
      */
     public function destroyDocument(Quotation $quotation)
     {
-        DB::transaction(function () use ($quotation) {
-            if ($quotation->document_path) {
-                Storage::disk('local')->delete($quotation->document_path);
+        // Refuse to remove the supplier's quotation when its prices are
+        // already referenced by a purchase order — that is the FK the
+        // delete would otherwise hit with a 500.
+        $blocked = $this->blockedRemoveReason($quotation);
+
+        if ($blocked !== null) {
+            return redirect()
+                ->route('quotation.show', ['quotation' => $quotation->id])
+                ->with('documentRemoveBlocked', $blocked);
+        }
+
+        try {
+            DB::transaction(function () use ($quotation) {
+                if ($quotation->document_path) {
+                    Storage::disk('local')->delete($quotation->document_path);
+                }
+
+                $quotation->items()->delete();
+
+                $quotation->update([
+                    'document_path' => null,
+                    'document_name' => null,
+                    'document_size' => null,
+                ]);
+
+                ActivityLogger::log('Deleted', 'Quotation', ($quotation->rfq_number ?: 'Quotation #'.$quotation->id).' (document)', $quotation);
+            });
+        } catch (QueryException $exception) {
+            // Defensive net for an unexpected reference we did not predict —
+            // surface the same friendly reason instead of a 500.
+            if (str_contains($exception->getMessage(), '23000') || str_contains($exception->getMessage(), 'Integrity constraint')) {
+                return redirect()
+                    ->route('quotation.show', ['quotation' => $quotation->id])
+                    ->with('documentRemoveBlocked', $this->blockedRemoveReason($quotation)
+                        ?? 'This quotation is already in use by another record and cannot be removed.');
             }
 
-            $quotation->items()->delete();
-
-            $quotation->update([
-                'document_path' => null,
-                'document_name' => null,
-                'document_size' => null,
-            ]);
-
-            ActivityLogger::log('Deleted', 'Quotation', ($quotation->rfq_number ?: 'Quotation #'.$quotation->id).' (document)', $quotation);
-        });
+            throw $exception;
+        }
 
         return redirect()
             ->route('quotation.show', ['quotation' => $quotation->id])

@@ -49,6 +49,13 @@
         // Quotation module; View-only roles see the buttons disabled.
         $canManageQuotation = auth()->user()?->canModule('quotation', 'manage') ?? false;
 
+        // A view-only user never gets the destructive confirmation — the
+        // same modal shows the access-restriction instead, before any POST.
+        $removeAccessDenied = ! $canManageQuotation;
+        if ($removeAccessDenied) {
+            $removeBlockedReason = 'Your role does not have access to that module.';
+        }
+
         $documentSize = $formatDocumentSize($quotation->document_size);
     @endphp
 
@@ -337,18 +344,23 @@
             <div class="flex flex-wrap items-center gap-3">
                 @if ($quotation->document_path)
                     {{-- Removing a quotation only removes the supplier's uploaded file
-                         (and its quoted prices); the entry itself is deleted elsewhere. --}}
-                    <form id="quotationRemoveForm" method="POST" action="{{ route('quotation.destroy-document', ['quotation' => $quotation->id]) }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="button" id="quotationRemoveBtn" aria-haspopup="dialog"
-                                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
-                            </svg>
-                            Remove quotation
-                        </button>
-                    </form>
+                         (and its quoted prices); the entry itself is deleted elsewhere.
+                         When a purchase order already uses these prices, the same modal
+                         shows the reason instead of confirming the removal. --}}
+                    @if (! ($removeBlockedReason ?? null))
+                        <form id="quotationRemoveForm" method="POST" action="{{ route('quotation.destroy-document', ['quotation' => $quotation->id]) }}">
+                            @csrf
+                            @method('DELETE')
+                        </form>
+                    @endif
+                    <button type="button" id="quotationRemoveBtn" aria-haspopup="dialog"
+                            @if (($removeBlockedReason ?? null)) title="{{ $removeBlockedReason }}" @endif
+                            class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                        </svg>
+                        Remove quotation
+                    </button>
                 @endif
 
                 @if ($status === 'Quoted')
@@ -392,35 +404,60 @@
         <div id="quotationRemoveModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="quotationRemoveTitle">
             <div id="quotationRemoveOverlay" class="absolute inset-0 bg-gray-900/50"></div>
 
-            <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
-                <div class="flex items-start gap-3 px-5 py-4">
-                    <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
-                        <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
-                        </svg>
-                    </span>
-                    <div class="min-w-0">
-                        <h3 id="quotationRemoveTitle" class="text-base font-bold text-gray-900">Remove quotation?</h3>
-                        <p class="mt-1 text-sm text-gray-500">
-                            The quotation file uploaded by
-                            <span class="font-medium text-gray-700">{{ $supplier?->name ?? 'this supplier' }}</span>
-                            will be removed and its quoted prices cleared. The quotation will return to
-                            <span class="font-medium text-gray-700">Awaiting quote</span>.
-                        </p>
+            @if (($removeBlockedReason ?? null) === null)
+                {{-- Confirmation state: the supplier's file and prices will go. --}}
+                <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+                    <div class="flex items-start gap-3 px-5 py-4">
+                        <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                            <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 id="quotationRemoveTitle" class="text-base font-bold text-gray-900">Remove quotation?</h3>
+                            <p class="mt-1 text-sm text-gray-500">
+                                The quotation file uploaded by
+                                <span class="font-medium text-gray-700">{{ $supplier?->name ?? 'this supplier' }}</span>
+                                will be removed and its quoted prices cleared. The quotation will return to
+                                <span class="font-medium text-gray-700">Awaiting quote</span>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                        <button type="button" id="quotationRemoveCancel"
+                                class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="button" id="quotationRemoveConfirm"
+                                class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
+                            Remove
+                        </button>
                     </div>
                 </div>
+            @else
+                {{-- Blocked state: explain why it cannot be removed instead of confirming. --}}
+                <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+                    <div class="flex items-start gap-3 px-5 py-4">
+                        <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-50">
+                            <svg class="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
+                            </svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 id="quotationRemoveTitle" class="text-base font-bold text-gray-900">{{ $removeAccessDenied ? 'Access restricted' : 'This quotation cannot be removed' }}</h3>
+                            <p class="mt-1 text-sm text-gray-500">{{ $removeBlockedReason }}</p>
+                        </div>
+                    </div>
 
-                <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
-                    <button type="button" id="quotationRemoveCancel"
-                            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
-                        Cancel
-                    </button>
-                    <button type="button" id="quotationRemoveConfirm"
-                            class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
-                        Remove
-                    </button>
+                    <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                        <button type="button" id="quotationRemoveCancel"
+                                class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                            Okay
+                        </button>
+                    </div>
                 </div>
-            </div>
+            @endif
         </div>
     </div>
 
@@ -461,7 +498,11 @@
             function openModal() {
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
-                confirmBtn.focus();
+                if (confirmBtn) {
+                    confirmBtn.focus();
+                } else if (cancelBtn) {
+                    cancelBtn.focus();
+                }
             }
             function closeModal() {
                 modal.classList.add('hidden');
@@ -472,11 +513,17 @@
             if (btn) {
                 btn.addEventListener('click', openModal);
             }
-            cancelBtn.addEventListener('click', closeModal);
-            overlay.addEventListener('click', closeModal);
-            confirmBtn.addEventListener('click', function () {
-                if (form) form.submit();
-            });
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', closeModal);
+            }
+            if (overlay) {
+                overlay.addEventListener('click', closeModal);
+            }
+            if (confirmBtn && form) {
+                confirmBtn.addEventListener('click', function () {
+                    form.submit();
+                });
+            }
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
                     closeModal();
