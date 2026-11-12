@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Models\Quotation;
 use App\Models\Supplier;
+use App\Support\ActivityLogger;
 use App\Support\RfqQuotationWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -78,6 +79,8 @@ class PreplistController extends Controller
                 ]);
 
                 $this->syncItems($preplist, $validated);
+
+                ActivityLogger::log('Created', 'Preplist', $preplist->name, $preplist);
 
                 return $preplist;
             });
