@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Role;
 use App\Models\User;
 use App\Support\ActivityLogger;
+use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -42,8 +43,28 @@ class SettingsController extends Controller
         $filterAction = $request->get('action', 'all');
         $filterModule = $request->get('module', 'all');
         $filterUser = $request->get('user', 'all');
-        $filterFrom = $request->get('from_date', '');
-        $filterTo = $request->get('to_date', '');
+        $filterFrom = trim((string) $request->get('from_date', ''));
+        $filterTo = trim((string) $request->get('to_date', ''));
+        $dateNotice = null;
+
+        // Guard the date range: ignore malformed dates and swap an inverted
+        // From/To instead of silently returning zero rows.
+        $fromDate = $this->validDate($filterFrom);
+        $toDate = $this->validDate($filterTo);
+
+        if ($filterFrom !== '' && $fromDate === null) {
+            $dateNotice = 'The "From" date was not recognized and was ignored.';
+        }
+
+        if ($filterTo !== '' && $toDate === null) {
+            $dateNotice = trim(($dateNotice ? $dateNotice.' ' : '').'The "To" date was not recognized and was ignored.');
+        }
+
+        if ($fromDate !== null && $toDate !== null && $fromDate > $toDate) {
+            [$fromDate, $toDate] = [$toDate, $fromDate];
+            [$filterFrom, $filterTo] = [$filterTo, $filterFrom];
+            $dateNotice = 'The "From" date was after the "To" date — the range was swapped.';
+        }
 
         $logs = ActivityLog::query()
             ->when($search !== '', function ($query) use ($search) {
@@ -57,8 +78,8 @@ class SettingsController extends Controller
             ->when($filterAction !== 'all', fn ($query) => $query->where('action', $filterAction))
             ->when($filterModule !== 'all', fn ($query) => $query->where('module', $filterModule))
             ->when($filterUser !== 'all', fn ($query) => $query->where('user_name', $filterUser))
-            ->when($filterFrom !== '', fn ($query) => $query->whereDate('created_at', '>=', $filterFrom))
-            ->when($filterTo !== '', fn ($query) => $query->whereDate('created_at', '<=', $filterTo))
+            ->when($fromDate !== null, fn ($query) => $query->whereDate('created_at', '>=', $fromDate))
+            ->when($toDate !== null, fn ($query) => $query->whereDate('created_at', '<=', $toDate))
             ->latest('created_at')
             ->paginate(50)
             ->withQueryString();
@@ -84,9 +105,29 @@ class SettingsController extends Controller
             'filterUser',
             'filterFrom',
             'filterTo',
+            'dateNotice',
             'modules',
             'users'
         ));
+    }
+
+    /**
+     * Return the value as a canonical Y-m-d string if it is a real calendar
+     * date, or null if it is empty or malformed.
+     */
+    private function validDate(string $value): ?string
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        $date = DateTime::createFromFormat('Y-m-d', $value);
+
+        if ($date === false || $date->format('Y-m-d') !== $value) {
+            return null;
+        }
+
+        return $value;
     }
 
     /**

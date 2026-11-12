@@ -60,6 +60,16 @@
     </style>
 
     <div class="mb-6 no-print">
+        {{-- Friendly notice for inverted or malformed date ranges --}}
+        @if (! empty($dateNotice))
+            <div class="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+                <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-7.72 13.4A1 1 0 003.43 19h17.14a1 1 0 00.86-1.74l-7.72-13.4a1 1 0 00-1.72 0z"/>
+                </svg>
+                <span>{{ $dateNotice }}</span>
+            </div>
+        @endif
+
         {{-- Search and filters bar --}}
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <form method="GET" action="{{ route('settings.logs') }}" class="space-y-4">

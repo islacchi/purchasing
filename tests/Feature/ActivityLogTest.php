@@ -123,6 +123,33 @@ class ActivityLogTest extends TestCase
             ->assertDontSee('dummy data');
     }
 
+    public function test_settings_logs_page_swaps_inverted_date_range(): void
+    {
+        $user = $this->admin();
+        $today = now()->toDateString();
+        $yesterday = now()->subDay()->toDateString();
+
+        $this->actingAs($user)->post(route('entities.store', ['type' => 'supplier']), [
+            'name' => 'Triple Tact',
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->get(route('settings.logs', ['from_date' => $today, 'to_date' => $yesterday]))
+            ->assertOk()
+            ->assertSee('range was swapped')
+            ->assertSee('Triple Tact');
+    }
+
+    public function test_settings_logs_page_ignores_malformed_dates(): void
+    {
+        $user = $this->admin();
+
+        $this->actingAs($user)
+            ->get(route('settings.logs', ['from_date' => 'not-a-date', 'to_date' => '2026-02-31']))
+            ->assertOk()
+            ->assertSee('was not recognized');
+    }
+
     public function test_failed_preplist_create_writes_no_activity_log_row(): void
     {
         $user = $this->admin();
