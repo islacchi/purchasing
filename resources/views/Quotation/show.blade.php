@@ -440,11 +440,6 @@
                         <div class="min-w-0">
                             <h3 id="quotationRemoveTitle" class="text-base font-bold text-gray-900">This quotation cannot be removed</h3>
                             <p class="mt-1 text-sm text-gray-500">{{ $removeBlockedReason }}</p>
-                            <p class="mt-2 text-xs text-gray-500">
-                                If the purchase order is only a
-                                <span class="font-medium text-gray-700">draft</span>, an administrator can delete the draft
-                                first, then come back here and remove the quotation.
-                            </p>
                         </div>
                     </div>
 
