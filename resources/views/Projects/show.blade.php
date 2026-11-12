@@ -32,8 +32,8 @@
         }
     </style>
 
-    <div class="screen-only">
-    <div class="flex h-full min-h-0 flex-col">
+    <div class="screen-only flex h-full min-h-0 flex-col">
+    <div class="flex min-h-0 flex-1 flex-col">
 
     @php
         $totalItems = $project->totalItemCount();
@@ -107,7 +107,7 @@
     @endif
 
     {{-- Main Content --}}
-    <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-4">
+    <div class="grid min-h-0 flex-1 auto-rows-[minmax(0,1fr)] grid-cols-1 gap-6 lg:grid-cols-4">
         {{-- Project Details (Left Column) — static --}}
         <div class="min-h-0 lg:col-span-1">
             <div class="bg-white rounded-lg border border-gray-200 h-full">
@@ -207,7 +207,15 @@
     </div>
 
     {{-- Action Buttons --}}
-    <div class="no-print mt-4 flex shrink-0 items-center justify-end gap-3">
+    <div class="no-print mt-4 flex shrink-0 items-center justify-between gap-3">
+        <a href="{{ route('projects') }}"
+           class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+            </svg>
+            Back to list
+        </a>
+        <div class="flex items-center gap-3">
         @if ($preplistSources->isNotEmpty())
             <button type="button" disabled
                     class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-400 cursor-not-allowed"
@@ -246,8 +254,11 @@
             </svg>
             Print Project
         </button>
+        </div>
     </div>
-    </div>{{-- /screen-only /flex column --}}
+
+    </div><!-- /flex column -->
+    </div>{{-- /screen-only --}}
 
     {{-- Print sheet: hidden on screen; what window.print() sends to the printer (landscape). --}}
     <div id="projectPrintSheet" class="print-sheet">

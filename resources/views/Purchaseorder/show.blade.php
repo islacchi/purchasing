@@ -58,15 +58,6 @@
 
     <div class="flex h-full min-h-0 flex-col">
 
-        {{-- Back --}}
-        <a href="{{ route('purchase-order') }}"
-           class="mb-5 inline-flex shrink-0 items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94]">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
-            </svg>
-            Back to purchase orders
-        </a>
-
         {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
 
         @if ($errors->any())
@@ -126,14 +117,6 @@
                     </button>
                 @endif
 
-                {{-- @TODO: Generate the printable PO document. --}}
-                <a href="#" aria-disabled="true" title="Not available yet"
-                   class="inline-flex items-center gap-2 rounded-lg bg-[#2a7a94]/40 px-4 py-2 text-sm font-medium text-white">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 7.5 12 3m0 0L7.5 7.5M12 3v13.5"/>
-                    </svg>
-                    Download PDF
-                </a>
             </div>
         </div>
 
