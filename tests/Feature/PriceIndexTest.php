@@ -226,7 +226,9 @@ class PriceIndexTest extends TestCase
             ->assertSee('Amoxicillin 500mg')
             ->assertSee('GreenCore Pharmaceuticals')
             ->assertSee('MedSource Inc.')
-            ->assertSee('Brand / expiry');
+            ->assertSee('Brand / expiry')
+            ->assertSee('current quotes across the catalogue')
+            ->assertSee('Ties count as a win for every tied supplier.');
     }
 
     public function test_price_index_project_filter_uses_ids_for_duplicate_and_pipe_titles(): void

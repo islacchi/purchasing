@@ -57,7 +57,7 @@
                     </span>
                 </div>
                 <p class="mt-3 text-2xl font-bold text-gray-900">{{ $activeSuppliers }}</p>
-                <p class="mt-1 text-xs text-gray-500">{{ $totalQuoteLines }} quote lines across the catalogue</p>
+                <p class="mt-1 text-xs text-gray-500">{{ $totalQuoteLines }} current quotes across the catalogue</p>
             </div>
 
             {{-- Average price spread --}}
@@ -401,7 +401,7 @@
                             </div>
 
                             <div class="mt-2 flex items-center justify-between gap-3 text-xs text-gray-500">
-                                <span>{{ $row['quotes'] }} quote lines</span>
+                                <span>{{ $row['quotes'] }} current quotes</span>
                                 @if ($premium === null)
                                     <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-500">Not compared</span>
                                 @elseif ($premium <= 1)
@@ -421,8 +421,9 @@
                     @endforelse
                 </div>
 
-                <div class="border-t border-gray-100 px-6 py-3">
+                <div class="space-y-1 border-t border-gray-100 px-6 py-3">
                     <p class="text-xs text-gray-500">Single-quote items are excluded so they cannot inflate a win rate.</p>
+                    <p class="text-xs text-gray-500">Ties count as a win for every tied supplier.</p>
                 </div>
             </div>
         </div>
@@ -615,7 +616,8 @@
             function renderComparison(item) {
                 selectedId = item.id;
 
-                const subtitleParts = [item.name, item.unit, item.requested + ' requested'];
+                const requestedLabel = item.requested > 0 ? item.requested + ' requested' : 'no active request';
+                const subtitleParts = [item.name, item.unit, requestedLabel];
                 if (item.projects.length) {
                     subtitleParts.push(item.projects.join(', '));
                 }
@@ -635,7 +637,6 @@
                 const bestQuote = sorted[0];
                 const isComparable = item.count > 1;
                 const delta = isComparable && item.avg > 0 ? ((1 - (item.best / item.avg)) * 100) : null;
-                const requestedLabel = item.requested > 0 ? item.requested + ' requested' : 'no active request';
 
                 compareBadge.classList.toggle('hidden', !isComparable);
 
