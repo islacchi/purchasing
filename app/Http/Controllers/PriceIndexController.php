@@ -31,16 +31,30 @@ class PriceIndexController extends Controller
         $projectRows = ProjectItem::query()
             ->join('projects', 'projects.id', '=', 'project_items.project_id')
             ->whereNull('projects.deleted_at')
-            ->select(['project_items.item_id', 'project_items.quantity', 'projects.title'])
+            ->select([
+                'project_items.item_id',
+                'project_items.quantity',
+                'projects.id as project_id',
+                'projects.title',
+                'projects.reference_no',
+            ])
             ->get();
 
         $requestedByItem = [];
         $projectsByItem = [];
+        $projectIdsByItem = [];
+        $projectOptions = [];
 
         foreach ($projectRows as $row) {
             $requestedByItem[$row->item_id] = ($requestedByItem[$row->item_id] ?? 0) + (int) $row->quantity;
             $projectsByItem[$row->item_id][$row->title] = true;
+            $projectIdsByItem[$row->item_id][(int) $row->project_id] = true;
+            $projectOptions[(int) $row->project_id] = $row->reference_no
+                ? $row->title.' ('.$row->reference_no.')'
+                : $row->title;
         }
+
+        asort($projectOptions, SORT_NATURAL | SORT_FLAG_CASE);
 
         // Every priced line, oldest first so the last row per supplier/month wins.
         $quoteRows = QuotationItem::query()
@@ -210,6 +224,8 @@ class PriceIndexController extends Controller
 
             $projects = array_keys($projectsByItem[$catalogItem->id] ?? []);
             sort($projects);
+            $projectIds = array_map('intval', array_keys($projectIdsByItem[$catalogItem->id] ?? []));
+            sort($projectIds);
 
             $items[] = [
                 'id' => $catalogItem->id,
@@ -218,6 +234,7 @@ class PriceIndexController extends Controller
                 'category' => $catalogItem->category?->name ?? 'Uncategorised',
                 'requested' => $requested,
                 'projects' => $projects,
+                'project_ids' => $projectIds,
                 'quotes' => $quotes->all(),
                 'history' => $history->all(),
                 'sparkline' => $this->sparkline($monthlyBest),
@@ -265,6 +282,7 @@ class PriceIndexController extends Controller
             'avgSpread',
             'spreadCount',
             'activeSuppliers',
+            'projectOptions',
         ));
     }
 

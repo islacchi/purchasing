@@ -169,6 +169,12 @@ class PriceIndexTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame(150, $row['requested']);
         $this->assertSame(['Laboratory reagents', 'Pharma supplies Q3'], $row['projects']);
+        $this->assertEqualsCanonicalizing([$projectA->id, $projectB->id], $row['project_ids']);
+
+        $projectOptions = $response->viewData('projectOptions');
+        $this->assertSame('Pharma supplies Q3 ('.$projectA->reference_no.')', $projectOptions[$projectA->id]);
+        $this->assertSame('Laboratory reagents ('.$projectB->reference_no.')', $projectOptions[$projectB->id]);
+
         $this->assertSame(2, $row['stats']['count']);
         $this->assertEqualsWithDelta(300.00, $row['stats']['best'], 0.001);
         $this->assertEqualsWithDelta(330.00, $row['stats']['avg'], 0.001);
@@ -220,6 +226,40 @@ class PriceIndexTest extends TestCase
             ->assertSee('GreenCore Pharmaceuticals')
             ->assertSee('MedSource Inc.')
             ->assertSee('Brand / expiry');
+    }
+
+    public function test_price_index_project_filter_uses_ids_for_duplicate_and_pipe_titles(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $item = $this->item(['name' => 'Filterable item', 'unit' => 'Box']);
+
+        $first = $this->project($user, $entity, [
+            'title' => 'Same title | with pipe',
+            'reference_no' => 'RF-DUP-1',
+        ]);
+        $second = $this->project($user, $entity, [
+            'title' => 'Same title | with pipe',
+            'reference_no' => 'RF-DUP-2',
+        ]);
+        $this->projectItem($first, $item, 10);
+        $this->projectItem($second, $item, 20);
+
+        $response = $this->actingAs($user)->get(route('priceindex'))->assertOk();
+
+        $row = collect($response->viewData('items'))->firstWhere('id', $item->id);
+        $options = $response->viewData('projectOptions');
+
+        $this->assertEqualsCanonicalizing([$first->id, $second->id], $row['project_ids']);
+        $this->assertSame(['Same title | with pipe'], $row['projects']);
+        $this->assertCount(2, $options);
+        $this->assertSame('Same title | with pipe (RF-DUP-1)', $options[$first->id]);
+        $this->assertSame('Same title | with pipe (RF-DUP-2)', $options[$second->id]);
+
+        $response->assertSee('data-project-ids="'.$first->id.','.$second->id.'"', false)
+            ->assertDontSee('data-projects=', false)
+            ->assertSee('Same title | with pipe (RF-DUP-1)');
     }
 
     public function test_price_index_ignores_zero_and_negative_unit_prices(): void

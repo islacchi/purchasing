@@ -113,8 +113,8 @@
                 <select id="priceProject"
                         class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
                     <option value="">All projects</option>
-                    @foreach (collect($items)->pluck('projects')->flatten()->unique()->sort() as $project)
-                        <option value="{{ $project }}">{{ $project }}</option>
+                    @foreach ($projectOptions as $projectId => $projectLabel)
+                        <option value="{{ $projectId }}">{{ $projectLabel }}</option>
                     @endforeach
                 </select>
 
@@ -180,7 +180,7 @@
                                     data-item-id="{{ $item['id'] }}"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
-                                    data-projects="{{ implode('|', $item['projects']) }}"
+                                    data-project-ids="{{ implode(',', $item['project_ids']) }}"
                                     data-has-quotes="{{ $hasQuotes ? '1' : '0' }}">
                                     <td class="px-6 py-4">
                                         <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
@@ -301,7 +301,7 @@
                                     data-item-id="{{ $item['id'] }}"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
-                                    data-projects="{{ implode('|', $item['projects']) }}">
+                                    data-project-ids="{{ implode(',', $item['project_ids']) }}">
                                     <td class="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-white px-6 py-4">
                                         <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
                                         <p class="mt-0.5 text-xs text-gray-500">{{ $item['unit'] }}</p>
@@ -500,7 +500,7 @@
                                 <tr class="savings-row transition-colors hover:bg-gray-50"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
-                                    data-projects="{{ implode('|', $item['projects']) }}">
+                                    data-project-ids="{{ implode(',', $item['project_ids']) }}">
                                     <td class="px-6 py-4">
                                         <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
                                         <div class="mt-1 flex flex-wrap items-center gap-2">
@@ -965,7 +965,7 @@
                 if (category && dataset.category !== category) {
                     return false;
                 }
-                if (project && dataset.projects.split('|').indexOf(project) === -1) {
+                if (project && dataset.projectIds.split(',').indexOf(project) === -1) {
                     return false;
                 }
 
