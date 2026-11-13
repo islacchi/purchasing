@@ -15,16 +15,26 @@
     {{-- Search and actions bar --}}
     <div class="mb-6 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4 flex-1">
-            <form method="GET" action="{{ route('preplist') }}" class="relative max-w-xl w-full">
+            <form method="GET" action="{{ route('preplist') }}" class="flex max-w-xl w-full items-center gap-2">
                 {{-- Preserve the current date-sort across explicit searches. --}}
                 <input type="hidden" name="sort" value="{{ $sort ?? 'date_desc' }}">
-                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
-                    </svg>
-                </span>
-                <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search by prep list name / created by..."
-                       class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
+                <div class="relative min-w-0 flex-1">
+                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
+                        </svg>
+                    </span>
+                    <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search by prep list name / created by..."
+                           class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
+                </div>
+
+                <label class="sr-only" for="preplistPerPage">Prep lists per page</label>
+                <select id="preplistPerPage" name="per_page" aria-label="Prep lists per page" onchange="this.form.requestSubmit()"
+                        class="shrink-0 rounded-lg border border-gray-200 bg-white py-2 pl-2 pr-6 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                    @foreach (\App\Support\Pagination::options() as $value => $label)
+                        <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
+                    @endforeach
+                </select>
             </form>
         </div>
 
@@ -171,6 +181,12 @@
                 </tbody>
             </table>
         </div>
+
+        @if ($preplists->hasPages())
+            <div class="border-t border-gray-200 px-6 py-3">
+                {{ $preplists->links() }}
+            </div>
+        @endif
     </div>
 
     <script>

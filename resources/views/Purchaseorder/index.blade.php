@@ -31,8 +31,7 @@
     </style>
 
     @php
-        // Real records come from PurchaseOrderController@index. The view only
-        // formats them; statuses are canonical (see PurchaseOrder::statusLabel).
+        // Server-side filtered list (see PurchaseOrderController@index); statuses are canonical (see PurchaseOrder::statusLabel).
         $statusStyles = [
             'Draft' => 'bg-gray-100 text-gray-600',
             'Sent to supplier' => 'bg-blue-100 text-blue-700',
@@ -40,9 +39,6 @@
             'Completed' => 'bg-green-100 text-green-700',
             'Cancelled' => 'bg-red-100 text-red-700',
         ];
-
-        $supplierOptions = $purchaseOrders->pluck('supplier')->unique()->sort()->values();
-        $statusOptions = $purchaseOrders->pluck('status')->unique()->sort()->values();
 
         $peso = function ($amount) {
             return '₱' . number_format($amount, 2);
@@ -59,36 +55,46 @@
    
         </div>
 
-        {{-- Filters --}}
-        <div class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {{-- Filters (GET form, debounced) --}}
+        <form method="GET" action="{{ route('purchase-order') }}" id="poFilterForm" class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                 <div class="relative md:col-span-1">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
                         </svg>
                     </span>
-                    <input type="text" id="poSearch" placeholder="Search PO number, supplier, prep list…"
+                    <input type="text" name="q" id="poSearch" value="{{ $search }}" placeholder="Search PO number, supplier, prep list…"
                            class="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-700 placeholder-gray-400 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
                 </div>
 
-                <select id="poSupplier"
+                <select name="supplier" id="poSupplier"
                         class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
                     <option value="">All suppliers</option>
-                    @foreach ($supplierOptions as $supplier)
-                        <option value="{{ $supplier }}">{{ $supplier }}</option>
+                    @foreach ($supplierOptions as $option)
+                        <option value="{{ $option->id }}" @selected($supplier === (string) $option->id)>{{ $option->name }}</option>
                     @endforeach
                 </select>
 
-                <select id="poStatus"
+                <div class="flex items-center gap-2">
+                    <label class="sr-only" for="poPerPage">Purchase orders per page</label>
+                    <select name="per_page" id="poPerPage" aria-label="Purchase orders per page" onchange="this.form.requestSubmit()"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
+                        @foreach (\App\Support\Pagination::options() as $value => $label)
+                            <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <select name="status" id="poStatus"
                         class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
                     <option value="">All statuses</option>
-                    @foreach ($statusOptions as $status)
-                        <option value="{{ $status }}">{{ $status }}</option>
+                    @foreach ($statusOptions as $value => $label)
+                        <option value="{{ $value }}" @selected($status === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-        </div>
+        </form>
 
         {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
 
@@ -106,7 +112,7 @@
                     <p class="mt-0.5 text-xs text-gray-500">Track issued, partially received, and completed orders.</p>
                 </div>
                 <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                    {{ $purchaseOrders->count() }} total
+                    {{ $purchaseOrders->total() }} total
                 </span>
             </div>
 
@@ -129,10 +135,7 @@
                     <tbody class="divide-y divide-gray-100">
                         @forelse ($purchaseOrders as $po)
                             <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
-                                data-href="{{ route('purchase-order.show', ['purchaseOrder' => $po['id']]) }}"
-                                data-search="{{ strtolower($po['number'] . ' ' . $po['supplier'] . ' ' . $po['prep_list'] . ' ' . $po['rfq_number']) }}"
-                                data-supplier="{{ $po['supplier'] }}"
-                                data-status="{{ $po['status'] }}">
+                                data-href="{{ route('purchase-order.show', ['purchaseOrder' => $po['id']]) }}">
                                 <td class="whitespace-nowrap px-3 py-4">
                                     <p class="font-semibold text-gray-900">{{ $po['number'] }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">from quotation {{ $po['rfq_number'] }}</p>
@@ -230,7 +233,11 @@
                         @empty
                             <tr>
                                 <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-500">
-                                    No purchase orders yet. Purchase orders are created from a supplier quotation using “Proceed to PO”.
+                                    @if ($search !== '' || $supplier !== '' || $status !== '')
+                                        No purchase orders match the current filters. Try clearing the search or choosing another status.
+                                    @else
+                                        No purchase orders yet. Purchase orders are created from a supplier quotation using “Proceed to PO”.
+                                    @endif
                                 </td>
                             </tr>
                         @endforelse
@@ -238,14 +245,11 @@
                 </table>
             </div>
 
-            <div id="poEmptyState" class="hidden px-6 py-12 text-center">
-                <p class="text-sm font-medium text-gray-600">No purchase orders match the current filters.</p>
-                <p class="mt-1 text-xs text-gray-500">Try clearing the search or choosing another status.</p>
-            </div>
-
-            <div class="border-t border-gray-100 px-3 py-3">
-                <p id="poCount" class="text-xs text-gray-500">Showing {{ $purchaseOrders->count() }} of {{ $purchaseOrders->count() }} purchase orders</p>
-            </div>
+            @if ($purchaseOrders->hasPages())
+                <div class="border-t border-gray-200 px-3 py-3">
+                    {{ $purchaseOrders->links() }}
+                </div>
+            @endif
         </div>
 
         {{-- Cancel order confirmation modal --}}
@@ -416,38 +420,25 @@
                 });
             });
 
-            // --- Filters ---
+            // --- Filters (GET form; server-side search, debounced) ---
+            const poFilterForm = document.getElementById('poFilterForm');
             const searchInput = document.getElementById('poSearch');
             const supplierInput = document.getElementById('poSupplier');
             const statusInput = document.getElementById('poStatus');
-            const rows = Array.from(document.querySelectorAll('tr[data-href]'));
-            const emptyState = document.getElementById('poEmptyState');
-            const countLabel = document.getElementById('poCount');
+            let poSearchTimer = null;
 
-            function applyFilters() {
-                const term = searchInput.value.trim().toLowerCase();
-                const supplier = supplierInput.value;
-                const status = statusInput.value;
-                let visible = 0;
-
-                rows.forEach(function (row) {
-                    const match = (!term || row.dataset.search.indexOf(term) !== -1)
-                        && (!supplier || row.dataset.supplier === supplier)
-                        && (!status || row.dataset.status === status);
-
-                    row.classList.toggle('hidden', !match);
-                    if (match) {
-                        visible++;
-                    }
-                });
-
-                emptyState.classList.toggle('hidden', visible > 0);
-                countLabel.textContent = 'Showing ' + visible + ' of ' + rows.length + ' purchase orders';
+            function submitPoFilters() {
+                poFilterForm.requestSubmit();
             }
 
-            searchInput.addEventListener('input', applyFilters);
-            supplierInput.addEventListener('change', applyFilters);
-            statusInput.addEventListener('change', applyFilters);
+            searchInput.addEventListener('input', function () {
+                if (poSearchTimer) {
+                    clearTimeout(poSearchTimer);
+                }
+                poSearchTimer = setTimeout(submitPoFilters, 300);
+            });
+            supplierInput.addEventListener('change', submitPoFilters);
+            statusInput.addEventListener('change', submitPoFilters);
 
             // --- Cancel order modal ---
             const cancelModal = document.getElementById('poCancelModal');

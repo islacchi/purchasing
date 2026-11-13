@@ -138,10 +138,22 @@
                 </div>
 
                 {{-- Form actions --}}
-                <div class="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <span class="text-xs font-medium text-gray-500">
-                        Showing <strong>{{ $logs->firstItem() ?? 0 }}–{{ $logs->lastItem() ?? 0 }}</strong> of <strong>{{ $logs->total() }}</strong> record(s)
-                    </span>
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-100">
+                    <div class="flex items-center gap-4">
+                        <span class="text-xs font-medium text-gray-500">
+                            Showing <strong>{{ $logs->firstItem() ?? 0 }}–{{ $logs->lastItem() ?? 0 }}</strong> of <strong>{{ $logs->total() }}</strong> record(s)
+                        </span>
+
+                        <label class="flex items-center gap-2 text-xs font-medium text-gray-500">
+                            Per page
+                            <select name="per_page" aria-label="Logs per page" onchange="this.form.requestSubmit()" class="px-2 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                @foreach (\App\Support\Pagination::options() as $value => $label)
+                                    <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                    </div>
+
                     <div class="flex items-center gap-2">
                         <button type="reset"
                                 class="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">

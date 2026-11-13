@@ -557,6 +557,55 @@ class PurchaseOrderTest extends TestCase
         $this->assertDatabaseCount('purchase_order_receipts', 0);
     }
 
+    public function test_purchase_order_index_paginates_ten_per_page(): void
+    {
+        $user = $this->admin();
+
+        for ($i = 0; $i < 12; $i++) {
+            $this->makePurchaseOrder($user);
+        }
+
+        $pageOne = $this->actingAs($user)->get(route('purchase-order'))->assertOk();
+        $pageOne->assertSee('aria-label="Pagination Navigation"', false)
+            ->assertSee('page=2', false);
+
+        $orders = $pageOne->viewData('purchaseOrders');
+        $this->assertSame(10, $orders->count());
+        $this->assertSame(12, $orders->total());
+        $this->assertSame(1, $orders->currentPage());
+        $this->assertNotNull($orders->nextPageUrl());
+
+        $pageTwo = $this->actingAs($user)->get(route('purchase-order', ['page' => 2]))->assertOk();
+        $this->assertSame(2, $pageTwo->viewData('purchaseOrders')->count());
+        $pageTwo->assertSee('PO-2026-9001')
+            ->assertSee('PO-2026-9002')
+            ->assertDontSee('PO-2026-9012');
+    }
+
+    public function test_purchase_order_index_search_filters_server_side(): void
+    {
+        $user = $this->admin();
+        $match = $this->makePurchaseOrder($user);
+        $this->makePurchaseOrder($user);
+
+        $this->actingAs($user)
+            ->get(route('purchase-order', ['q' => $match->po_number]))
+            ->assertOk()
+            ->assertSee($match->po_number)
+            ->assertDontSee('PO-2026-9002');
+    }
+
+    public function test_purchase_order_index_status_filter_shows_empty_state_when_nothing_matches(): void
+    {
+        $user = $this->admin();
+        $this->makePurchaseOrder($user, PurchaseOrder::STATUS_DRAFT);
+
+        $this->actingAs($user)
+            ->get(route('purchase-order', ['status' => PurchaseOrder::STATUS_COMPLETED]))
+            ->assertOk()
+            ->assertSee('No purchase orders match the current filters.');
+    }
+
     public function test_administrator_can_delete_a_draft_purchase_order_and_its_rows(): void
     {
         $admin = $this->admin();

@@ -7,6 +7,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\ActivityLogger;
+use App\Support\Pagination;
 use App\Support\QuotationWorkbookParser;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -33,54 +34,70 @@ class QuotationController extends Controller
 
     /**
      * Show the quotation tracker using real database records.
+     * Paginates one prep list group per page instead of every RFQ in one page.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $quotations = Quotation::query()
-            ->with(['preplist.items', 'supplier', 'items'])
-            ->orderByDesc('id')
-            ->get()
-            ->map(function (Quotation $quotation) {
-                $total = $quotation->preplist?->items->count() ?? 0;
-                $quoted = $quotation->items
-                    ->filter(fn ($item) => $item->unit_price !== null)
-                    ->count();
+        $perPage = Pagination::perPage($request, 5);
 
-                return [
-                    'id' => $quotation->id,
-                    'preplist_id' => (int) $quotation->preplist_id,
-                    'prep_list' => $quotation->preplist?->name ?? 'Prep list removed',
-                    'ref' => $quotation->preplist?->reference_no ?? 'Prep list removed',
-                    'supplier' => $quotation->supplier?->name ?? 'Supplier removed',
-                    'rfq_number' => $quotation->rfq_number,
-                    'quoted' => $quoted,
-                    'total' => $total,
-                    'status' => $quoted > 0 ? 'Quoted' : 'Awaiting quote',
-                ];
-            })->values();
+        $groups = Quotation::query()
+            ->select('preplist_id', DB::raw('MAX(id) as latest_id'))
+            ->groupBy('preplist_id')
+            ->orderByDesc('latest_id')
+            ->paginate($perPage)
+            ->withQueryString();
 
-        // Group the RFQ tracker by prep list so the quotations sent to
-        // different suppliers against the same batch stay together.
+        $pageIds = collect($groups->items())->pluck('preplist_id')->map(fn ($id) => (int) $id);
+
+        $quotations = $pageIds->isEmpty()
+            ? collect()
+            : Quotation::query()
+                ->with(['preplist.items', 'supplier', 'items'])
+                ->whereIn('preplist_id', $pageIds)
+                ->orderByDesc('id')
+                ->get()
+                ->map(function (Quotation $quotation) {
+                    $total = $quotation->preplist?->items->count() ?? 0;
+                    $quoted = $quotation->items
+                        ->filter(fn ($item) => $item->unit_price !== null)
+                        ->count();
+
+                    return [
+                        'id' => $quotation->id,
+                        'preplist_id' => (int) $quotation->preplist_id,
+                        'prep_list' => $quotation->preplist?->name ?? 'Prep list removed',
+                        'ref' => $quotation->preplist?->reference_no ?? 'Prep list removed',
+                        'supplier' => $quotation->supplier?->name ?? 'Supplier removed',
+                        'rfq_number' => $quotation->rfq_number,
+                        'quoted' => $quoted,
+                        'total' => $total,
+                        'status' => $quoted > 0 ? 'Quoted' : 'Awaiting quote',
+                    ];
+                })->values();
+
         $preplistGroups = [];
 
         foreach ($quotations as $quotation) {
             $preplistGroups[$quotation['preplist_id']][] = $quotation;
         }
 
-        $groups = collect($preplistGroups)
-            ->map(function (array $groupQuotations, $preplistId) {
+        // Quotation creation order matches the paginated prep list order.
+        $orderedGroups = collect($pageIds)
+            ->mapWithKeys(fn (int $id) => [$id => $preplistGroups[$id] ?? null])
+            ->filter()
+            ->map(function (array $groupQuotations, int $id) {
                 return [
-                    'preplist_id' => (int) $preplistId,
+                    'preplist_id' => $id,
                     'name' => $groupQuotations[0]['prep_list'],
                     'ref' => $groupQuotations[0]['ref'],
                     'quotations' => $groupQuotations,
                 ];
-            })
-            ->sortByDesc(fn (array $group) => max(array_column($group['quotations'], 'id')))
-            ->values();
+            })->values();
 
         return view('Quotation.index', [
-            'preplistGroups' => $groups,
+            'preplistGroups' => $orderedGroups,
+            'groups' => $groups,
+            'perPage' => $perPage,
         ]);
     }
 
