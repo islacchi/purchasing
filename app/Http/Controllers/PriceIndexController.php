@@ -18,6 +18,11 @@ class PriceIndexController extends Controller
     ];
 
     /**
+     * Number of days before expiry that counts as "expires soon".
+     */
+    private const EXPIRY_SOON_DAYS = 30;
+
+    /**
      * Show the price index built from submitted quotation lines.
      */
     public function index()
@@ -26,27 +31,42 @@ class PriceIndexController extends Controller
         $projectRows = ProjectItem::query()
             ->join('projects', 'projects.id', '=', 'project_items.project_id')
             ->whereNull('projects.deleted_at')
-            ->select(['project_items.item_id', 'project_items.quantity', 'projects.title'])
+            ->select([
+                'project_items.item_id',
+                'project_items.quantity',
+                'projects.id as project_id',
+                'projects.title',
+                'projects.reference_no',
+            ])
             ->get();
 
         $requestedByItem = [];
         $projectsByItem = [];
+        $projectIdsByItem = [];
+        $projectOptions = [];
 
         foreach ($projectRows as $row) {
             $requestedByItem[$row->item_id] = ($requestedByItem[$row->item_id] ?? 0) + (int) $row->quantity;
             $projectsByItem[$row->item_id][$row->title] = true;
+            $projectIdsByItem[$row->item_id][(int) $row->project_id] = true;
+            $projectOptions[(int) $row->project_id] = $row->reference_no
+                ? $row->title.' ('.$row->reference_no.')'
+                : $row->title;
         }
+
+        asort($projectOptions, SORT_NATURAL | SORT_FLAG_CASE);
 
         // Every priced line, oldest first so the last row per supplier/month wins.
         $quoteRows = QuotationItem::query()
             ->join('quotations', 'quotations.id', '=', 'quotation_items.quotation_id')
             ->join('suppliers', 'suppliers.id', '=', 'quotations.supplier_id')
             ->join('preplist_items', 'preplist_items.id', '=', 'quotation_items.preplist_item_id')
-            ->whereNotNull('quotation_items.unit_price')
+            ->where('quotation_items.unit_price', '>', 0)
             ->select([
                 'quotation_items.id',
                 'quotation_items.unit_price',
-                'quotation_items.available_qty',
+                'quotation_items.brand',
+                'quotation_items.expiry',
                 'quotation_items.quoted_at',
                 'quotations.id as quotation_id',
                 'quotations.generated_at',
@@ -100,16 +120,17 @@ class PriceIndexController extends Controller
             $quotes = $rows
                 ->groupBy('supplier_id')
                 ->map(fn ($group) => $group->last())
-                ->map(function ($row) use ($suppliers, $requested) {
+                ->map(function ($row) use ($suppliers) {
                     $quotedAt = $row->quoted_at ?? $row->generated_at;
-                    $available = $row->available_qty === null ? null : (int) $row->available_qty;
+                    $expiry = $row->expiry ? Carbon::parse($row->expiry)->startOfDay() : null;
+                    $expiryState = null;
 
-                    $coverage = null;
-                    $coverageFull = false;
-
-                    if ($available !== null && $requested > 0) {
-                        $coverage = $available.' / '.$requested;
-                        $coverageFull = $available >= $requested;
+                    if ($expiry !== null) {
+                        if ($expiry->lt(Carbon::today())) {
+                            $expiryState = 'expired';
+                        } elseif ($expiry->lte(Carbon::today()->addDays(self::EXPIRY_SOON_DAYS))) {
+                            $expiryState = 'soon';
+                        }
                     }
 
                     return [
@@ -118,9 +139,10 @@ class PriceIndexController extends Controller
                         'short' => $suppliers[$row->supplier_id]['short'] ?? $row->supplier_name,
                         'color' => $suppliers[$row->supplier_id]['color'] ?? '#9ca3af',
                         'price' => round((float) $row->unit_price, 2),
+                        'brand' => $row->brand,
+                        'expiry' => $expiry?->format('M j, Y'),
+                        'expiry_state' => $expiryState,
                         'quoted_at' => $quotedAt ? Carbon::parse($quotedAt)->format('M j, Y') : '—',
-                        'coverage' => $coverage,
-                        'coverage_full' => $coverageFull,
                         'quotation_id' => (int) $row->quotation_id,
                     ];
                 })
@@ -202,6 +224,8 @@ class PriceIndexController extends Controller
 
             $projects = array_keys($projectsByItem[$catalogItem->id] ?? []);
             sort($projects);
+            $projectIds = array_map('intval', array_keys($projectIdsByItem[$catalogItem->id] ?? []));
+            sort($projectIds);
 
             $items[] = [
                 'id' => $catalogItem->id,
@@ -210,6 +234,7 @@ class PriceIndexController extends Controller
                 'category' => $catalogItem->category?->name ?? 'Uncategorised',
                 'requested' => $requested,
                 'projects' => $projects,
+                'project_ids' => $projectIds,
                 'quotes' => $quotes->all(),
                 'history' => $history->all(),
                 'sparkline' => $this->sparkline($monthlyBest),
@@ -257,6 +282,7 @@ class PriceIndexController extends Controller
             'avgSpread',
             'spreadCount',
             'activeSuppliers',
+            'projectOptions',
         ));
     }
 

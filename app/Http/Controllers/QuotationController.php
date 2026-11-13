@@ -224,6 +224,12 @@ class QuotationController extends Controller
                 ]);
             }
 
+            if ($row['unit_price'] !== null && $row['unit_price'] <= 0) {
+                throw ValidationException::withMessages([
+                    'document' => 'The unit price for "'.$row['description'].'" must be greater than zero.',
+                ]);
+            }
+
             $updates[] = [
                 'preplist_item_id' => $preplistItem->id,
                 'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,

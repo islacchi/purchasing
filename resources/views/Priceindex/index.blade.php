@@ -57,7 +57,7 @@
                     </span>
                 </div>
                 <p class="mt-3 text-2xl font-bold text-gray-900">{{ $activeSuppliers }}</p>
-                <p class="mt-1 text-xs text-gray-500">{{ $totalQuoteLines }} quote lines across the catalogue</p>
+                <p class="mt-1 text-xs text-gray-500">{{ $totalQuoteLines }} current quotes across the catalogue</p>
             </div>
 
             {{-- Average price spread --}}
@@ -91,7 +91,7 @@
 
         {{-- Filter bar --}}
         <div class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 <div class="relative">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -113,16 +113,9 @@
                 <select id="priceProject"
                         class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
                     <option value="">All projects</option>
-                    @foreach (collect($items)->pluck('projects')->flatten()->unique()->sort() as $project)
-                        <option value="{{ $project }}">{{ $project }}</option>
+                    @foreach ($projectOptions as $projectId => $projectLabel)
+                        <option value="{{ $projectId }}">{{ $projectLabel }}</option>
                     @endforeach
-                </select>
-
-                <select id="pricePeriod"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                    <option value="3">Last 3 months</option>
-                    <option value="6" selected>Last 6 months</option>
-                    <option value="12">Last 12 months</option>
                 </select>
             </div>
         </div>
@@ -180,7 +173,7 @@
                                     data-item-id="{{ $item['id'] }}"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
-                                    data-projects="{{ implode('|', $item['projects']) }}"
+                                    data-project-ids="{{ implode(',', $item['project_ids']) }}"
                                     data-has-quotes="{{ $hasQuotes ? '1' : '0' }}">
                                     <td class="px-6 py-4">
                                         <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
@@ -301,7 +294,7 @@
                                     data-item-id="{{ $item['id'] }}"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
-                                    data-projects="{{ implode('|', $item['projects']) }}">
+                                    data-project-ids="{{ implode(',', $item['project_ids']) }}">
                                     <td class="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-white px-6 py-4">
                                         <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
                                         <p class="mt-0.5 text-xs text-gray-500">{{ $item['unit'] }}</p>
@@ -374,6 +367,11 @@
                             <p class="text-sm font-medium text-gray-600">No items to compare yet.</p>
                             <p class="mt-1 text-xs text-gray-500">Create a project and submit supplier quotations first.</p>
                         </div>
+                    @else
+                        <div class="py-10 text-center">
+                            <p class="text-sm font-medium text-gray-600">Select an item from the board.</p>
+                            <p class="mt-1 text-xs text-gray-500">Choose a row with quotes to compare supplier prices.</p>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -408,7 +406,7 @@
                             </div>
 
                             <div class="mt-2 flex items-center justify-between gap-3 text-xs text-gray-500">
-                                <span>{{ $row['quotes'] }} quote lines</span>
+                                <span>{{ $row['quotes'] }} current quotes</span>
                                 @if ($premium === null)
                                     <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-500">Not compared</span>
                                 @elseif ($premium <= 1)
@@ -428,8 +426,9 @@
                     @endforelse
                 </div>
 
-                <div class="border-t border-gray-100 px-6 py-3">
+                <div class="space-y-1 border-t border-gray-100 px-6 py-3">
                     <p class="text-xs text-gray-500">Single-quote items are excluded so they cannot inflate a win rate.</p>
+                    <p class="text-xs text-gray-500">Ties count as a win for every tied supplier.</p>
                 </div>
             </div>
         </div>
@@ -441,7 +440,18 @@
                     <h2 class="text-sm font-bold uppercase tracking-wider text-gray-700">Price trend</h2>
                     <p id="trendSubtitle" class="mt-0.5 text-xs text-gray-500">Movement of the selected item's quoted price.</p>
                 </div>
-                <div id="trendLegend" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600"></div>
+                <div class="flex flex-wrap items-center justify-end gap-3">
+                    <div id="trendLegend" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600"></div>
+
+                    <label for="pricePeriod" class="sr-only">Price trend period</label>
+                    <select id="pricePeriod"
+                            aria-label="Price trend period"
+                            class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
+                        <option value="3">Last 3 months</option>
+                        <option value="6" selected>Last 6 months</option>
+                        <option value="12">Last 12 months</option>
+                    </select>
+                </div>
             </div>
 
             <div class="px-6 py-5">
@@ -500,7 +510,7 @@
                                 <tr class="savings-row transition-colors hover:bg-gray-50"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
-                                    data-projects="{{ implode('|', $item['projects']) }}">
+                                    data-project-ids="{{ implode(',', $item['project_ids']) }}">
                                     <td class="px-6 py-4">
                                         <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
                                         <div class="mt-1 flex flex-wrap items-center gap-2">
@@ -600,6 +610,7 @@
             const trendLegend = document.getElementById('trendLegend');
             const trendEmpty = document.getElementById('trendEmpty');
             const trendCanvas = document.getElementById('priceTrendChart');
+            const comparePlaceholder = compareBody.innerHTML;
 
             let chart = null;
             let selectedId = null;
@@ -608,10 +619,33 @@
                 return priceData.find(function (item) { return item.id === id; });
             }
 
+            function resetComparison() {
+                selectedId = null;
+
+                document.querySelectorAll('.price-row').forEach(function (row) {
+                    row.classList.remove('selected-row');
+                });
+
+                compareSubtitle.textContent = 'Select an item from the board to compare its quotes.';
+                compareBadge.classList.add('hidden');
+                compareBody.innerHTML = comparePlaceholder;
+
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
+                trendLegend.innerHTML = '';
+                trendCanvas.classList.remove('hidden');
+                trendEmpty.classList.add('hidden');
+                trendEmpty.querySelector('p').textContent = 'No price history for this item yet.';
+                trendSubtitle.textContent = 'Movement of the selected item\'s quoted price.';
+            }
+
             function renderComparison(item) {
                 selectedId = item.id;
 
-                const subtitleParts = [item.name, item.unit, item.requested + ' requested'];
+                const requestedLabel = item.requested > 0 ? item.requested + ' requested' : 'no active request';
+                const subtitleParts = [item.name, item.unit, requestedLabel];
                 if (item.projects.length) {
                     subtitleParts.push(item.projects.join(', '));
                 }
@@ -631,7 +665,6 @@
                 const bestQuote = sorted[0];
                 const isComparable = item.count > 1;
                 const delta = isComparable && item.avg > 0 ? ((1 - (item.best / item.avg)) * 100) : null;
-                const requestedLabel = item.requested > 0 ? item.requested + ' requested' : 'no active request';
 
                 compareBadge.classList.toggle('hidden', !isComparable);
 
@@ -694,24 +727,33 @@
 
                 // Comparison table
                 html += '<div class="mt-5 overflow-x-auto rounded-lg border border-gray-200">';
-                html += '<table class="w-full min-w-[760px] text-sm">';
+                html += '<table class="w-full min-w-[900px] text-sm">';
                 html += '<thead><tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">'
                     + '<th class="px-4 py-3">Supplier</th>'
+                    + '<th class="px-4 py-3">Brand / expiry</th>'
                     + '<th class="px-4 py-3 text-right">Unit price</th>'
                     + '<th class="px-4 py-3 text-right">Extended</th>'
                     + '<th class="px-4 py-3 text-right">vs Best</th>'
                     + '<th class="px-4 py-3 text-center">Quoted</th>'
-                    + '<th class="px-4 py-3 text-center">Coverage</th>'
                     + '<th class="px-4 py-3 text-center">Source</th>'
                     + '</tr></thead><tbody class="divide-y divide-gray-100">';
 
                 sorted.forEach(function (quote) {
                     const isBest = isComparable && Math.abs(quote.price - item.best) < 0.0001;
                     const premium = item.best > 0 ? ((quote.price - item.best) / item.best) * 100 : 0;
-                    const coverage = quote.coverage ? escapeHtml(quote.coverage) : '—';
-                    const coverageClass = quote.coverage
-                        ? (quote.coverage_full ? 'text-gray-600' : 'text-amber-600')
-                        : 'text-gray-400';
+                    const brand = quote.brand ? escapeHtml(quote.brand) : '—';
+                    const brandClass = quote.brand ? 'text-gray-800' : 'text-gray-400';
+                    const expiry = quote.expiry ? escapeHtml(quote.expiry) : '—';
+                    let expiryClass = quote.expiry ? 'text-gray-500' : 'text-gray-400';
+                    let expiryNote = '';
+
+                    if (quote.expiry_state === 'expired') {
+                        expiryClass = 'text-red-600 font-semibold';
+                        expiryNote = ' · expired';
+                    } else if (quote.expiry_state === 'soon') {
+                        expiryClass = 'text-amber-600 font-medium';
+                        expiryNote = ' · expires soon';
+                    }
 
                     html += '<tr class="hover:bg-gray-50">';
                     html += '<td class="px-4 py-3"><span class="inline-flex items-center gap-2 text-gray-800">'
@@ -719,12 +761,15 @@
                         + escapeHtml(quote.name)
                         + (isBest ? ' <span class="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">Lowest</span>' : '')
                         + '</span></td>';
+                    html += '<td class="px-4 py-3">'
+                        + '<p class="text-xs font-medium ' + brandClass + '">' + brand + '</p>'
+                        + '<p class="mt-0.5 text-xs ' + expiryClass + '" title="Supplier-stated expiry">' + expiry + expiryNote + '</p>'
+                        + '</td>';
                     html += '<td class="px-4 py-3 text-right font-semibold ' + (isBest ? 'text-green-600' : 'text-gray-800') + '">' + peso(quote.price) + '</td>';
                     html += '<td class="px-4 py-3 text-right text-gray-600">' + (item.requested > 0 ? peso(quote.price * item.requested) : '—') + '</td>';
                     html += '<td class="px-4 py-3 text-right text-xs ' + (isBest ? 'text-green-600 font-semibold' : 'text-gray-500') + '">'
                         + (!isComparable ? '—' : (isBest ? '—' : '+' + premium.toFixed(1) + '%')) + '</td>';
                     html += '<td class="px-4 py-3 text-center text-xs text-gray-600">' + escapeHtml(quote.quoted_at) + '</td>';
-                    html += '<td class="px-4 py-3 text-center text-xs ' + coverageClass + '">' + coverage + '</td>';
                     html += '<td class="px-4 py-3 text-center">'
                         + '<a href="' + quotationBase + '/' + quote.quotation_id + '" class="inline-flex items-center gap-1 text-xs font-semibold text-[#2a7a94] hover:underline">View'
                         + '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M9 5l7 7-7 7"/></svg>'
@@ -735,9 +780,11 @@
                 html += '</tbody></table></div>';
 
                 if (isComparable) {
-                    html += '<p class="mt-3 text-xs text-gray-500">Best price is the lowest normalised unit price. '
-                        + 'Coverage shows how much of the requested quantity the quote covers.</p>';
+                    html += '<p class="mt-3 text-xs text-gray-500">Best price is the lowest normalised unit price.</p>';
                 }
+
+                html += '<p class="mt-2 text-xs text-gray-500">Brand and expiry are supplier-stated. '
+                    + 'Check expiry against the project delivery date and required shelf life.</p>';
 
                 compareBody.innerHTML = html;
             }
@@ -951,7 +998,7 @@
                 if (category && dataset.category !== category) {
                     return false;
                 }
-                if (project && dataset.projects.split('|').indexOf(project) === -1) {
+                if (project && dataset.projectIds.split(',').indexOf(project) === -1) {
                     return false;
                 }
 
@@ -982,6 +1029,14 @@
                 document.querySelectorAll('.savings-row').forEach(function (row) {
                     row.classList.toggle('hidden', !matchesFilters(row.dataset));
                 });
+
+                if (selectedId !== null) {
+                    const selectedRow = document.querySelector('.price-row[data-item-id="' + selectedId + '"]');
+
+                    if (!selectedRow || selectedRow.classList.contains('hidden')) {
+                        resetComparison();
+                    }
+                }
             }
 
             searchInput.addEventListener('input', applyFilters);
@@ -1009,13 +1064,6 @@
             if (initialItem) {
                 selectItem(initialItem.id, false);
             }
-
-            // Keep the selected row highlighted only while it is visible.
-            searchInput.addEventListener('input', function () {
-                document.querySelectorAll('.price-row').forEach(function (row) {
-                    row.classList.remove('selected-row');
-                });
-            });
         })();
     </script>
 @endsection

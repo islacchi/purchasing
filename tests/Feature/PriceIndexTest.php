@@ -123,7 +123,6 @@ class PriceIndexTest extends TestCase
             'quotation_id' => $quotation->id,
             'preplist_item_id' => $preplistItem->id,
             'unit_price' => $unitPrice,
-            'available_qty' => null,
             'quoted_at' => Carbon::parse($quotedAt),
         ], $overrides));
     }
@@ -147,13 +146,21 @@ class PriceIndexTest extends TestCase
         $medSource = $this->supplier('MedSource Inc.');
 
         $greenCoreOld = $this->quotation($user, $preplist, $greenCore);
-        $this->quote($greenCoreOld, $preplistItem, 320.00, '2026-01-10 08:00:00', ['available_qty' => 150]);
+        $this->quote($greenCoreOld, $preplistItem, 320.00, '2026-01-10 08:00:00');
 
+        $greenExpiry = now()->addYear()->toDateString();
         $greenCoreNew = $this->quotation($user, $preplist, $greenCore);
-        $this->quote($greenCoreNew, $preplistItem, 300.00, '2026-02-10 08:00:00', ['available_qty' => 150]);
+        $this->quote($greenCoreNew, $preplistItem, 300.00, '2026-02-10 08:00:00', [
+            'brand' => 'MediCore',
+            'expiry' => $greenExpiry,
+        ]);
 
+        $medExpiry = now()->addDays(60)->toDateString();
         $medSourceQuotation = $this->quotation($user, $preplist, $medSource);
-        $this->quote($medSourceQuotation, $preplistItem, 360.00, '2026-02-05 08:00:00', ['available_qty' => 80]);
+        $this->quote($medSourceQuotation, $preplistItem, 360.00, '2026-02-05 08:00:00', [
+            'brand' => 'PharmaCorp',
+            'expiry' => $medExpiry,
+        ]);
 
         $response = $this->actingAs($user)->get(route('priceindex'))->assertOk();
 
@@ -162,6 +169,12 @@ class PriceIndexTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame(150, $row['requested']);
         $this->assertSame(['Laboratory reagents', 'Pharma supplies Q3'], $row['projects']);
+        $this->assertEqualsCanonicalizing([$projectA->id, $projectB->id], $row['project_ids']);
+
+        $projectOptions = $response->viewData('projectOptions');
+        $this->assertSame('Pharma supplies Q3 ('.$projectA->reference_no.')', $projectOptions[$projectA->id]);
+        $this->assertSame('Laboratory reagents ('.$projectB->reference_no.')', $projectOptions[$projectB->id]);
+
         $this->assertSame(2, $row['stats']['count']);
         $this->assertEqualsWithDelta(300.00, $row['stats']['best'], 0.001);
         $this->assertEqualsWithDelta(330.00, $row['stats']['avg'], 0.001);
@@ -174,13 +187,17 @@ class PriceIndexTest extends TestCase
         $greenQuote = collect($row['quotes'])->firstWhere('supplier', $greenCore->id);
         $this->assertEqualsWithDelta(300.00, $greenQuote['price'], 0.001);
         $this->assertSame('Feb 10, 2026', $greenQuote['quoted_at']);
-        $this->assertSame('150 / 150', $greenQuote['coverage']);
-        $this->assertTrue($greenQuote['coverage_full']);
+        $this->assertSame('MediCore', $greenQuote['brand']);
+        $this->assertSame(Carbon::parse($greenExpiry)->format('M j, Y'), $greenQuote['expiry']);
+        $this->assertNull($greenQuote['expiry_state']);
+        $this->assertArrayNotHasKey('coverage', $greenQuote);
 
         $medQuote = collect($row['quotes'])->firstWhere('supplier', $medSource->id);
         $this->assertEqualsWithDelta(360.00, $medQuote['price'], 0.001);
-        $this->assertSame('80 / 150', $medQuote['coverage']);
-        $this->assertFalse($medQuote['coverage_full']);
+        $this->assertSame('PharmaCorp', $medQuote['brand']);
+        $this->assertSame(Carbon::parse($medExpiry)->format('M j, Y'), $medQuote['expiry']);
+        $this->assertNull($medQuote['expiry_state']);
+        $this->assertArrayNotHasKey('coverage', $medQuote);
 
         // History keeps every priced line, including the superseded GreenCore quote.
         $this->assertCount(3, $row['history']);
@@ -205,9 +222,135 @@ class PriceIndexTest extends TestCase
         $response->assertSee('Live quotation data')
             ->assertDontSee('Dummy data')
             ->assertSee('id="pricePeriod"', false)
+            ->assertSee('aria-label="Price trend period"', false)
             ->assertSee('Amoxicillin 500mg')
             ->assertSee('GreenCore Pharmaceuticals')
-            ->assertSee('MedSource Inc.');
+            ->assertSee('MedSource Inc.')
+            ->assertSee('Brand / expiry')
+            ->assertSee('current quotes across the catalogue')
+            ->assertSee('Ties count as a win for every tied supplier.')
+            ->assertSee('Select an item from the board.')
+            ->assertDontSee('No items to compare yet.');
+    }
+
+    public function test_price_index_project_filter_uses_ids_for_duplicate_and_pipe_titles(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $item = $this->item(['name' => 'Filterable item', 'unit' => 'Box']);
+
+        $first = $this->project($user, $entity, [
+            'title' => 'Same title | with pipe',
+            'reference_no' => 'RF-DUP-1',
+        ]);
+        $second = $this->project($user, $entity, [
+            'title' => 'Same title | with pipe',
+            'reference_no' => 'RF-DUP-2',
+        ]);
+        $this->projectItem($first, $item, 10);
+        $this->projectItem($second, $item, 20);
+
+        $response = $this->actingAs($user)->get(route('priceindex'))->assertOk();
+
+        $row = collect($response->viewData('items'))->firstWhere('id', $item->id);
+        $options = $response->viewData('projectOptions');
+
+        $this->assertEqualsCanonicalizing([$first->id, $second->id], $row['project_ids']);
+        $this->assertSame(['Same title | with pipe'], $row['projects']);
+        $this->assertCount(2, $options);
+        $this->assertSame('Same title | with pipe (RF-DUP-1)', $options[$first->id]);
+        $this->assertSame('Same title | with pipe (RF-DUP-2)', $options[$second->id]);
+
+        $response->assertSee('data-project-ids="'.$first->id.','.$second->id.'"', false)
+            ->assertDontSee('data-projects=', false)
+            ->assertSee('Same title | with pipe (RF-DUP-1)');
+    }
+
+    public function test_price_index_ignores_zero_and_negative_unit_prices(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $item = $this->item(['name' => 'Insulin vials', 'unit' => 'box of 10']);
+
+        $project = $this->project($user, $entity, ['title' => 'Pharma supplies Q3']);
+        $this->projectItem($project, $item, 100);
+
+        $preplist = $this->preplist($user);
+        $preplistItem = $this->preplistItem($preplist, $item);
+
+        $valid = $this->supplier('GreenCore Pharmaceuticals');
+        $secondValid = $this->supplier('MedSource Inc.');
+        $zero = $this->supplier('Zero Price Supplies');
+        $negative = $this->supplier('Negative Price Supplies');
+
+        $this->quote($this->quotation($user, $preplist, $valid), $preplistItem, 300.00, '2026-02-10 08:00:00');
+        $this->quote($this->quotation($user, $preplist, $secondValid), $preplistItem, 350.00, '2026-02-11 08:00:00');
+        $this->quote($this->quotation($user, $preplist, $zero), $preplistItem, 0.00, '2026-02-12 08:00:00');
+        $this->quote($this->quotation($user, $preplist, $negative), $preplistItem, -50.00, '2026-02-13 08:00:00');
+
+        $response = $this->actingAs($user)->get(route('priceindex'))->assertOk();
+
+        $row = collect($response->viewData('items'))->firstWhere('id', $item->id);
+
+        $this->assertNotNull($row);
+        $this->assertSame(2, $row['stats']['count']);
+        $this->assertEqualsWithDelta(300.00, $row['stats']['best'], 0.001);
+        $this->assertEqualsWithDelta(325.00, $row['stats']['avg'], 0.001);
+        $this->assertEqualsWithDelta(2500.00, $row['stats']['savings'], 0.001);
+        $this->assertSame($valid->id, $row['stats']['best_supplier']);
+        $this->assertCount(2, $row['quotes']);
+        $this->assertCount(2, $row['history']);
+
+        $suppliers = $response->viewData('suppliers');
+        $this->assertArrayNotHasKey($zero->id, $suppliers);
+        $this->assertArrayNotHasKey($negative->id, $suppliers);
+    }
+
+    public function test_price_index_flags_expired_and_soon_expiring_quotes(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $item = $this->item(['name' => 'Ceftriaxone 1g', 'unit' => 'vial']);
+
+        $project = $this->project($user, $entity, ['title' => 'Pharma supplies Q3']);
+        $this->projectItem($project, $item, 100);
+
+        $preplist = $this->preplist($user);
+        $preplistItem = $this->preplistItem($preplist, $item);
+
+        $expired = $this->supplier('Expired Batch Supplies');
+        $soon = $this->supplier('Near Expiry Supplies');
+        $good = $this->supplier('Fresh Batch Supplies');
+
+        $this->quote($this->quotation($user, $preplist, $expired), $preplistItem, 100.00, '2026-02-01 08:00:00', [
+            'brand' => 'OldBatch',
+            'expiry' => now()->subDay()->toDateString(),
+        ]);
+        $this->quote($this->quotation($user, $preplist, $soon), $preplistItem, 110.00, '2026-02-02 08:00:00', [
+            'brand' => 'NearBatch',
+            'expiry' => now()->addDays(10)->toDateString(),
+        ]);
+        $this->quote($this->quotation($user, $preplist, $good), $preplistItem, 120.00, '2026-02-03 08:00:00', [
+            'brand' => 'FreshBatch',
+            'expiry' => now()->addYear()->toDateString(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('priceindex'))->assertOk();
+        $row = collect($response->viewData('items'))->firstWhere('id', $item->id);
+
+        $expiredQuote = collect($row['quotes'])->firstWhere('supplier', $expired->id);
+        $soonQuote = collect($row['quotes'])->firstWhere('supplier', $soon->id);
+        $goodQuote = collect($row['quotes'])->firstWhere('supplier', $good->id);
+
+        $this->assertSame('OldBatch', $expiredQuote['brand']);
+        $this->assertSame('expired', $expiredQuote['expiry_state']);
+        $this->assertSame('NearBatch', $soonQuote['brand']);
+        $this->assertSame('soon', $soonQuote['expiry_state']);
+        $this->assertSame('FreshBatch', $goodQuote['brand']);
+        $this->assertNull($goodQuote['expiry_state']);
     }
 
     public function test_price_index_shows_requested_items_without_quotes(): void
@@ -297,6 +440,7 @@ class PriceIndexTest extends TestCase
             ->assertSee('No items with quotation activity yet.')
             ->assertSee('No suppliers have quoted yet.')
             ->assertSee('No items to compare yet.')
+            ->assertDontSee('Select an item from the board.')
             ->assertSee('No comparable savings yet.');
     }
 }

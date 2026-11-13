@@ -869,6 +869,41 @@ class QuotationTest extends TestCase
             ->assertSee('₱ 305.50 / Box');
     }
 
+    public function test_quotation_upload_rejects_non_positive_unit_prices(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'AlphaItemAlpha']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 30]);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $quotation = Quotation::query()->firstOrFail();
+
+        foreach (['0', '-12.50'] as $price) {
+            $patched = $this->fillUnitPrices($binary, [18 => $price]);
+
+            $this->upload($user, $quotation, $patched)
+                ->assertSessionHasErrors([
+                    'document' => 'The unit price for "AlphaItemAlpha" must be greater than zero.',
+                ]);
+        }
+
+        $this->assertDatabaseCount('quotation_items', 0);
+        $this->assertNull($quotation->fresh()->document_path);
+    }
+
     public function test_quotation_upload_normalizes_month_only_and_keeps_na(): void
     {
         Storage::fake('local');
