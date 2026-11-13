@@ -231,6 +231,7 @@ class PriceIndexTest extends TestCase
             ->assertSee('Ties count as a win for every tied supplier.')
             ->assertSee('Select an item from the board.')
             ->assertDontSee('No items to compare yet.')
+            ->assertSee('Best expiry:', false)
             ->assertSee('id="savingsTableWrapper"', false)
             ->assertSee('id="savingsEmptyState"', false)
             ->assertSee('No savings match the current filters.');
