@@ -2,7 +2,7 @@
 
 A Laravel 12 application that runs the procurement cycle end to end: **Projects → Prep Lists → Request for Quotation → Quotation tracking → Purchase Orders → Receiving**, plus the supplier / procuring-entity directory, price-index tracking, and settings & privileges. Built for Philippine government-style procurement but works for any institution.
 
-> **Status:** actively developed. The procurement chain (Projects → Preplist → Quotation → Purchase Order → Receiving) is functional and database-backed, with role-based access control (None/View/Manage) enforced server-side and reflected in the UI, and an activity log wired across modules. Role × module matrix, settings, and the admin area are Administrator-only. The Price Index is database-backed and Settings → Backup still renders sample data. See [Project status](#project-status) for an exact, honest breakdown.
+> **Status:** actively developed. The procurement chain (Projects → Preplist → Quotation → Purchase Order → Receiving) is functional and database-backed, with role-based access control (None/View/Manage) enforced server-side and reflected in the UI, and an activity log wired across modules. Role × module matrix, settings, and the admin area are Administrator-only. The Price Index is database-backed and Settings → Backup works. See [Project status](#project-status) for an exact, honest breakdown.
 
 ---
 
@@ -21,7 +21,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 | **Price Index** | Per-item supplier price comparison across quotations: latest quote per supplier, requested quantities, best/average/spread/savings, supplier scorecard, monthly trend | ✅ Database-backed, working |
 | **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage). Administrator rows are locked full access | ✅ Working |
 | **Settings → Logs** | Activity/log viewer — real rows written by `ActivityLogger` on every module create/edit/delete, plus user/matrix changes | ✅ Working |
-| **Settings → Backup** | Database backup download | 🚧 Placeholder (hardcoded sample rows) |
+| **Settings → Backup** | Full database backup (schema + contents), admin-only | ✅ Working |
 
 ---
 
@@ -88,11 +88,11 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons (Add project / Add entity / Add Supplier / Compile prep list / Edit project / Edit entity) and access-restricted dialogs for blocked actions (Edit prep list, Generate RFQ, PO receive checkboxes, Delete project, quotation document removal for view-only). Seeded defaults: Procurement Officer = Manage everywhere, Viewer = View everywhere
 - [x] **Activity logging** — `activity_logs` table + `App\Support\ActivityLogger`; every module's create/edit/delete writes a row (who, what, when, record label), plus user/role-matrix changes from Settings; Settings → Logs viewer is live (module/user filters, date range)
 - [x] **Settings → Privileges** — admin-only user/role management with live search **and** the role × module access matrix (changes logged to the activity trail)
-- [x] **Tests** — 177 passing (992 assertions) on every module above, including RBAC (`ModuleAccessTest`), viewer-affordance coverage (restricted dialogs, inert buttons, receive checkboxes, variation per role), and price-index aggregation (`PriceIndexTest`)
+- [x] **Settings → Backup** — administrator-only page; one-click full database back-up (schema and contents), dumped through the app's own connection (no external mysqldump binary; verified restorable against the dev MySQL database); back-ups live under `storage/app/private/backups/`, the 15 newest are kept, and each entry can be downloaded or deleted
+- [x] **Tests** — 199 passing (1251 assertions) on every module above, including RBAC (`ModuleAccessTest`), viewer-affordance coverage (restricted dialogs, inert buttons, receive checkboxes, variation per role), and price-index aggregation (`PriceIndexTest`)
 
 ### Not yet done
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
-- [ ] **Settings → Backup** — real database backup (page hardcodes sample filenames)
 - [ ] **Partial receipts** — receiving is all-or-nothing per line; `purchase_order_receipts` already has `received_qty`, `lot_no`, `expiry_date`, but the UI doesn't capture them
 - [ ] **PO re-download** — the PO Excel is produced once at creation; there's no way to re-download it from the detail page
 - [ ] **PO tracking reference numbers** — PO only references the quotation; PO→project links via allocations are not yet surfaced on the PO detail page
@@ -165,7 +165,7 @@ Seeded module grants: **Procurement Officer → Manage** on all six modules, **V
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **181 passed / 1045 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **199 passed / 1251 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 

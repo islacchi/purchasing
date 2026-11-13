@@ -7,13 +7,17 @@ use App\Models\Role;
 use App\Models\RoleModuleAccess;
 use App\Models\User;
 use App\Support\ActivityLogger;
+use App\Support\BackupStorage;
+use App\Support\DatabaseDumper;
 use App\Support\ModuleAccess;
 use App\Support\Pagination;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use RuntimeException;
 
 /**
  * Renders the settings page.
@@ -438,40 +442,90 @@ class SettingsController extends Controller
     }
 
     /**
-     * Show the database backup page.
+     * Show the database back-up page.
      *
-     * Displays backup options and dummy backup history.
-     * Pending real backup engine integration.
+     * Backups are stored under the local disk's private/backups directory, created on demand
+     * from the configured MySQL database, and older ones are pruned to the last 15.
      *
      * @return Response
      */
     public function backup()
     {
-        $dbPath = database_path('database.sqlite');
-        $dbInfo = null;
-
-        if (file_exists($dbPath)) {
-            $dbInfo = [
-                'name' => 'database.sqlite',
-                'size' => filesize($dbPath),
-                'modified' => date('Y-m-d H:i:s', filemtime($dbPath)),
-                'path' => $dbPath,
-            ];
-        }
-
-        $backups = [
-            [
-                'filename' => 'purchasing_backup_2026-07-18.sqlite',
-                'size' => 40960,
-                'created' => '2026-07-18 08:30:00',
-            ],
-            [
-                'filename' => 'purchasing_backup_2026-07-15.sqlite',
-                'size' => 36864,
-                'created' => '2026-07-15 14:15:00',
-            ],
+        $config = config('database.connections.'.config('database.default'));
+        $dbInfo = [
+            'driver' => strtoupper((string) ($config['driver'] ?? 'unknown')),
+            'database' => (string) ($config['database'] ?? ''),
+            'host' => (string) ($config['host'] ?? 'localhost'),
+            'port' => (string) ($config['port'] ?? '3306'),
+            'is_mysql' => ($config['driver'] ?? null) === 'mysql',
         ];
 
-        return view('settings.backup', compact('dbInfo', 'backups'));
+        $backups = BackupStorage::records();
+        $latest = $backups === [] ? null : $backups[0];
+
+        return view('settings.backup', compact('dbInfo', 'backups', 'latest'));
+    }
+
+    /**
+     * Create a full database backup (structure and contents) and queue nothing — runs synchronously.
+     */
+    public function storeBackup()
+    {
+        $filename = BackupStorage::createFilename();
+        $absolutePath = BackupStorage::path($filename);
+
+        try {
+            app(DatabaseDumper::class)->dump($absolutePath);
+        } catch (RuntimeException $exception) {
+            @unlink($absolutePath);
+
+            return redirect()
+                ->route('settings.backup')
+                ->withErrors(['backup' => $exception->getMessage()]);
+        }
+
+        BackupStorage::prune();
+
+        ActivityLogger::log('Created', 'Settings', "Database back-up: {$filename}");
+
+        return redirect()
+            ->route('settings.backup')
+            ->with('status', 'Database back-up created.');
+    }
+
+    /**
+     * Download one backup file, guarded against traversal and unknown filenames.
+     */
+    public function downloadBackup(string $file)
+    {
+        if (! BackupStorage::isValidFilename($file) || ! Storage::disk('local')->exists(BackupStorage::DIRECTORY.'/'.$file)) {
+            abort(404);
+        }
+
+        ActivityLogger::log('Downloaded', 'Settings', "Database back-up: {$file}");
+
+        return response()->download(
+            Storage::disk('local')->path(BackupStorage::DIRECTORY.'/'.$file),
+            $file,
+            ['Content-Type' => 'application/sql'],
+        );
+    }
+
+    /**
+     * Delete one backup file, guarded against traversal and unknown filenames.
+     */
+    public function destroyBackup(string $file)
+    {
+        if (! BackupStorage::isValidFilename($file) || ! Storage::disk('local')->exists(BackupStorage::DIRECTORY.'/'.$file)) {
+            abort(404);
+        }
+
+        Storage::disk('local')->delete(BackupStorage::DIRECTORY.'/'.$file);
+
+        ActivityLogger::log('Deleted', 'Settings', "Database back-up: {$file}");
+
+        return redirect()
+            ->route('settings.backup')
+            ->with('status', 'Database back-up deleted.');
     }
 }
