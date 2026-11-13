@@ -16,6 +16,8 @@
     <div class="mb-6 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4 flex-1">
             <form method="GET" action="{{ route('preplist') }}" class="relative max-w-xl w-full">
+                {{-- Preserve the current date-sort across explicit searches. --}}
+                <input type="hidden" name="sort" value="{{ $sort ?? 'date_desc' }}">
                 <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
@@ -53,7 +55,19 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Created by</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Created</th>
+                        <th class="px-6 py-3 text-left">
+                            @php
+                                $currentSort = $sort ?? 'date_desc';
+                                $nextSort = $currentSort === 'date_asc' ? 'date_desc' : 'date_asc';
+                                $sortQuery = array_filter(['q' => $search !== '' ? $search : null, 'sort' => $nextSort]);
+                                $isDateAsc = $currentSort === 'date_asc';
+                            @endphp
+                            <a href="{{ route('preplist', $sortQuery) }}"
+                               aria-sort="{{ $isDateAsc ? 'ascending' : 'descending' }}"
+                               class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-teal-300 rounded-sm">
+                                Date Created
+                            </a>
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Projects</th>
                         <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Items</th>
                         <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>

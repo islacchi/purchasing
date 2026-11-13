@@ -26,6 +26,8 @@ class PreplistController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
+        $sort = $request->query('sort', 'date_desc');
+        $sortDirection = $sort === 'date_asc' ? 'asc' : 'desc';
 
         $preplists = Preplist::query()
             ->with(['creator', 'items.sources.projectItem.project'])
@@ -38,6 +40,7 @@ class PreplistController extends Controller
                         });
                 });
             })
+            ->orderBy('created_at', $sortDirection)
             ->orderByDesc('id')
             ->get();
 
@@ -47,7 +50,7 @@ class PreplistController extends Controller
             ->groupBy('preplist_id')
             ->pluck('aggregate', 'preplist_id');
 
-        return view('Preplist.index', compact('preplists', 'search', 'quotationCounts'));
+        return view('Preplist.index', compact('preplists', 'search', 'sort', 'quotationCounts'));
     }
 
     /**

@@ -8,6 +8,17 @@
 
 @section('content')
     <style>
+        /* Notes textarea: suppress the native resize gripper (up/down arrows) used by some browsers. */
+        #prepListNotes,
+        #prepListNotes::-webkit-inner-spin-button,
+        #prepListNotes::-webkit-outer-spin-button { appearance: none; -webkit-appearance: none; }
+        #prepListNotes { resize: none; }
+
+        /* Hide native number-spinner arrows on the shelf-life input while keeping the input editable. */
+        .shelf-life-input::-webkit-outer-spin-button,
+        .shelf-life-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .shelf-life-input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
         /* Selected project items keep the brand highlight. The hover rule in
            Tailwind would otherwise turn a selected row gray, so the selected
            state explicitly overrides it. */
@@ -67,14 +78,14 @@
             @method('PUT')
         @endif
 
-        {{-- Prep list name + notes --}}
-        <div class="shrink-0 max-w-2xl space-y-4">
-            <div>
+        {{-- Prep list name (left) + notes (fills the remaining row to the far edge) --}}
+        <div class="grid w-full shrink-0 grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-8">
+            <div class="flex flex-col lg:col-span-3">
                 <label for="prepListName" class="block text-sm font-medium text-gray-800 mb-1.5">Prep list name</label>
                 <input id="prepListName" type="text" name="name"
                        value="{{ old('name', $prepList?->name ?? '') }}"
                        placeholder="{{ $isEdit ? '' : 'PURCHASE OF PHARMA SUPPLIES' }}"
-                       class="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                       class="w-full h-10 px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
                 <p class="mt-1 text-xs text-gray-500">
                     @if($isEdit)
                         Reference no. <span class="font-medium text-gray-700">{{ $prepList->reference_no }}</span>
@@ -84,16 +95,16 @@
                 </p>
             </div>
 
-            <div>
+            <div class="flex flex-col lg:col-span-9">
                 <label for="prepListNotes" class="block text-sm font-medium text-gray-800 mb-1.5">Notes <span class="font-normal text-gray-400">(optional)</span></label>
-                <textarea id="prepListNotes" name="notes" rows="3"
-                          placeholder="Add notes here..."
-                          class="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ old('notes', $prepList?->notes ?? '') }}</textarea>
+                <input id="prepListNotes" type="text" name="notes" value="{{ old('notes', $prepList?->notes ?? '') }}"
+                       placeholder="Add notes here..."
+                       class="w-full h-10 px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
             </div>
         </div>
 
         {{-- Project groups (item list scrolls here) --}}
-        <div class="min-h-[220px] flex-1 space-y-6 overflow-y-auto pr-1">
+        <div class="min-h-[360px] flex-1 space-y-6 overflow-y-auto pr-1">
             @forelse($projects as $project)
                 @php
                     $selectedProjectItems = $project->items
@@ -147,17 +158,17 @@
                                             <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-green-700">Fulfilled</span>
                                         @endif
 
-                                        {{-- Shelf life required at delivery (per item) --}}
-                                        <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
-                                            <label class="text-[11px] font-medium text-gray-500">Min. shelf life at delivery</label>
+                                        {{-- Shelf life required at delivery (per item) — fills the row width --}}
+                                        <div class="mt-1.5 flex items-center gap-1.5">
+                                            <label class="text-[11px] font-medium text-gray-500 whitespace-nowrap">Min. shelf life at delivery</label>
                                             <input type="number" min="0" max="1200" step="1"
                                                    name="shelf_life[{{ $projectItem->id }}]"
                                                    value="{{ $shelfLife }}"
-                                                   class="shelf-life-input w-16 px-2 py-0.5 rounded-md border border-gray-300 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                                                   class="shelf-life-input flex-1 min-w-0 w-full px-2 py-0.5 rounded-md border border-gray-300 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300"
                                                    title="Minimum months of shelf life remaining at delivery"
                                                    aria-label="Minimum shelf life at delivery in months for {{ $projectItem->item?->name ?? 'item' }}">
-                                            <span class="text-[11px] text-gray-500">months</span>
-                                            <span class="text-[11px] text-gray-400">&middot; 0 = non-perishable</span>
+                                            <span class="text-[11px] text-gray-500 whitespace-nowrap">months</span>
+                                            <span class="text-[11px] text-gray-400 whitespace-nowrap">&middot; 0 = non-perishable</span>
                                         </div>
                                     </div>
                                 </div>
