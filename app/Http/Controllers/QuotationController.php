@@ -201,6 +201,20 @@ class QuotationController extends Controller
 
     public function storeDocument(Request $request, Quotation $quotation)
     {
+        $current = md5(
+            ($quotation->document_path ?? '').'|'
+            .($quotation->document_name ?? '').'|'
+            .((int) ($quotation->document_size ?? 0))
+        );
+
+        $expectedFingerprint = $request->input('expected_document_fingerprint');
+
+        if (is_string($expectedFingerprint) && $expectedFingerprint !== '' && $expectedFingerprint !== $current) {
+            throw ValidationException::withMessages([
+                'document' => 'Someone else already replaced the quotation file since this page was loaded. Refresh the page and check which document is current before uploading again.',
+            ]);
+        }
+
         $request->validate([
             'document' => ['required', 'file', 'extensions:xlsx', 'max:10240'],
         ], [

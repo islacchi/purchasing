@@ -64,6 +64,8 @@
     <form id="supplierQuotationForm" method="POST" action="{{ route('quotation.store-document', ['quotation' => $quotation->id]) }}" enctype="multipart/form-data" class="hidden">
         @csrf
         <input id="supplierQuotationFile" type="file" name="document" accept=".xlsx" required onchange="this.form.requestSubmit()">
+        <input type="hidden" name="expected_document_fingerprint"
+               value="{{ md5(($quotation->document_path ?? '').'|'.($quotation->document_name ?? '').'|'.((int) ($quotation->document_size ?? 0))) }}">
     </form>
     @endif
 

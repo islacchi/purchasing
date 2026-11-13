@@ -248,8 +248,15 @@
                 <div class="flex items-center gap-4">
                     @yield('header-actions')
 
-                    
-                   {{-- Notification bell --}}
+                    {{-- Reload control; the app is not live, so this is how you see other users' changes --}}
+                    <button type="button" onclick="window.location.reload()" aria-label="Refresh page" title="Refresh to see changes other people made (reloads this page)"
+                            class="text-white/80 transition-colors hover:text-white cursor-pointer">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
+                        </svg>
+                    </button>
+
+                    {{-- Notification bell --}}
             <div class="relative">
                 <button id="notifBell" type="button" aria-label="Delivery deadlines" class="text-white/80 hover:text-white transition-colors cursor-pointer">
                     <x-nav-icon name="bell" />

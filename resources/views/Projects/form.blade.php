@@ -64,6 +64,8 @@
         @csrf
         @if ($isEdit)
             @method('PUT')
+            {{-- Optimistic concurrency checkpoint: rejected if the project changed since this page rendered. --}}
+            <input type="hidden" name="expected_project_fingerprint" value="{{ $projectFingerprint ?? '' }}">
         @endif
         {{-- Content holder: project details stay static; only the items table scrolls --}}
         <div class="flex flex-1 min-h-0 flex-col space-y-6 overflow-auto rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">

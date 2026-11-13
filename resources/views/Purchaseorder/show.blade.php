@@ -277,6 +277,7 @@
                                 <td class="whitespace-nowrap px-3 py-2 text-center">
                                     <form method="POST" action="{{ route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]) }}">
                                         @csrf
+                                        <input type="hidden" name="expected_received" value="{{ $isReceived ? '1' : '0' }}">
                                         <input type="checkbox"
                                                class="po-receipt h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:cursor-not-allowed disabled:opacity-40"
                                                title="{{ $canManagePurchaseOrder

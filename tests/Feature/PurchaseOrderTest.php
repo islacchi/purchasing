@@ -606,6 +606,30 @@ class PurchaseOrderTest extends TestCase
             ->assertSee('No purchase orders match the current filters.');
     }
 
+    public function test_receive_toggle_rejects_stale_expected_state(): void
+    {
+        $user = $this->admin();
+        $purchaseOrder = $this->makePurchaseOrder($user, PurchaseOrder::STATUS_SENT);
+
+        $item = $purchaseOrder->items->first();
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]), [
+                'expected_received' => '0',
+            ])
+            ->assertRedirect(route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertSessionHas('status', 'Receipt updated.');
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]), [
+                'expected_received' => '0',
+            ])
+            ->assertRedirect(route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id]))
+            ->assertSessionHasErrors('purchase_order');
+
+        $this->assertTrue($item->fresh()->isReceived());
+    }
+
     public function test_administrator_can_delete_a_draft_purchase_order_and_its_rows(): void
     {
         $admin = $this->admin();

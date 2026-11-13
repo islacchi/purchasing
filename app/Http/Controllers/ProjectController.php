@@ -145,7 +145,35 @@ class ProjectController extends Controller
         return view('Projects.form', [
             'project' => $project,
             'entities' => ProcuringEntity::query()->orderBy('name')->get(),
+            'projectFingerprint' => $this->payloadFingerprint($project),
         ]);
+    }
+
+    /**
+     * Fingerprint of every field the edit form can change — used as the optimistic
+     * concurrency checkpoint when the project is saved.
+     */
+    private function payloadFingerprint(Project $project): string
+    {
+        $itemRows = $project->items->map(fn (ProjectItem $item) => implode(':', [
+            $item->id,
+            (int) $item->quantity,
+            (float) $item->unit_cost,
+            (int) $item->in_stock,
+        ]))->sort()->implode("\n");
+
+        $fields = implode('|', [
+            (string) $project->title,
+            (string) $project->reference_no,
+            (string) $project->mode_of_procurement,
+            (string) $project->amount_awarded,
+            (string) $project->date_awarded,
+            (string) $project->delivery_due_date,
+            (string) $project->procuring_entity_id,
+            (string) $project->notes,
+        ]);
+
+        return md5($itemRows."\n".$fields);
     }
 
     /**
@@ -153,6 +181,14 @@ class ProjectController extends Controller
      */
     public function update(Request $request, Project $project)
     {
+        $expectedFingerprint = $request->input('expected_project_fingerprint');
+
+        if (is_string($expectedFingerprint) && $expectedFingerprint !== '' && $expectedFingerprint !== $this->payloadFingerprint($project)) {
+            return redirect()
+                ->route('projects.edit', ['project' => $project->id])
+                ->withErrors(['project' => 'Someone else changed this project since the page was loaded. Please review the current values, then submit your changes again.']);
+        }
+
         $validated = $this->validateProject($request);
         $items = $validated['items'] ?? [];
         unset($validated['items']);

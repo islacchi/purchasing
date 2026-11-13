@@ -77,6 +77,7 @@ class ProjectTest extends TestCase
             ->assertSee($project->title)
             ->assertSee($project->reference_no)
             ->assertSee($entity->name)
+            ->assertSee('aria-label="Refresh page"', false)
             ->assertDontSee('bg-gray-200/50')
             ->assertSee('id="view-list"', false)
             ->assertSee('class="min-w-full divide-y divide-gray-200"', false);
@@ -218,6 +219,27 @@ class ProjectTest extends TestCase
         ]);
 
         $this->assertSame('2026-07-25', $project->fresh()->delivery_due_date->toDateString());
+    }
+
+    public function test_project_update_rejects_a_stale_fingerprint(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity, ['title' => 'Original title']);
+
+        $response = $this->actingAs($user)
+            ->put(route('projects.update', ['project' => $project->id]), [
+                'expected_project_fingerprint' => 'not-the-current-fingerprint',
+                'procuring_entity_id' => $entity->id,
+                'title' => 'Someone else changed this',
+                'reference_no' => 'RF-2026-9999',
+                'mode_of_procurement' => 'small_value',
+                'items' => [],
+            ]);
+
+        $response->assertRedirect(route('projects.edit', ['project' => $project->id]));
+        $response->assertSessionHasErrors('project');
+        $this->assertSame('Original title', $project->fresh()->title);
     }
 
     public function test_project_show_displays_real_database_record(): void

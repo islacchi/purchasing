@@ -343,6 +343,47 @@ class QuotationTest extends TestCase
             ->assertDontSee('Group fixture 03');
     }
 
+    public function test_quotation_document_upload_rejects_a_stale_fingerprint(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Stale Fingerprint Supplies']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'stale_').'.xlsx';
+        file_put_contents($temporaryPath, 'anything at all');
+
+        $file = new UploadedFile(
+            $temporaryPath,
+            'returned.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true,
+        );
+
+        $response = $this->actingAs($user)
+            ->post(route('quotation.store-document', ['quotation' => $quotation->id]), [
+                'expected_document_fingerprint' => 'not-the-current-fingerprint',
+                'document' => $file,
+            ]);
+
+        $response->assertSessionHasErrors('document');
+
+        @unlink($temporaryPath);
+    }
+
     public function test_quotation_show_displays_pending_items_and_document(): void
     {
         Storage::fake('local');

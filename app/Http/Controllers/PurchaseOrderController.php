@@ -435,6 +435,14 @@ class PurchaseOrderController extends Controller
                 ->withErrors(['purchase_order' => 'Send the purchase order to the supplier before recording receipts.']);
         }
 
+        $expected = $request->validate(['expected_received' => 'nullable|boolean']);
+
+        if (isset($expected['expected_received']) && (bool) $expected['expected_received'] !== $purchaseOrderItem->isReceived()) {
+            return redirect()
+                ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
+                ->withErrors(['purchase_order' => 'Someone else already recorded this receipt since the page was loaded. Refresh the page and try again.']);
+        }
+
         DB::transaction(function () use ($request, $purchaseOrder, $purchaseOrderItem) {
             if ($purchaseOrderItem->receipts()->exists()) {
                 $purchaseOrderItem->receipts()->delete();
