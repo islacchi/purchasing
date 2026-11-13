@@ -9,6 +9,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderItemAllocation;
 use App\Models\PurchaseOrderReceipt;
 use App\Models\Quotation;
+use App\Models\Supplier;
 use App\Support\ActivityLogger;
 use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Database\QueryException;
@@ -34,30 +35,68 @@ class PurchaseOrderController extends Controller
 
     /**
      * Show the purchase order tracker using real database records.
+     * Search and filter happen in SQL so pagination works across the full set.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $purchaseOrders = PurchaseOrder::query()
+        $search = trim((string) $request->query('q', ''));
+        $supplier = trim((string) $request->query('supplier', ''));
+        $status = trim((string) $request->query('status', ''));
+
+        $query = PurchaseOrder::query()
             ->with(['supplier', 'quotation.preplist', 'items'])
             ->orderByDesc('id')
-            ->get()
-            ->map(function (PurchaseOrder $purchaseOrder) {
-                return [
-                    'id' => $purchaseOrder->id,
-                    'number' => $purchaseOrder->po_number,
-                    'supplier' => $purchaseOrder->supplier?->name ?? 'Supplier removed',
-                    'rfq_number' => $purchaseOrder->quotation?->rfq_number ?? '—',
-                    'prep_list' => $purchaseOrder->quotation?->preplist?->name ?? 'Prep list removed',
-                    'items' => $purchaseOrder->items->count(),
-                    'total' => $purchaseOrder->grandTotal(),
-                    'status' => $purchaseOrder->statusLabel(),
-                    'issued' => $purchaseOrder->issued_on?->format('M j, Y'),
-                    'cancellable' => $purchaseOrder->isCancellable(),
-                    'deletable' => $purchaseOrder->isDeletable(),
-                ];
-            });
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('po_number', 'like', "%{$search}%")
+                        ->orWhereHas('supplier', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('quotation', function ($query) use ($search) {
+                            $query->where('rfq_number', 'like', "%{$search}%")
+                                ->orWhereHas('preplist', fn ($query) => $query->where('name', 'like', "%{$search}%"));
+                        });
+                });
+            })
+            ->when($supplier !== '' && ctype_digit($supplier), fn ($query) => $query->where('supplier_id', (int) $supplier))
+            ->when($status !== '', fn ($query) => $query->where('status', $status));
 
-        return view('Purchaseorder.index', compact('purchaseOrders'));
+        $purchaseOrders = $query
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn (PurchaseOrder $purchaseOrder) => [
+                'id' => $purchaseOrder->id,
+                'number' => $purchaseOrder->po_number,
+                'supplier' => $purchaseOrder->supplier?->name ?? 'Supplier removed',
+                'rfq_number' => $purchaseOrder->quotation?->rfq_number ?? '—',
+                'prep_list' => $purchaseOrder->quotation?->preplist?->name ?? 'Prep list removed',
+                'items' => $purchaseOrder->items->count(),
+                'total' => $purchaseOrder->grandTotal(),
+                'status' => $purchaseOrder->statusLabel(),
+                'issued' => $purchaseOrder->issued_on?->format('M j, Y'),
+                'cancellable' => $purchaseOrder->isCancellable(),
+                'deletable' => $purchaseOrder->isDeletable(),
+            ]);
+
+        $supplierOptions = Supplier::query()
+            ->whereIn('id', PurchaseOrder::query()->select('supplier_id'))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $statusOptions = [
+            PurchaseOrder::STATUS_DRAFT => 'Draft',
+            PurchaseOrder::STATUS_SENT => 'Sent to supplier',
+            PurchaseOrder::STATUS_PARTIALLY_RECEIVED => 'Partially received',
+            PurchaseOrder::STATUS_COMPLETED => 'Completed',
+            PurchaseOrder::STATUS_CANCELLED => 'Cancelled',
+        ];
+
+        return view('Purchaseorder.index', compact(
+            'purchaseOrders',
+            'supplierOptions',
+            'statusOptions',
+            'search',
+            'supplier',
+            'status',
+        ));
     }
 
     /**
