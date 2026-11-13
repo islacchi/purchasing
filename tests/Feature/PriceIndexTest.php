@@ -230,7 +230,10 @@ class PriceIndexTest extends TestCase
             ->assertSee('current quotes across the catalogue')
             ->assertSee('Ties count as a win for every tied supplier.')
             ->assertSee('Select an item from the board.')
-            ->assertDontSee('No items to compare yet.');
+            ->assertDontSee('No items to compare yet.')
+            ->assertSee('id="savingsTableWrapper"', false)
+            ->assertSee('id="savingsEmptyState"', false)
+            ->assertSee('No savings match the current filters.');
     }
 
     public function test_price_index_project_filter_uses_ids_for_duplicate_and_pipe_titles(): void
@@ -441,6 +444,7 @@ class PriceIndexTest extends TestCase
             ->assertSee('No suppliers have quoted yet.')
             ->assertSee('No items to compare yet.')
             ->assertDontSee('Select an item from the board.')
-            ->assertSee('No comparable savings yet.');
+            ->assertSee('No comparable savings yet.')
+            ->assertDontSee('No savings match the current filters.');
     }
 }

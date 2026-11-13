@@ -488,7 +488,7 @@
             </div>
 
             @if (count($savingsItems))
-                <div class="overflow-x-auto">
+                <div id="savingsTableWrapper" class="overflow-x-auto">
                     <table class="w-full min-w-[760px] text-sm">
                         <thead>
                             <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -538,6 +538,10 @@
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+
+                <div id="savingsEmptyState" class="hidden px-6 py-12 text-center">
+                    <p class="text-sm font-medium text-gray-600">No savings match the current filters.</p>
                 </div>
             @else
                 <div class="px-6 py-12 text-center">
@@ -1026,9 +1030,22 @@
                 });
                 document.getElementById('matrixEmptyState').classList.toggle('hidden', visibleMatrix > 0);
 
+                let visibleSavings = 0;
                 document.querySelectorAll('.savings-row').forEach(function (row) {
-                    row.classList.toggle('hidden', !matchesFilters(row.dataset));
+                    const match = matchesFilters(row.dataset);
+                    row.classList.toggle('hidden', !match);
+                    if (match) {
+                        visibleSavings++;
+                    }
                 });
+
+                const savingsWrapper = document.getElementById('savingsTableWrapper');
+                const savingsEmpty = document.getElementById('savingsEmptyState');
+
+                if (savingsWrapper && savingsEmpty) {
+                    savingsWrapper.classList.toggle('hidden', visibleSavings === 0);
+                    savingsEmpty.classList.toggle('hidden', visibleSavings > 0);
+                }
 
                 if (selectedId !== null) {
                     const selectedRow = document.querySelector('.price-row[data-item-id="' + selectedId + '"]');

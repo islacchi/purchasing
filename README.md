@@ -165,9 +165,26 @@ Seeded module grants: **Procurement Officer → Manage** on all six modules, **V
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **173 passed / 926 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **181 passed / 1045 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
+
+---
+
+## Known limitations
+
+Accepted trade-offs in the current build — worth knowing before relying on the numbers:
+
+- **Price Index compares per item, not per project.** The best price, savings estimate, and scorecard reflect the lowest/average quote across all suppliers and projects for that item. They do not decide which supplier each project actually buys from.
+- **Requested quantity is an upper bound.** It is the sum of quantities in non-deleted projects; it is not reduced by received PO quantities, stock on hand, or fulfillment status.
+- **Savings estimates exclude real-world costs.** They use the requested quantity × (average − best) from current quotes and ignore freight, taxes, lead time, minimum order quantities, unit conversions, and delivery windows. Supplier-stated brand/expiry are shown but not enforced against a project's delivery date.
+- **Deleting an uploaded quotation file deletes its priced lines.** The price history derived from those lines cannot be rebuilt from the file afterwards.
+- **The trend shows one point per supplier per month** (the latest priced quote within that month). The sparkline compresses the last six monthly best prices; it is not interactive and does not follow the period selector (the selector affects only the trend chart).
+- **The Price Index renders the full catalogue on one page.** There is no server-side pagination; filters run client-side, so very large catalogues will load slowly.
+- **Chart.js is loaded from the jsdelivr CDN** (4.4.3), not vendored. Without network access the trend chart does not render.
+- **Supplier colour is not persisted.** Colours are assigned by sorted supplier order, so adding or removing a supplier can reassign chart colours.
+- **Soft-deleted suppliers keep their historical priced lines visible** because the index reads submitted quotation rows. If a supplier's history must remain, restore it under Entities rather than deleting it.
+- **Ties count as a win for every tied supplier** in the competitiveness scorecard.
 
 ---
 
