@@ -1036,7 +1036,9 @@
                 });
 
                 if (shouldScroll) {
-                    compareBody.closest('.rounded-lg').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Only nudge the page when the comparison panel is actually
+                    // off-screen — minimal scrolling, the top bar stays put.
+                    compareBody.closest('.rounded-lg').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }
             }
 
