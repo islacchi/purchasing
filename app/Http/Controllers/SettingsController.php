@@ -8,6 +8,7 @@ use App\Models\RoleModuleAccess;
 use App\Models\User;
 use App\Support\ActivityLogger;
 use App\Support\ModuleAccess;
+use App\Support\Pagination;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,6 +69,8 @@ class SettingsController extends Controller
             $dateNotice = 'The "From" date was after the "To" date — the range was swapped.';
         }
 
+        $perPage = Pagination::perPage($request, 50);
+
         $logs = ActivityLog::query()
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
@@ -83,7 +86,7 @@ class SettingsController extends Controller
             ->when($fromDate !== null, fn ($query) => $query->whereDate('created_at', '>=', $fromDate))
             ->when($toDate !== null, fn ($query) => $query->whereDate('created_at', '<=', $toDate))
             ->latest('created_at')
-            ->paginate(50)
+            ->paginate($perPage)
             ->withQueryString();
 
         $activityLogs = $logs->getCollection()->map(fn (ActivityLog $log) => [
@@ -102,6 +105,7 @@ class SettingsController extends Controller
             'activityLogs',
             'logs',
             'search',
+            'perPage',
             'filterAction',
             'filterModule',
             'filterUser',

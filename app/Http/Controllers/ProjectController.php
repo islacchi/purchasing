@@ -10,6 +10,7 @@ use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Support\ActivityLogger;
+use App\Support\Pagination;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -46,6 +47,7 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
+        $perPage = Pagination::perPage($request, 10);
 
         $projects = Project::query()
             ->with(['procuringEntity', 'items'])
@@ -59,10 +61,10 @@ class ProjectController extends Controller
                 });
             })
             ->orderByDesc('id')
-            ->paginate(10)
+            ->paginate($perPage)
             ->withQueryString();
 
-        return view('Projects.index', compact('projects', 'search'));
+        return view('Projects.index', compact('projects', 'search', 'perPage'));
     }
 
     /**

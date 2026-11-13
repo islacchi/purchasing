@@ -57,7 +57,7 @@
 
         {{-- Filters (GET form, debounced) --}}
         <form method="GET" action="{{ route('purchase-order') }}" id="poFilterForm" class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                 <div class="relative md:col-span-1">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -75,6 +75,16 @@
                         <option value="{{ $option->id }}" @selected($supplier === (string) $option->id)>{{ $option->name }}</option>
                     @endforeach
                 </select>
+
+                <div class="flex items-center gap-2">
+                    <label class="sr-only" for="poPerPage">Purchase orders per page</label>
+                    <select name="per_page" id="poPerPage" aria-label="Purchase orders per page" onchange="this.form.requestSubmit()"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
+                        @foreach (\App\Support\Pagination::options() as $value => $label)
+                            <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
+                        @endforeach
+                    </select>
+                </div>
 
                 <select name="status" id="poStatus"
                         class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">

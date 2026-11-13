@@ -7,6 +7,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\ActivityLogger;
+use App\Support\Pagination;
 use App\Support\QuotationWorkbookParser;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -35,13 +36,15 @@ class QuotationController extends Controller
      * Show the quotation tracker using real database records.
      * Paginates one prep list group per page instead of every RFQ in one page.
      */
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = Pagination::perPage($request, 5);
+
         $groups = Quotation::query()
             ->select('preplist_id', DB::raw('MAX(id) as latest_id'))
             ->groupBy('preplist_id')
             ->orderByDesc('latest_id')
-            ->paginate(5)
+            ->paginate($perPage)
             ->withQueryString();
 
         $pageIds = collect($groups->items())->pluck('preplist_id')->map(fn ($id) => (int) $id);
@@ -94,6 +97,7 @@ class QuotationController extends Controller
         return view('Quotation.index', [
             'preplistGroups' => $orderedGroups,
             'groups' => $groups,
+            'perPage' => $perPage,
         ]);
     }
 

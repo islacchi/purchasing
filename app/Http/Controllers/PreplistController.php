@@ -10,6 +10,7 @@ use App\Models\ProjectItem;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\ActivityLogger;
+use App\Support\Pagination;
 use App\Support\RfqQuotationWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -43,6 +44,7 @@ class PreplistController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
+        $perPage = Pagination::perPage($request, 10);
         $requestedSort = (string) $request->query('sort', 'date_desc');
         $sort = in_array($requestedSort, self::ALLOWED_SORTS, true) ? $requestedSort : 'date_desc';
         $direction = str_ends_with($sort, '_asc') ? 'asc' : 'desc';
@@ -84,7 +86,7 @@ class PreplistController extends Controller
                 break;
         }
 
-        $preplists = $query->orderByDesc('id')->paginate(10)->withQueryString();
+        $preplists = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
 
         $quotationCounts = Quotation::query()
             ->select('preplist_id', DB::raw('COUNT(*) as aggregate'))
@@ -92,7 +94,7 @@ class PreplistController extends Controller
             ->groupBy('preplist_id')
             ->pluck('aggregate', 'preplist_id');
 
-        return view('Preplist.index', compact('preplists', 'search', 'sort', 'quotationCounts'));
+        return view('Preplist.index', compact('preplists', 'search', 'sort', 'quotationCounts', 'perPage'));
     }
 
     /**

@@ -12,6 +12,16 @@
         <div class="mb-6 flex items-end justify-between gap-4">
             <!-- <h2 class="text-xl font-bold text-gray-900">Quotation</h2> -->
             <p class="text-xs text-gray-500">Supplier responses to sent RFQs</p>
+
+            <form method="GET" action="{{ route('quotation') }}">
+                <label class="sr-only" for="quotationPerPage">Prep list groups per page</label>
+                <select id="quotationPerPage" name="per_page" aria-label="Prep list groups per page" onchange="this.form.requestSubmit()"
+                        class="rounded-lg border border-gray-200 bg-white py-2 pl-2 pr-6 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                    @foreach (\App\Support\Pagination::options() as $value => $label)
+                        <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
+                    @endforeach
+                </select>
+            </form>
         </div>
 
         {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}

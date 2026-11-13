@@ -11,6 +11,7 @@ use App\Models\PurchaseOrderReceipt;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\ActivityLogger;
+use App\Support\Pagination;
 use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -42,6 +43,7 @@ class PurchaseOrderController extends Controller
         $search = trim((string) $request->query('q', ''));
         $supplier = trim((string) $request->query('supplier', ''));
         $status = trim((string) $request->query('status', ''));
+        $perPage = Pagination::perPage($request, 10);
 
         $query = PurchaseOrder::query()
             ->with(['supplier', 'quotation.preplist', 'items'])
@@ -60,7 +62,7 @@ class PurchaseOrderController extends Controller
             ->when($status !== '', fn ($query) => $query->where('status', $status));
 
         $purchaseOrders = $query
-            ->paginate(10)
+            ->paginate($perPage)
             ->withQueryString()
             ->through(fn (PurchaseOrder $purchaseOrder) => [
                 'id' => $purchaseOrder->id,
@@ -96,6 +98,7 @@ class PurchaseOrderController extends Controller
             'search',
             'supplier',
             'status',
+            'perPage',
         ));
     }
 
