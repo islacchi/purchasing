@@ -56,9 +56,9 @@
                     </p>
                 @endunless
 
-                {{-- Restore guide (for whoever administers the system) --}}
+                {{-- Restore guide (for whoever administers the system). The card grows to fit it. --}}
                 <div class="mt-6 border-t border-gray-100 pt-6">
-                    <details class="group rounded-lg border border-gray-200 bg-white transition-colors open:bg-gray-50">
+                    <details id="restoreGuide" class="group rounded-lg border border-gray-200 bg-white transition-colors open:bg-gray-50">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
                             <span class="min-w-0">
                                 <span class="block text-sm font-semibold text-gray-900">Restore guide (for non-technical readers)</span>
@@ -69,7 +69,8 @@
                             </svg>
                         </summary>
 
-                        <div class="space-y-5 border-t border-gray-100 px-4 py-4 text-xs leading-relaxed text-gray-600">
+                        <div class="max-h-[560px] overflow-y-auto border-t border-gray-100 px-4 py-4 text-xs leading-relaxed text-gray-600">
+                        <p class="mb-3 text-[11px] uppercase tracking-wider text-gray-400">Close with Esc.</p>
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">When you would use this</p>
                                 <ul class="mt-1 list-disc space-y-1 pl-5">
@@ -189,4 +190,21 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Collapse the restore guide on Escape.
+        (function () {
+            var guide = document.getElementById('restoreGuide');
+
+            if (! guide) {
+                return;
+            }
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && guide.open) {
+                    guide.open = false;
+                }
+            });
+        })();
+    </script>
 @endsection
