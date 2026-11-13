@@ -144,6 +144,51 @@ class PreplistTest extends TestCase
             ->assertDontSee('August laboratory batch');
     }
 
+    public function test_preplist_module_paginates_and_preserves_search_and_sort(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $source = $this->projectItem($project, $item)->id;
+
+        for ($i = 1; $i <= 12; $i++) {
+            $this->compile($user, [
+                'name' => sprintf('Pagination fixture %02d', $i),
+                'sources' => [$source],
+            ]);
+        }
+
+        $pageOne = $this->actingAs($user)->get(route('preplist'))->assertOk();
+        $pageOne->assertSee('aria-label="Pagination Navigation"', false)
+            ->assertSee('page=2', false);
+
+        $first = $pageOne->viewData('preplists');
+        $this->assertSame(10, $first->count());
+        $this->assertSame(12, $first->total());
+        $this->assertSame(1, $first->currentPage());
+        $this->assertNotNull($first->nextPageUrl());
+
+        // Default sort is date_desc (then newest id), so page 2 holds the two oldest.
+        $pageTwo = $this->actingAs($user)->get(route('preplist', ['page' => 2]))->assertOk();
+        $second = $pageTwo->viewData('preplists');
+        $this->assertSame(2, $second->count());
+        $pageTwo->assertSee('Pagination fixture 01')
+            ->assertSee('Pagination fixture 02')
+            ->assertDontSee('Pagination fixture 12');
+
+        // Search and sort remain active on the second page and survive the links.
+        $searchPage = $this->actingAs($user)->get(route('preplist', [
+            'q' => 'fixture',
+            'sort' => 'name_asc',
+            'page' => 2,
+        ]))->assertOk();
+        $this->assertSame(2, $searchPage->viewData('preplists')->count());
+        $previousPageUrl = $searchPage->viewData('preplists')->previousPageUrl();
+        $this->assertStringContainsString('q=fixture', $previousPageUrl);
+        $this->assertStringContainsString('sort=name_asc', $previousPageUrl);
+    }
+
     public function test_preplist_create_form_lists_real_projects_and_items(): void
     {
         $user = $this->admin();

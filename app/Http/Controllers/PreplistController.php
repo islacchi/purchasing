@@ -84,7 +84,7 @@ class PreplistController extends Controller
                 break;
         }
 
-        $preplists = $query->orderByDesc('id')->get();
+        $preplists = $query->orderByDesc('id')->paginate(10)->withQueryString();
 
         $quotationCounts = Quotation::query()
             ->select('preplist_id', DB::raw('COUNT(*) as aggregate'))

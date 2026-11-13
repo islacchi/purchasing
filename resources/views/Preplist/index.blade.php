@@ -171,6 +171,12 @@
                 </tbody>
             </table>
         </div>
+
+        @if ($preplists->hasPages())
+            <div class="border-t border-gray-200 px-6 py-3">
+                {{ $preplists->links() }}
+            </div>
+        @endif
     </div>
 
     <script>
