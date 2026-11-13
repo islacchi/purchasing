@@ -76,7 +76,10 @@ class ProjectTest extends TestCase
             ->assertOk()
             ->assertSee($project->title)
             ->assertSee($project->reference_no)
-            ->assertSee($entity->name);
+            ->assertSee($entity->name)
+            ->assertDontSee('bg-gray-200/50')
+            ->assertSee('id="view-list"', false)
+            ->assertSee('class="min-w-full divide-y divide-gray-200"', false);
     }
 
     public function test_projects_can_be_searched_by_title_or_entity(): void

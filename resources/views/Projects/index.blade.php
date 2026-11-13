@@ -100,8 +100,8 @@
         ];
     @endphp
 
-    {{-- Scrollable content holder ("square" container). Holds the three view panels and gets its own scrollbar instead of the page's main scroller. --}}
-    <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-gray-200 bg-gray-200/50 p-4 sm:p-5 shadow-sm">
+    {{-- Scrollable content holder. Sits directly on the page background; each view panel fills the space, and the List table stretches to it. --}}
+    <div class="flex-1 min-h-0 overflow-y-auto flex flex-col">
 
     {{-- ============================== CONTENT VIEW (default) ============================== --}}
     <div id="view-content" class="space-y-4">
@@ -272,8 +272,8 @@
     </div>
 
     {{-- ============================== LIST VIEW ============================== --}}
-    <div id="view-list" class="hidden">
-        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div id="view-list" class="hidden flex-1 min-h-0">
+        <div class="h-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
