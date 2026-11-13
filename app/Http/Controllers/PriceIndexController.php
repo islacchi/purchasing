@@ -18,6 +18,11 @@ class PriceIndexController extends Controller
     ];
 
     /**
+     * Number of days before expiry that counts as "expires soon".
+     */
+    private const EXPIRY_SOON_DAYS = 30;
+
+    /**
      * Show the price index built from submitted quotation lines.
      */
     public function index()
@@ -46,6 +51,8 @@ class PriceIndexController extends Controller
             ->select([
                 'quotation_items.id',
                 'quotation_items.unit_price',
+                'quotation_items.brand',
+                'quotation_items.expiry',
                 'quotation_items.quoted_at',
                 'quotations.id as quotation_id',
                 'quotations.generated_at',
@@ -101,6 +108,16 @@ class PriceIndexController extends Controller
                 ->map(fn ($group) => $group->last())
                 ->map(function ($row) use ($suppliers) {
                     $quotedAt = $row->quoted_at ?? $row->generated_at;
+                    $expiry = $row->expiry ? Carbon::parse($row->expiry)->startOfDay() : null;
+                    $expiryState = null;
+
+                    if ($expiry !== null) {
+                        if ($expiry->lt(Carbon::today())) {
+                            $expiryState = 'expired';
+                        } elseif ($expiry->lte(Carbon::today()->addDays(self::EXPIRY_SOON_DAYS))) {
+                            $expiryState = 'soon';
+                        }
+                    }
 
                     return [
                         'supplier' => (int) $row->supplier_id,
@@ -108,6 +125,9 @@ class PriceIndexController extends Controller
                         'short' => $suppliers[$row->supplier_id]['short'] ?? $row->supplier_name,
                         'color' => $suppliers[$row->supplier_id]['color'] ?? '#9ca3af',
                         'price' => round((float) $row->unit_price, 2),
+                        'brand' => $row->brand,
+                        'expiry' => $expiry?->format('M j, Y'),
+                        'expiry_state' => $expiryState,
                         'quoted_at' => $quotedAt ? Carbon::parse($quotedAt)->format('M j, Y') : '—',
                         'quotation_id' => (int) $row->quotation_id,
                     ];

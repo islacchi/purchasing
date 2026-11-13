@@ -694,9 +694,10 @@
 
                 // Comparison table
                 html += '<div class="mt-5 overflow-x-auto rounded-lg border border-gray-200">';
-                html += '<table class="w-full min-w-[760px] text-sm">';
+                html += '<table class="w-full min-w-[900px] text-sm">';
                 html += '<thead><tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">'
                     + '<th class="px-4 py-3">Supplier</th>'
+                    + '<th class="px-4 py-3">Brand / expiry</th>'
                     + '<th class="px-4 py-3 text-right">Unit price</th>'
                     + '<th class="px-4 py-3 text-right">Extended</th>'
                     + '<th class="px-4 py-3 text-right">vs Best</th>'
@@ -707,6 +708,19 @@
                 sorted.forEach(function (quote) {
                     const isBest = isComparable && Math.abs(quote.price - item.best) < 0.0001;
                     const premium = item.best > 0 ? ((quote.price - item.best) / item.best) * 100 : 0;
+                    const brand = quote.brand ? escapeHtml(quote.brand) : '—';
+                    const brandClass = quote.brand ? 'text-gray-800' : 'text-gray-400';
+                    const expiry = quote.expiry ? escapeHtml(quote.expiry) : '—';
+                    let expiryClass = quote.expiry ? 'text-gray-500' : 'text-gray-400';
+                    let expiryNote = '';
+
+                    if (quote.expiry_state === 'expired') {
+                        expiryClass = 'text-red-600 font-semibold';
+                        expiryNote = ' · expired';
+                    } else if (quote.expiry_state === 'soon') {
+                        expiryClass = 'text-amber-600 font-medium';
+                        expiryNote = ' · expires soon';
+                    }
 
                     html += '<tr class="hover:bg-gray-50">';
                     html += '<td class="px-4 py-3"><span class="inline-flex items-center gap-2 text-gray-800">'
@@ -714,6 +728,10 @@
                         + escapeHtml(quote.name)
                         + (isBest ? ' <span class="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">Lowest</span>' : '')
                         + '</span></td>';
+                    html += '<td class="px-4 py-3">'
+                        + '<p class="text-xs font-medium ' + brandClass + '">' + brand + '</p>'
+                        + '<p class="mt-0.5 text-xs ' + expiryClass + '" title="Supplier-stated expiry">' + expiry + expiryNote + '</p>'
+                        + '</td>';
                     html += '<td class="px-4 py-3 text-right font-semibold ' + (isBest ? 'text-green-600' : 'text-gray-800') + '">' + peso(quote.price) + '</td>';
                     html += '<td class="px-4 py-3 text-right text-gray-600">' + (item.requested > 0 ? peso(quote.price * item.requested) : '—') + '</td>';
                     html += '<td class="px-4 py-3 text-right text-xs ' + (isBest ? 'text-green-600 font-semibold' : 'text-gray-500') + '">'
@@ -731,6 +749,9 @@
                 if (isComparable) {
                     html += '<p class="mt-3 text-xs text-gray-500">Best price is the lowest normalised unit price.</p>';
                 }
+
+                html += '<p class="mt-2 text-xs text-gray-500">Brand and expiry are supplier-stated. '
+                    + 'Check expiry against the project delivery date and required shelf life.</p>';
 
                 compareBody.innerHTML = html;
             }
