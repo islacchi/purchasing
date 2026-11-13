@@ -7,6 +7,22 @@
 @endsection
 
 @section('content')
+    <style>
+        /* Anti-delete warning overlay — floats above the content area. */
+        #quotationWarningBanner {
+            position: fixed;
+            top: 9rem;
+            left: calc(5rem + 2rem);
+            right: 2rem;
+            z-index: 60;
+            pointer-events: none;
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 300ms ease, transform 300ms ease;
+        }
+        html.sidebar-expanded #quotationWarningBanner { left: calc(16rem + 2rem); }
+        #quotationWarningBanner.is-hiding { opacity: 0; transform: translateY(-4px); }
+    </style>
     <div class="flex h-full min-h-0 flex-col">
 
     @php
@@ -64,7 +80,8 @@
     @endif
 
     @if ($quotationCount > 0)
-        <div id="quotationWarningBanner" class="mb-4 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 transition-[opacity,transform] duration-300 ease-out" role="alert">
+        {{-- Fixed overlay — floats above the view; does not affect layout --}}
+        <div id="quotationWarningBanner" class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-lg" role="alert">
             <p class="font-semibold">This prep list cannot be deleted.</p>
             <p class="mt-0.5 text-xs text-amber-700">
                 It is already referenced by {{ $quotationCount }} quotation{{ $quotationCount === 1 ? '' : 's' }}. Remove the quotation{{ $quotationCount === 1 ? '' : 's' }} first.
@@ -105,12 +122,7 @@
                     <label for="notes" class="block text-xs font-medium text-gray-500 mb-1">Notes:</label>
                     <textarea id="notes" name="notes" rows="4" placeholder="Add notes here..."
                               class="w-full px-3 py-2 rounded-md border border-gray-200 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 resize-none">{{ old('notes', $preplist->notes) }}</textarea>
-                    <div class="mt-2 flex justify-end">
-                        <button type="submit"
-                                class="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                            Save notes
-                        </button>
-                    </div>
+                
                 </form>
             </div>
 
@@ -288,20 +300,19 @@
 
 @push('scripts')
 <script>
-    // Auto-dismiss the "cannot be deleted" anti-delete warning after 3 seconds
-    // with a fade-out transition, mirroring the flash message behaviour.
+    // Auto-dismiss the "cannot be deleted" anti-delete warning after a few seconds,
+    // mirroring the flash success message (fixed overlay, fade-out, no layout shift).
     (function () {
         var banner = document.getElementById('quotationWarningBanner');
         if (!banner) return;
 
         setTimeout(function () {
-            banner.style.opacity = '0';
-            banner.style.transform = 'translateY(-4px)';
-        }, 3000);
+            banner.classList.add('is-hiding');
+        }, 4000);
 
         setTimeout(function () {
             banner.classList.add('hidden');
-        }, 3350);
+        }, 4350);
     })();
 </script>
 @endpush

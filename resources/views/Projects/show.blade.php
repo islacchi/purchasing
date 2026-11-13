@@ -9,6 +9,21 @@
 @section('content')
     {{-- Print styles: hide the app chrome so only the project summary prints. --}}
     <style>
+        /* Anti-delete warning overlay — floats above the content area. */
+        #antiDeleteBanner {
+            position: fixed;
+            top: 9rem;
+            left: calc(5rem + 2rem);
+            right: 2rem;
+            z-index: 60;
+            pointer-events: none;
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 300ms ease, transform 300ms ease;
+        }
+        html.sidebar-expanded #antiDeleteBanner { left: calc(16rem + 2rem); }
+        #antiDeleteBanner.is-hiding { opacity: 0; transform: translateY(-4px); }
+
         /* Print sheet is hidden on screen; visible only for printing. */
         .print-sheet { display: none; }
 
@@ -96,8 +111,10 @@
         $preplistSources = $preplistSources ?? collect();
     @endphp
 
+    {{-- Anti-delete warning: floats above the view (same pattern as the flash-success
+         overlay) so fading it out does not shift the layout underneath. --}}
     @if ($preplistSources->isNotEmpty())
-        <div class="mb-4 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div id="antiDeleteBanner" class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-lg" role="alert">
             <p class="font-semibold">This project cannot be deleted.</p>
             <p class="mt-0.5 text-xs text-amber-700">
                 It is used by the prep list(s)
@@ -467,6 +484,23 @@
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
             });
+        })();
+    </script>
+    @endpush
+
+    @push('scripts')
+    <script>
+        // Anti-delete warning: auto-dismiss after a few seconds like the flash success message.
+        (function () {
+            var banner = document.getElementById('antiDeleteBanner');
+            if (!banner) return;
+
+            setTimeout(function () {
+                banner.classList.add('is-hiding');
+            }, 4000);
+            setTimeout(function () {
+                banner.classList.add('hidden');
+            }, 4350);
         })();
     </script>
     @endpush
