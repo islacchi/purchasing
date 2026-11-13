@@ -95,7 +95,8 @@ class ProjectTest extends TestCase
             ->get('/projects?q=medicine')
             ->assertOk()
             ->assertSee('Regional medicine purchase')
-            ->assertDontSee('Hospital equipment purchase');
+            ->assertDontSee('Hospital equipment purchase')
+            ->assertSee('border border-gray-200"', false);
     }
 
     public function test_project_create_form_has_procuring_entity_dropdown(): void

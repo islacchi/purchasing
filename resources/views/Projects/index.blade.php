@@ -19,7 +19,7 @@
                     </svg>
                 </span>
                 <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search by project name / title..."
-                       class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                       class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
             </form>
 
             {{-- View options dropdown: Content (default), Details, List --}}
