@@ -44,6 +44,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::get('/projects/{project}', [ProjectController::class, 'show'])
             ->whereNumber('project')
             ->name('projects.show');
+        Route::get('/projects/{project}/download', [ProjectController::class, 'download'])
+            ->whereNumber('project')
+            ->name('projects.download');
         Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])
             ->whereNumber('project')
             ->name('projects.edit');

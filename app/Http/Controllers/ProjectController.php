@@ -10,6 +10,7 @@ use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Support\ActivityLogger;
+use App\Support\ProjectSummaryWorkbook;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -111,6 +112,25 @@ class ProjectController extends Controller
         $preplistSources = $this->preplistsReferencing($project);
 
         return view('Projects.show', compact('project', 'preplistSources'));
+    }
+
+    /**
+     * Download the project summary as an .xlsx workbook.
+     *
+     * Folio (8.5 × 13 in), landscape, fit-to-width — a print-ready export of
+     * the same data shown on the project detail page. Opened in the normal
+     * grid view so the sheet renders in every spreadsheet application.
+     */
+    public function download(Project $project)
+    {
+        $project->load(['procuringEntity', 'items.item']);
+
+        $reference = preg_replace('/[^a-z0-9_-]+/i', '-', (string) $project->reference_no) ?: 'project';
+
+        return response(ProjectSummaryWorkbook::build($project), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$reference.'_Project_Summary.xlsx"',
+        ]);
     }
 
     /**

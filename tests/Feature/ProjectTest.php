@@ -330,4 +330,42 @@ class ProjectTest extends TestCase
         $this->assertSame(2, $searchPage->viewData('projects')->count());
         $this->assertStringContainsString('q=fixture', $searchPage->viewData('projects')->previousPageUrl() ?? '');
     }
+
+    public function test_project_summary_downloads_an_xlsx_workbook(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $this->addItem($project);
+
+        $response = $this->actingAs($user)->get('/projects/'.$project->id.'/download');
+
+        $response->assertOk();
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type')
+        );
+        $disposition = (string) $response->headers->get('Content-Disposition');
+        $this->assertStringContainsString('attachment', $disposition);
+        $this->assertStringContainsString('RF-2026-0042_Project_Summary.xlsx', $disposition);
+
+        // The export is a real .xlsx package: Folio (8.5 × 13 in), landscape,
+        // fit-to-width, opened in the normal grid view so it renders in
+        // every spreadsheet application.
+        $zipPath = tempnam(sys_get_temp_dir(), 'xlsx_').'.xlsx';
+        file_put_contents($zipPath, $response->getContent());
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($zipPath) === true);
+
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $this->assertIsString($sheet);
+        $this->assertStringContainsString('paperSize="14"', $sheet);
+        $this->assertStringContainsString('orientation="landscape"', $sheet);
+        $this->assertStringContainsString('view="normal"', $sheet);
+        $this->assertStringContainsString('Mefenamic Capsule - 500mg', $sheet);
+
+        $zip->close();
+        unlink($zipPath);
+    }
 }
