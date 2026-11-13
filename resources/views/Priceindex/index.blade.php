@@ -465,7 +465,7 @@
                 </div>
 
                 <p class="mt-4 text-xs text-gray-500">
-                    One point per supplier per month, from submitted quotation lines.
+                    One point per supplier per month, from submitted quotation lines. The chart spans from the first quoted month within the selected period.
                 </p>
             </div>
         </div>
@@ -818,24 +818,22 @@
                     return;
                 }
 
-                const months = monthWindow(Number(periodSelect.value) || 6);
+                const periodMonths = monthWindow(Number(periodSelect.value) || 6);
                 const monthIndex = {};
 
-                months.forEach(function (month, index) {
+                periodMonths.forEach(function (month, index) {
                     monthIndex[month.key] = index;
                 });
 
-                const quotedSuppliers = {};
+                const dataMonthIndices = [];
 
                 item.history.forEach(function (point) {
                     if (monthIndex[point.month] !== undefined) {
-                        quotedSuppliers[point.supplier] = true;
+                        dataMonthIndices.push(monthIndex[point.month]);
                     }
                 });
 
-                const supplierIds = Object.keys(quotedSuppliers);
-
-                if (!supplierIds.length) {
+                if (!dataMonthIndices.length) {
                     if (chart) {
                         chart.destroy();
                         chart = null;
@@ -847,6 +845,27 @@
                     trendSubtitle.textContent = item.name + ' — no quotes in the selected period.';
                     return;
                 }
+
+                // Span only the referenced data: from the first month with a quote
+                // through the latest one, so leading/trailing empty months collapse.
+                const firstMonth = Math.min.apply(null, dataMonthIndices);
+                const lastMonth = Math.max.apply(null, dataMonthIndices);
+                const months = periodMonths.slice(firstMonth, lastMonth + 1);
+                const visibleMonthIndex = {};
+
+                months.forEach(function (month, index) {
+                    visibleMonthIndex[month.key] = index;
+                });
+
+                const quotedSuppliers = {};
+
+                item.history.forEach(function (point) {
+                    if (visibleMonthIndex[point.month] !== undefined) {
+                        quotedSuppliers[point.supplier] = true;
+                    }
+                });
+
+                const supplierIds = Object.keys(quotedSuppliers);
 
                 trendCanvas.classList.remove('hidden');
                 trendEmpty.classList.add('hidden');

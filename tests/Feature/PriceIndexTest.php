@@ -232,6 +232,7 @@ class PriceIndexTest extends TestCase
             ->assertSee('Select an item from the board.')
             ->assertDontSee('No items to compare yet.')
             ->assertSee('Best expiry:', false)
+            ->assertSee('The chart spans from the first quoted month within the selected period.')
             ->assertSee('id="savingsTableWrapper"', false)
             ->assertSee('id="savingsEmptyState"', false)
             ->assertSee('No savings match the current filters.');
