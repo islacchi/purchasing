@@ -645,6 +645,26 @@
                 trendSubtitle.textContent = 'Movement of the selected item\'s quoted price.';
             }
 
+            function expiryView(quote) {
+                let className = 'text-gray-500';
+                let note = '';
+
+                if (quote.expiry) {
+                    if (quote.expiry_state === 'expired') {
+                        className = 'text-red-600 font-semibold';
+                        note = ' · expired';
+                    } else if (quote.expiry_state === 'soon') {
+                        className = 'text-amber-600 font-medium';
+                        note = ' · expires soon';
+                    }
+                }
+
+                return {
+                    text: quote.expiry ? escapeHtml(quote.expiry) + note : 'Not stated',
+                    className: quote.expiry ? className : 'text-gray-400',
+                };
+            }
+
             function renderComparison(item) {
                 selectedId = item.id;
 
@@ -654,7 +674,6 @@
                     subtitleParts.push(item.projects.join(', '));
                 }
                 compareSubtitle.textContent = subtitleParts.join(' · ');
-
                 if (!item.count) {
                     compareBadge.classList.add('hidden');
                     compareBody.innerHTML =
@@ -678,6 +697,7 @@
                 html += '<div class="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">';
                 html += '<div>';
                 html += '<p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Best price</p>';
+                const bestExpiry = expiryView(bestQuote);
                 html += '<p class="mt-1 text-2xl font-bold ' + (isComparable ? 'text-green-600' : 'text-gray-800') + '">'
                     + peso(item.best)
                     + ' <span class="text-xs font-normal text-gray-500">/ ' + escapeHtml(item.unit) + '</span></p>';
@@ -686,6 +706,7 @@
                     html += ' <span class="font-semibold text-green-600">· ' + delta.toFixed(1) + '% below average</span>';
                 }
                 html += '</p>';
+                html += '<p class="mt-0.5 text-xs ' + bestExpiry.className + '" title="Supplier-stated expiry">Best expiry: ' + bestExpiry.text + '</p>';
                 html += '</div>';
                 html += '<div class="text-right">';
                 html += '<p class="text-xs text-gray-500">Extended cost · ' + requestedLabel + '</p>';
@@ -747,17 +768,7 @@
                     const premium = item.best > 0 ? ((quote.price - item.best) / item.best) * 100 : 0;
                     const brand = quote.brand ? escapeHtml(quote.brand) : '—';
                     const brandClass = quote.brand ? 'text-gray-800' : 'text-gray-400';
-                    const expiry = quote.expiry ? escapeHtml(quote.expiry) : '—';
-                    let expiryClass = quote.expiry ? 'text-gray-500' : 'text-gray-400';
-                    let expiryNote = '';
-
-                    if (quote.expiry_state === 'expired') {
-                        expiryClass = 'text-red-600 font-semibold';
-                        expiryNote = ' · expired';
-                    } else if (quote.expiry_state === 'soon') {
-                        expiryClass = 'text-amber-600 font-medium';
-                        expiryNote = ' · expires soon';
-                    }
+                    const expiry = expiryView(quote);
 
                     html += '<tr class="hover:bg-gray-50">';
                     html += '<td class="px-4 py-3"><span class="inline-flex items-center gap-2 text-gray-800">'
@@ -767,7 +778,7 @@
                         + '</span></td>';
                     html += '<td class="px-4 py-3">'
                         + '<p class="text-xs font-medium ' + brandClass + '">' + brand + '</p>'
-                        + '<p class="mt-0.5 text-xs ' + expiryClass + '" title="Supplier-stated expiry">' + expiry + expiryNote + '</p>'
+                        + '<p class="mt-0.5 text-xs ' + expiry.className + '" title="Supplier-stated expiry">' + expiry.text + '</p>'
                         + '</td>';
                     html += '<td class="px-4 py-3 text-right font-semibold ' + (isBest ? 'text-green-600' : 'text-gray-800') + '">' + peso(quote.price) + '</td>';
                     html += '<td class="px-4 py-3 text-right text-gray-600">' + (item.requested > 0 ? peso(quote.price * item.requested) : '—') + '</td>';
