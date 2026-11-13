@@ -52,24 +52,35 @@
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
+                    @php
+                        $currentSort = $sort ?? 'date_desc';
+                        $sortToggle = function (string $column) use ($search, $currentSort) {
+                            $active = str_starts_with($currentSort, $column.'_');
+                            $asc = $column.'_asc';
+                            $next = ($active && $currentSort === $asc) ? $column.'_desc' : $asc;
+                            return [
+                                'url' => route('preplist', array_filter(['q' => $search !== '' ? $search : null, 'sort' => $next])),
+                                'aria' => $active ? ($currentSort === $asc ? 'ascending' : 'descending') : 'none',
+                            ];
+                        };
+                        $toggleClass = 'inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-teal-300 rounded-sm';
+                    @endphp
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Created by</th>
                         <th class="px-6 py-3 text-left">
-                            @php
-                                $currentSort = $sort ?? 'date_desc';
-                                $nextSort = $currentSort === 'date_asc' ? 'date_desc' : 'date_asc';
-                                $sortQuery = array_filter(['q' => $search !== '' ? $search : null, 'sort' => $nextSort]);
-                                $isDateAsc = $currentSort === 'date_asc';
-                            @endphp
-                            <a href="{{ route('preplist', $sortQuery) }}"
-                               aria-sort="{{ $isDateAsc ? 'ascending' : 'descending' }}"
-                               class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-teal-300 rounded-sm">
-                                Date Created
-                            </a>
+                            <a href="{{ $sortToggle('name')['url'] }}" aria-sort="{{ $sortToggle('name')['aria'] }}" class="{{ $toggleClass }}">Name</a>
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Projects</th>
-                        <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Items</th>
+                        <th class="px-6 py-3 text-left">
+                            <a href="{{ $sortToggle('created_by')['url'] }}" aria-sort="{{ $sortToggle('created_by')['aria'] }}" class="{{ $toggleClass }}">Created by</a>
+                        </th>
+                        <th class="px-6 py-3 text-left">
+                            <a href="{{ $sortToggle('date')['url'] }}" aria-sort="{{ $sortToggle('date')['aria'] }}" class="{{ $toggleClass }}">Date Created</a>
+                        </th>
+                        <th class="px-6 py-3 text-left">
+                            <a href="{{ $sortToggle('projects')['url'] }}" aria-sort="{{ $sortToggle('projects')['aria'] }}" class="{{ $toggleClass }}">Projects</a>
+                        </th>
+                        <th class="px-6 py-3 text-center">
+                            <a href="{{ $sortToggle('items')['url'] }}" aria-sort="{{ $sortToggle('items')['aria'] }}" class="{{ $toggleClass }}">Total Items</a>
+                        </th>
                         <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>

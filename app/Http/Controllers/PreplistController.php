@@ -21,15 +21,34 @@ use ZipArchive;
 class PreplistController extends Controller
 {
     /**
+     * Allowed sort keys for the index list. Each is a column slug plus a
+     * direction suffix (_asc / _desc); anything else falls back to date_desc.
+     */
+    private const ALLOWED_SORTS = [
+        'name_asc',
+        'name_desc',
+        'created_by_asc',
+        'created_by_desc',
+        'projects_asc',
+        'projects_desc',
+        'items_asc',
+        'items_desc',
+        'date_asc',
+        'date_desc',
+    ];
+
+    /**
      * Show the prep lists list using real database records.
      */
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
-        $sort = $request->query('sort', 'date_desc');
-        $sortDirection = $sort === 'date_asc' ? 'asc' : 'desc';
+        $requestedSort = (string) $request->query('sort', 'date_desc');
+        $sort = in_array($requestedSort, self::ALLOWED_SORTS, true) ? $requestedSort : 'date_desc';
+        $direction = str_ends_with($sort, '_asc') ? 'asc' : 'desc';
+        $sortColumn = substr($sort, 0, (int) strrpos($sort, '_'));
 
-        $preplists = Preplist::query()
+        $query = Preplist::query()
             ->with(['creator', 'items.sources.projectItem.project'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
@@ -39,10 +58,33 @@ class PreplistController extends Controller
                             $query->where('name', 'like', '%'.$search.'%');
                         });
                 });
-            })
-            ->orderBy('created_at', $sortDirection)
-            ->orderByDesc('id')
-            ->get();
+            });
+
+        switch ($sortColumn) {
+            case 'name':
+                $query->orderBy('preplists.name', $direction);
+                break;
+            case 'created_by':
+                $query->orderByRaw('(SELECT name FROM users WHERE users.id = preplists.created_by) '.($direction === 'asc' ? 'ASC' : 'DESC'));
+                break;
+            case 'projects':
+                $query->orderByRaw('(SELECT COUNT(DISTINCT project_items.project_id)'
+                    .' FROM preplist_items'
+                    .' INNER JOIN preplist_item_sources ON preplist_item_sources.preplist_item_id = preplist_items.id'
+                    .' INNER JOIN project_items ON project_items.id = preplist_item_sources.project_item_id'
+                    .' WHERE preplist_items.preplist_id = preplists.id) '
+                    .($direction === 'asc' ? 'ASC' : 'DESC'));
+                break;
+            case 'items':
+                $query->withCount('items')->orderBy('items_count', $direction);
+                break;
+            case 'date':
+            default:
+                $query->orderBy('preplists.created_at', $direction);
+                break;
+        }
+
+        $preplists = $query->orderByDesc('id')->get();
 
         $quotationCounts = Quotation::query()
             ->select('preplist_id', DB::raw('COUNT(*) as aggregate'))
