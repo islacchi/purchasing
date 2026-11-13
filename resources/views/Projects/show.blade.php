@@ -268,23 +268,6 @@
             </button>
         @endif
         @if (auth()->user()?->canModule('projects', 'manage'))
-            <a href="{{ route('projects.edit', ['project' => $project->id]) }}"
-               class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-                Edit project
-            </a>
-        @else
-            <span class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-400"
-                  title="Your role does not have access to that module.">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-                Edit project
-            </span>
-        @endif
-        @if (auth()->user()?->canModule('projects', 'manage'))
             <button type="button" id="printProjectBtn"
                     class="no-print flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -303,6 +286,23 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 13H4a2 2 0 01-2-2v-2a2 2 0 012-2h16a2 2 0 012 2v2a2 2 0 01-2 2h-2m-12 0v6a1 1 0 001 1h10a1 1 0 001-1v-6"/>
                 </svg>
                 Print Project
+            </span>
+        @endif
+        @if (auth()->user()?->canModule('projects', 'manage'))
+            <a href="{{ route('projects.edit', ['project' => $project->id]) }}"
+               class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit project
+            </a>
+        @else
+            <span class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-400"
+                  title="Your role does not have access to that module.">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit project
             </span>
         @endif
         </div>

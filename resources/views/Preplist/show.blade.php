@@ -44,31 +44,12 @@
         });
     @endphp
 
-    {{-- Top row: heading + edit button --}}
-    <div class="flex shrink-0 items-start justify-between gap-4 mb-4">
+    {{-- Top row: heading --}}
+    <div class="shrink-0 mb-4">
         <div>
             <h2 class="text-2xl font-bold text-gray-900">{{ $preplist->name }}</h2>
             <p class="text-sm text-gray-500 mt-1">{{ $preplist->reference_no }}</p>
         </div>
-        @if (auth()->user()?->canModule('preplist', 'manage'))
-            <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
-               class="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-                Edit prep list
-            </a>
-        @else
-            <button type="button"
-                    data-access-restricted-modal-toggle
-                    title="Your role does not have access to that module."
-                    class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-                Edit prep list
-            </button>
-        @endif
     </div>
 
     {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
@@ -131,10 +112,12 @@
                 <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Source Projects</p>
                 <div class="space-y-3">
                     @forelse($sourceProjects as $project)
+                        {{-- The source project is a link; teal text signals it is clickable. --}}
                         <a href="{{ route('projects.show', ['project' => $project->id]) }}"
-                           class="block bg-white rounded-lg border border-gray-200 shadow-sm p-3 hover:border-[#2a7a94] hover:shadow-md transition-all cursor-pointer">
-                            <p class="text-sm font-bold text-gray-900">{{ $project->title }}</p>
-                            <p class="text-xs text-gray-400 mt-1">{{ $project->reference_no }}</p>
+                           class="block bg-white rounded-lg border border-gray-200 shadow-sm p-3 hover:border-[#2a7a94] hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-teal-300"
+                           title="Open project details">
+                            <p class="text-sm font-bold text-[#2a7a94] hover:text-[#236b80] transition-colors">{{ $project->title }}</p>
+                            <p class="text-xs text-[#2a7a94]/70 mt-1 hover:text-[#2a7a94]/80 transition-colors">{{ $project->reference_no }}</p>
                         </a>
                     @empty
                         <p class="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
@@ -179,7 +162,15 @@
     </div>
 
     {{-- Bottom action buttons --}}
-    <div class="flex shrink-0 items-center justify-end gap-3 mt-4">
+    <div class="mt-4 flex shrink-0 items-center justify-between gap-3">
+        <a href="{{ route('preplist') }}"
+           class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+            </svg>
+            Back to list
+        </a>
+        <div class="flex items-center gap-3">
         @if ($quotationCount > 0)
             <button type="button" disabled
                     class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-400 cursor-not-allowed"
@@ -202,6 +193,26 @@
                 </button>
             </form>
         @endif
+        {{-- Edit prep list (between delete and generate RFQ) --}}
+        @if (auth()->user()?->canModule('preplist', 'manage'))
+            <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
+               class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit prep list
+            </a>
+        @else
+            <button type="button"
+                    data-access-restricted-modal-toggle
+                    title="Your role does not have access to that module."
+                    class="flex cursor-not-allowed items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit prep list
+            </button>
+        @endif
         @if (auth()->user()?->canModule('preplist', 'manage'))
             <a href="{{ route('preplist.generate-rfq', ['preplist' => $preplist->id]) }}"
                class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
@@ -221,6 +232,7 @@
                 Generate RFQ for supplier
             </button>
         @endif
+        </div>{{-- /action group --}}
     </div>
 
     {{-- Delete prep list confirmation modal --}}
