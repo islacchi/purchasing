@@ -197,7 +197,7 @@
                                             </span>
                                         @endif
                                     </td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-right">
+                                    <td class="break-words px-6 py-4 text-right">
                                         @if ($hasQuotes)
                                             <span class="font-bold {{ $isComparable ? 'text-green-600' : 'text-gray-700' }}">{{ $peso($stats['best']) }}</span>
                                         @else
@@ -214,8 +214,8 @@
                                             <span class="text-gray-300">—</span>
                                         @endif
                                     </td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-right text-gray-500">
-                                        {{ $hasQuotes ? $peso($stats['avg']) : '—' }}
+                                    <td class="break-words px-6 py-4 text-right text-gray-500">
+                                        {{ $hasQuotes ? $peso($stats['avg']) : '-' }}
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right">
                                         @if ($variance !== null)
@@ -305,7 +305,7 @@
                                             $isBest = $quote && $item['stats']['best'] !== null && abs($quote['price'] - $item['stats']['best']) < 0.0001 && $item['stats']['count'] > 1;
                                             $isAbove = $quote && $item['stats']['avg'] !== null && $quote['price'] > $item['stats']['avg'];
                                         @endphp
-                                        <td class="whitespace-nowrap px-5 py-4 text-center">
+                                        <td class="break-words px-5 py-4 text-center">
                                             @if ($quote)
                                                 <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium
                                                     {{ $isBest ? 'bg-green-50 text-green-700' : ($isAbove ? 'bg-amber-50 text-amber-700' : 'bg-white text-gray-700') }}">
@@ -524,17 +524,17 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-right font-semibold text-green-600">{{ $peso($stats['best']) }}</td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-right text-gray-500">{{ $peso($stats['avg']) }}</td>
+                                    <td class="break-words px-6 py-4 text-right font-semibold text-green-600">{{ $peso($stats['best']) }}</td>
+                                    <td class="break-words px-6 py-4 text-right text-gray-500">{{ $peso($stats['avg']) }}</td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right text-gray-700">{{ $item['requested'] }}</td>
-                                    <td class="whitespace-nowrap px-6 py-4 text-right font-bold text-gray-900">{{ $peso($stats['savings']) }}</td>
+                                    <td class="break-words px-6 py-4 text-right font-bold text-gray-900">{{ $peso($stats['savings']) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                         <tfoot>
                             <tr class="border-t border-gray-200 bg-gray-50">
                                 <td colspan="4" class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Total potential savings</td>
-                                <td class="whitespace-nowrap px-6 py-4 text-right text-base font-bold text-green-700">{{ $peso($totalSavings) }}</td>
+                                <td class="break-words px-6 py-4 text-right text-base font-bold text-green-700">{{ $peso($totalSavings) }}</td>
                             </tr>
                         </tfoot>
                     </table>

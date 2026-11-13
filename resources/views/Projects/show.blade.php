@@ -201,8 +201,8 @@
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ $remaining }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 text-right">
-                                        {{ $projectItem->awarded_unit_price !== null ? '₱ ' . number_format((float) $projectItem->awarded_unit_price, 2) : '—' }}
+                                    <td class="px-4 py-3 text-sm text-gray-900 text-right break-words">
+                                        {{ $projectItem->awarded_unit_price !== null ? '₱ ' . number_format((float) $projectItem->awarded_unit_price, 2) : '-' }}
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format($lineTotal, 2) }}</td>
                                     <td class="px-4 py-3 text-center">

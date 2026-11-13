@@ -241,7 +241,7 @@
                                 </div>
 
                                 <div class="flex-shrink-0 text-right">
-                                    <p class="text-sm font-bold text-gray-900">
+                                    <p class="break-words text-sm font-bold text-gray-900">
                                         {{ $peso($quotedItem->unit_price) }} / {{ $item['unit'] }}
                                     </p>
                                     <p class="mt-0.5 text-xs text-gray-500">

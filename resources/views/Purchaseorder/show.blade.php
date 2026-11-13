@@ -289,8 +289,8 @@
                                                aria-label="Mark {{ $item->item?->name ?? 'line' }} as received">
                                     </form>
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-2 text-right text-gray-700">{{ $peso($item->unit_price) }}</td>
-                                <td class="whitespace-nowrap px-3 py-2 text-right font-semibold text-gray-900">
+                                <td class="break-words px-3 py-2 text-right text-gray-700">{{ $peso($item->unit_price) }}</td>
+                                <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">
                                     {{ $peso($item->extendedTotal()) }}
                                 </td>
                             </tr>

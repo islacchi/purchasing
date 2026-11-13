@@ -88,9 +88,9 @@
                 <td class="border border-gray-300 px-2 py-2 text-gray-900"></td>
                 {{-- Not sourced from the database — intentionally blank --}}
                 <td class="border border-gray-300 px-2 py-2 text-gray-900"></td>
-                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
-                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900">{{ $projectItem->awarded_unit_price !== null ? '₱ ' . number_format((float) $projectItem->awarded_unit_price, 2) : '—' }}</td>
-                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900">₱ {{ number_format($lineTotal, 2) }}</td>
+                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900 break-words">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
+                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900 break-words">{{ $projectItem->awarded_unit_price !== null ? '₱ ' . number_format((float) $projectItem->awarded_unit_price, 2) : '-' }}</td>
+                <td class="border border-gray-300 px-2 py-2 text-right text-gray-900 break-words">₱ {{ number_format($lineTotal, 2) }}</td>
                 {{-- Not sourced from the database — intentionally blank --}}
                 <td class="border border-gray-300 px-2 py-2 text-center text-gray-900"></td>
                 {{-- Not sourced from the database — intentionally blank --}}

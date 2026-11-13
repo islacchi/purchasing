@@ -186,8 +186,8 @@
                                                     <span class="text-xs text-gray-400">&mdash;</span>
                                                 @endif
                                             </td>
-                                            <td class="whitespace-nowrap px-3 py-4 text-right {{ $isQuoted ? 'text-gray-700' : 'text-gray-400' }}">
-                                                {{ $isQuoted ? $peso($item['unit_price']) : '—' }}
+                                            <td class="break-words px-3 py-4 text-right {{ $isQuoted ? 'text-gray-700' : 'text-gray-400' }}">
+                                                {{ $isQuoted ? $peso($item['unit_price']) : '-' }}
                                             </td>
                                             <td class="whitespace-nowrap px-3 py-4 text-center">
                                                 @if ($isQuoted)
@@ -204,9 +204,9 @@
                                                     <span class="text-xs text-gray-400">No quote</span>
                                                 @endif
                                             </td>
-                                            <td class="whitespace-nowrap px-3 py-4 text-right font-semibold {{ $isQuoted ? 'text-gray-900' : 'text-gray-400' }}"
+                                            <td class="break-words px-3 py-4 text-right font-semibold {{ $isQuoted ? 'text-gray-900' : 'text-gray-400' }}"
                                                 data-line-amount>
-                                                {{ $isQuoted ? $peso($lineAmount) : '—' }}
+                                                {{ $isQuoted ? $peso($lineAmount) : '-' }}
                                             </td>
                                         </tr>
                                     @endforeach

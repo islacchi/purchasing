@@ -149,7 +149,7 @@
                                 <td class="whitespace-nowrap px-3 py-4 text-center text-gray-700">
                                     {{ $po['items'] }}
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-4 text-right font-semibold text-gray-900">
+                                <td class="break-words px-3 py-4 text-right font-semibold text-gray-900">
                                     {{ $peso($po['total']) }}
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-4">
