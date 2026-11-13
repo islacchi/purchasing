@@ -56,13 +56,83 @@
                     </p>
                 @endunless
 
-                {{-- Restore guidance --}}
+                {{-- Restore guide (for whoever administers the system) --}}
                 <div class="mt-6 border-t border-gray-100 pt-6">
-                    <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Restore guidance</p>
-                    <p class="mt-2 text-xs text-gray-500">Restoring intentionally cannot be done from this page — it would destroy the live database. Run it by hand on a maintenance window instead:</p>
-                    <pre class="mt-2 overflow-x-auto rounded-lg bg-gray-900 px-4 py-3 text-xs text-gray-100">mysql -h {{ $dbInfo['host'] }} -P {{ $dbInfo['port'] }} -u &lt;user&gt; -p &lt; backups.sql
-mysql -h {{ $dbInfo['host'] }} -P {{ $dbInfo['port'] }} -u &lt;user&gt; -p -e "CREATE DATABASE purchase_test;"</pre>
-                    <p class="mt-2 text-xs text-gray-500">The dump file includes a drop-and-recreate of the database. Take a fresh back-up first and confirm the file runs on a scratch database before applying it to production.</p>
+                    <details class="group rounded-lg border border-gray-200 bg-white transition-colors open:bg-gray-50">
+                        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
+                            <span class="min-w-0">
+                                <span class="block text-sm font-semibold text-gray-900">Restore guide (for non-technical readers)</span>
+                                <span class="mt-0.5 block text-xs text-gray-500">Step-by-step instructions to bring this back-up back, readable by anyone</span>
+                            </span>
+                            <svg class="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ease-out group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 6 6 6-6 6"/>
+                            </svg>
+                        </summary>
+
+                        <div class="space-y-5 border-t border-gray-100 px-4 py-4 text-xs leading-relaxed text-gray-600">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">When you would use this</p>
+                                <ul class="mt-1 list-disc space-y-1 pl-5">
+                                    <li>You open the system and a section looks empty or broken (projects, prep lists, quotations, purchase orders, items).</li>
+                                    <li>You want to move the system to a new computer exactly as it was.</li>
+                                    <li>You did not see any error, but the data is wrong in a way you cannot fix by re-entering it.</li>
+                                </ul>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Step 1 — take a back-up of what you have now</p>
+                                <p class="mt-1">This is the single most important step: it makes the restore reversible.</p>
+                                <ol class="mt-1 list-decimal space-y-1 pl-5">
+                                    <li>Click the big <span class="font-semibold text-gray-800">“Download Database Back-up”</span> button on the right side of this page.</li>
+                                    <li>Wait for the green banner at the top that says <span class="font-semibold text-gray-800">“Database back-up created.”</span></li>
+                                    <li>A new file name appears at the top of the back-up history list. Note down the file name (it looks like <span class="font-mono text-[11px] text-gray-800">purchasing-YYYY-MM-DD-HHMMSS.sql</span>).</li>
+                                </ol>
+                                <p class="mt-1">If that step failed with a red error message, stop here and contact your IT support. Do not try the restore.</p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Step 2 — free the system</p>
+                                <p class="mt-1">Tell everyone else using the system to stay out (this is a maintenance window). Then, from the project folder:</p>
+                                <pre class="mt-2 overflow-x-auto rounded-lg bg-gray-900 px-3 py-2 text-[11px] text-gray-100">php artisan down</pre>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Step 3 — restore</p>
+                                <ol class="mt-1 list-decimal space-y-1 pl-5">
+                                    <li>Open the Command Prompt: press the <span class="font-semibold text-gray-800">Windows key</span>, type <span class="font-semibold text-gray-800">cmd</span>, press <span class="font-semibold text-gray-800">Enter</span>.</li>
+                                    <li>Paste the following line and press <span class="font-semibold text-gray-800">Enter</span>. Replace the file name with the one you noted in Step 1:</li>
+                                </ol>
+                                <pre class="mt-2 overflow-x-auto rounded-lg bg-gray-900 px-3 py-2 text-[11px] text-gray-100">cmd /c "type {{ str_replace('/', '\\', storage_path('app/private/backups')) }}\purchasing-YYYY-MM-DD-HHMMSS.sql | mysql -h {{ $dbInfo['host'] }} -P {{ $dbInfo['port'] }} -u root -p purchasing_db"</pre>
+                                <p class="mt-1">For example, if your newest back-up is <span class="font-mono text-[11px] text-gray-800">purchasing-2026-11-13-063811.sql</span>:</p>
+                                <pre class="mt-2 overflow-x-auto rounded-lg bg-gray-900 px-3 py-2 text-[11px] text-gray-100">cmd /c "type {{ str_replace('/', '\\', storage_path('app/private/backups')) }}\purchasing-2026-11-13-063811.sql | mysql -h {{ $dbInfo['host'] }} -P {{ $dbInfo['port'] }} -u root -p purchasing_db"</pre>
+                                <ol class="mt-1 list-decimal space-y-1 pl-5" start="3">
+                                    <li>It now asks for the MySQL root password. Type it (nothing will appear on the screen — this is normal) and press <span class="font-semibold text-gray-800">Enter</span>. If you don’t know the password, contact your IT support.</li>
+                                    <li>Wait for the prompt to come back (a few seconds). A backup replaces the whole database; it worked if there is no error message.</li>
+                                    <li>Bring the system back up:</li>
+                                </ol>
+                                <pre class="mt-2 overflow-x-auto rounded-lg bg-gray-900 px-3 py-2 text-[11px] text-gray-100">php artisan up</pre>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Step 4 — check the restore worked</p>
+                                <ol class="mt-1 list-decimal space-y-1 pl-5">
+                                    <li>Log in as admin.</li>
+                                    <li>Open <span class="font-semibold text-gray-800">Projects</span> — your old projects must be listed again (everything for this seed database, such as “Drugs for me”, must be there).</li>
+                                    <li>Open <span class="font-semibold text-gray-800">Prep Lists</span>, <span class="font-semibold text-gray-800">Quotation</span>, <span class="font-semibold text-gray-800">Purchase Order</span>, and <span class="font-semibold text-gray-800">Price Index</span> — the old content must be back.</li>
+                                    <li>If something is still missing, the very first backup you took in Step 1 is your safety net. Don’t delete anything; call your IT support with the error and the file names involved.</li>
+                                </ol>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">What this restores — and what it doesn't</p>
+                                <ul class="mt-1 list-disc space-y-1 pl-5">
+                                    <li><span class="font-semibold text-gray-800">Restored:</span> everything kept in the database — users and roles (and the privilege matrix), projects, items, prep lists, quotations, purchase orders, receiving history, and activity logs.</li>
+                                    <li><span class="font-semibold text-gray-800">Not restored:</span> the Excel files uploaded in the Quotation tracker (suppliers' quotation files and your generated RFQs). Those live in the `storage/app/private` folder, not the database; if you need them back, ask IT for a copy of that folder — the database cannot bring them back.</li>
+                                </ul>
+                                <p class="mt-2">Leaving the file will not log you out — the database is dropped/recreated, and the system will simply see the restored sessions.</p>
+                            </div>
+                        </div>
+                    </details>
                 </div>
             </div>
         </div>

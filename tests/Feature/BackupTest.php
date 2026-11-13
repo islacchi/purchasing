@@ -87,9 +87,11 @@ class BackupTest extends TestCase
         $response = $this->actingAs($user)->get(route('settings.backup'))->assertOk();
 
         $response->assertSee('Current Database')
-            ->assertSee('DATABASE')
             ->assertSee('Download Database Back-up')
             ->assertSee('No back-ups yet')
+            ->assertSee('Restore guide (for non-technical readers)', false)
+            ->assertSee('php artisan down')
+            ->assertSee('php artisan up')
             ->assertDontSee('Backup functionality is in development')
             ->assertDontSee('dummy backup history');
     }
