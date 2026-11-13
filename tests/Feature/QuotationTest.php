@@ -302,6 +302,47 @@ class QuotationTest extends TestCase
             ->assertSee('Awaiting quote');
     }
 
+    public function test_quotation_module_paginates_prep_list_groups(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        for ($i = 1; $i <= 12; $i++) {
+            $preplist = $this->compile($user, [
+                'name' => sprintf('Group fixture %02d', $i),
+                'sources' => [$projectItem->id],
+                'shelf_life' => [$projectItem->id => 9],
+            ]);
+            $this->createQuotation($user, $preplist, $supplier, [
+                'rfq_number' => sprintf('RFQ-2026-%04d', $i),
+            ]);
+        }
+
+        $pageOne = $this->actingAs($user)->get(route('quotation'))->assertOk();
+        $groups = $pageOne->viewData('groups');
+        $this->assertSame(5, $groups->count());
+        $this->assertSame(12, $groups->total());
+        $this->assertSame(1, $groups->currentPage());
+        $this->assertNotNull($groups->nextPageUrl());
+
+        $pageOne->assertSee('aria-label="Pagination Navigation"', false)
+            ->assertSee('Group fixture 12')
+            ->assertSee('Group fixture 08')
+            ->assertDontSee('Group fixture 07');
+
+        $pageThree = $this->actingAs($user)->get(route('quotation', ['page' => 3]))->assertOk();
+        $this->assertSame(2, $pageThree->viewData('groups')->count());
+        $pageThree->assertSee('Group fixture 02')
+            ->assertSee('Group fixture 01')
+            ->assertDontSee('Group fixture 03');
+    }
+
     public function test_quotation_show_displays_pending_items_and_document(): void
     {
         Storage::fake('local');

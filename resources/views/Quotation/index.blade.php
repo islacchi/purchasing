@@ -152,6 +152,12 @@
                     </tbody>
                 </table>
             </div>
+
+            @if ($groups->hasPages())
+                <div class="border-t border-gray-200 px-6 py-3">
+                    {{ $groups->links() }}
+                </div>
+            @endif
         </div>
 
         @push('scripts')
