@@ -701,17 +701,12 @@
                     + '<th class="px-4 py-3 text-right">Extended</th>'
                     + '<th class="px-4 py-3 text-right">vs Best</th>'
                     + '<th class="px-4 py-3 text-center">Quoted</th>'
-                    + '<th class="px-4 py-3 text-center">Coverage</th>'
                     + '<th class="px-4 py-3 text-center">Source</th>'
                     + '</tr></thead><tbody class="divide-y divide-gray-100">';
 
                 sorted.forEach(function (quote) {
                     const isBest = isComparable && Math.abs(quote.price - item.best) < 0.0001;
                     const premium = item.best > 0 ? ((quote.price - item.best) / item.best) * 100 : 0;
-                    const coverage = quote.coverage ? escapeHtml(quote.coverage) : '—';
-                    const coverageClass = quote.coverage
-                        ? (quote.coverage_full ? 'text-gray-600' : 'text-amber-600')
-                        : 'text-gray-400';
 
                     html += '<tr class="hover:bg-gray-50">';
                     html += '<td class="px-4 py-3"><span class="inline-flex items-center gap-2 text-gray-800">'
@@ -724,7 +719,6 @@
                     html += '<td class="px-4 py-3 text-right text-xs ' + (isBest ? 'text-green-600 font-semibold' : 'text-gray-500') + '">'
                         + (!isComparable ? '—' : (isBest ? '—' : '+' + premium.toFixed(1) + '%')) + '</td>';
                     html += '<td class="px-4 py-3 text-center text-xs text-gray-600">' + escapeHtml(quote.quoted_at) + '</td>';
-                    html += '<td class="px-4 py-3 text-center text-xs ' + coverageClass + '">' + coverage + '</td>';
                     html += '<td class="px-4 py-3 text-center">'
                         + '<a href="' + quotationBase + '/' + quote.quotation_id + '" class="inline-flex items-center gap-1 text-xs font-semibold text-[#2a7a94] hover:underline">View'
                         + '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M9 5l7 7-7 7"/></svg>'
@@ -735,8 +729,7 @@
                 html += '</tbody></table></div>';
 
                 if (isComparable) {
-                    html += '<p class="mt-3 text-xs text-gray-500">Best price is the lowest normalised unit price. '
-                        + 'Coverage shows how much of the requested quantity the quote covers.</p>';
+                    html += '<p class="mt-3 text-xs text-gray-500">Best price is the lowest normalised unit price.</p>';
                 }
 
                 compareBody.innerHTML = html;

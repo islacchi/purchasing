@@ -123,7 +123,6 @@ class PriceIndexTest extends TestCase
             'quotation_id' => $quotation->id,
             'preplist_item_id' => $preplistItem->id,
             'unit_price' => $unitPrice,
-            'available_qty' => null,
             'quoted_at' => Carbon::parse($quotedAt),
         ], $overrides));
     }
@@ -147,13 +146,13 @@ class PriceIndexTest extends TestCase
         $medSource = $this->supplier('MedSource Inc.');
 
         $greenCoreOld = $this->quotation($user, $preplist, $greenCore);
-        $this->quote($greenCoreOld, $preplistItem, 320.00, '2026-01-10 08:00:00', ['available_qty' => 150]);
+        $this->quote($greenCoreOld, $preplistItem, 320.00, '2026-01-10 08:00:00');
 
         $greenCoreNew = $this->quotation($user, $preplist, $greenCore);
-        $this->quote($greenCoreNew, $preplistItem, 300.00, '2026-02-10 08:00:00', ['available_qty' => 150]);
+        $this->quote($greenCoreNew, $preplistItem, 300.00, '2026-02-10 08:00:00');
 
         $medSourceQuotation = $this->quotation($user, $preplist, $medSource);
-        $this->quote($medSourceQuotation, $preplistItem, 360.00, '2026-02-05 08:00:00', ['available_qty' => 80]);
+        $this->quote($medSourceQuotation, $preplistItem, 360.00, '2026-02-05 08:00:00');
 
         $response = $this->actingAs($user)->get(route('priceindex'))->assertOk();
 
@@ -174,13 +173,11 @@ class PriceIndexTest extends TestCase
         $greenQuote = collect($row['quotes'])->firstWhere('supplier', $greenCore->id);
         $this->assertEqualsWithDelta(300.00, $greenQuote['price'], 0.001);
         $this->assertSame('Feb 10, 2026', $greenQuote['quoted_at']);
-        $this->assertSame('150 / 150', $greenQuote['coverage']);
-        $this->assertTrue($greenQuote['coverage_full']);
+        $this->assertArrayNotHasKey('coverage', $greenQuote);
 
         $medQuote = collect($row['quotes'])->firstWhere('supplier', $medSource->id);
         $this->assertEqualsWithDelta(360.00, $medQuote['price'], 0.001);
-        $this->assertSame('80 / 150', $medQuote['coverage']);
-        $this->assertFalse($medQuote['coverage_full']);
+        $this->assertArrayNotHasKey('coverage', $medQuote);
 
         // History keeps every priced line, including the superseded GreenCore quote.
         $this->assertCount(3, $row['history']);
@@ -208,6 +205,47 @@ class PriceIndexTest extends TestCase
             ->assertSee('Amoxicillin 500mg')
             ->assertSee('GreenCore Pharmaceuticals')
             ->assertSee('MedSource Inc.');
+    }
+
+    public function test_price_index_ignores_zero_and_negative_unit_prices(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $item = $this->item(['name' => 'Insulin vials', 'unit' => 'box of 10']);
+
+        $project = $this->project($user, $entity, ['title' => 'Pharma supplies Q3']);
+        $this->projectItem($project, $item, 100);
+
+        $preplist = $this->preplist($user);
+        $preplistItem = $this->preplistItem($preplist, $item);
+
+        $valid = $this->supplier('GreenCore Pharmaceuticals');
+        $secondValid = $this->supplier('MedSource Inc.');
+        $zero = $this->supplier('Zero Price Supplies');
+        $negative = $this->supplier('Negative Price Supplies');
+
+        $this->quote($this->quotation($user, $preplist, $valid), $preplistItem, 300.00, '2026-02-10 08:00:00');
+        $this->quote($this->quotation($user, $preplist, $secondValid), $preplistItem, 350.00, '2026-02-11 08:00:00');
+        $this->quote($this->quotation($user, $preplist, $zero), $preplistItem, 0.00, '2026-02-12 08:00:00');
+        $this->quote($this->quotation($user, $preplist, $negative), $preplistItem, -50.00, '2026-02-13 08:00:00');
+
+        $response = $this->actingAs($user)->get(route('priceindex'))->assertOk();
+
+        $row = collect($response->viewData('items'))->firstWhere('id', $item->id);
+
+        $this->assertNotNull($row);
+        $this->assertSame(2, $row['stats']['count']);
+        $this->assertEqualsWithDelta(300.00, $row['stats']['best'], 0.001);
+        $this->assertEqualsWithDelta(325.00, $row['stats']['avg'], 0.001);
+        $this->assertEqualsWithDelta(2500.00, $row['stats']['savings'], 0.001);
+        $this->assertSame($valid->id, $row['stats']['best_supplier']);
+        $this->assertCount(2, $row['quotes']);
+        $this->assertCount(2, $row['history']);
+
+        $suppliers = $response->viewData('suppliers');
+        $this->assertArrayNotHasKey($zero->id, $suppliers);
+        $this->assertArrayNotHasKey($negative->id, $suppliers);
     }
 
     public function test_price_index_shows_requested_items_without_quotes(): void

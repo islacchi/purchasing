@@ -42,11 +42,10 @@ class PriceIndexController extends Controller
             ->join('quotations', 'quotations.id', '=', 'quotation_items.quotation_id')
             ->join('suppliers', 'suppliers.id', '=', 'quotations.supplier_id')
             ->join('preplist_items', 'preplist_items.id', '=', 'quotation_items.preplist_item_id')
-            ->whereNotNull('quotation_items.unit_price')
+            ->where('quotation_items.unit_price', '>', 0)
             ->select([
                 'quotation_items.id',
                 'quotation_items.unit_price',
-                'quotation_items.available_qty',
                 'quotation_items.quoted_at',
                 'quotations.id as quotation_id',
                 'quotations.generated_at',
@@ -100,17 +99,8 @@ class PriceIndexController extends Controller
             $quotes = $rows
                 ->groupBy('supplier_id')
                 ->map(fn ($group) => $group->last())
-                ->map(function ($row) use ($suppliers, $requested) {
+                ->map(function ($row) use ($suppliers) {
                     $quotedAt = $row->quoted_at ?? $row->generated_at;
-                    $available = $row->available_qty === null ? null : (int) $row->available_qty;
-
-                    $coverage = null;
-                    $coverageFull = false;
-
-                    if ($available !== null && $requested > 0) {
-                        $coverage = $available.' / '.$requested;
-                        $coverageFull = $available >= $requested;
-                    }
 
                     return [
                         'supplier' => (int) $row->supplier_id,
@@ -119,8 +109,6 @@ class PriceIndexController extends Controller
                         'color' => $suppliers[$row->supplier_id]['color'] ?? '#9ca3af',
                         'price' => round((float) $row->unit_price, 2),
                         'quoted_at' => $quotedAt ? Carbon::parse($quotedAt)->format('M j, Y') : '—',
-                        'coverage' => $coverage,
-                        'coverage_full' => $coverageFull,
                         'quotation_id' => (int) $row->quotation_id,
                     ];
                 })
