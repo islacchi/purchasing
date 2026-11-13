@@ -197,7 +197,7 @@
                                     };
                                 @endphp
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->name ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 break-words">{{ $projectItem->item?->name ?? '-' }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ $remaining }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>

@@ -206,7 +206,7 @@
                             class="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
-                                <p class="font-bold text-gray-900">{{ $item['name'] }}</p>
+                                <p class="font-bold text-gray-900 break-words">{{ $item['name'] }}</p>
                             </div>
                             <p class="mt-1 text-xs text-gray-500">
                                 {{ $item['requested'] }} {{ $item['unit'] }} requested

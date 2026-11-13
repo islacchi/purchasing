@@ -176,7 +176,7 @@
                                     data-project-ids="{{ implode(',', $item['project_ids']) }}"
                                     data-has-quotes="{{ $hasQuotes ? '1' : '0' }}">
                                     <td class="px-6 py-4">
-                                        <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
+                                        <p class="font-semibold text-gray-900 break-words">{{ $item['name'] }}</p>
                                         <div class="mt-1 flex flex-wrap items-center gap-2">
                                             <span class="text-xs text-gray-500">{{ $item['unit'] }}</span>
                                             <span class="text-gray-300">·</span>
@@ -295,8 +295,8 @@
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
                                     data-project-ids="{{ implode(',', $item['project_ids']) }}">
-                                    <td class="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-white px-6 py-4">
-                                        <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
+                                    <td class="sticky left-0 z-10 border-r border-gray-200 bg-white px-6 py-4 break-words">
+                                        <p class="font-semibold text-gray-900 break-words">{{ $item['name'] }}</p>
                                         <p class="mt-0.5 text-xs text-gray-500">{{ $item['unit'] }}</p>
                                     </td>
                                     @foreach ($suppliers as $key => $supplier)
@@ -512,7 +512,7 @@
                                     data-category="{{ $item['category'] }}"
                                     data-project-ids="{{ implode(',', $item['project_ids']) }}">
                                     <td class="px-6 py-4">
-                                        <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
+                                        <p class="font-semibold text-gray-900 break-words">{{ $item['name'] }}</p>
                                         <div class="mt-1 flex flex-wrap items-center gap-2">
                                             <span class="text-xs text-gray-500">{{ $item['unit'] }}</span>
                                             @if ($bestSupplier)

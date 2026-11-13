@@ -160,7 +160,7 @@
                                            class="item-check mt-0.5 w-4 h-4 rounded border-gray-300 accent-[#2a7a94] text-[#2a7a94] focus:ring-teal-300"
                                            {{ $isSelected ? 'checked' : '' }}>
                                     <div class="min-w-0">
-                                        <span class="item-name text-sm text-gray-700">{{ $projectItem->item?->name ?? 'Item' }}</span>
+                                        <span class="item-name break-words text-sm text-gray-700">{{ $projectItem->item?->name ?? 'Item' }}</span>
                                         @if ($isFulfilled)
                                             <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-green-700">Fulfilled</span>
                                         @endif

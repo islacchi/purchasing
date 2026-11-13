@@ -75,7 +75,7 @@
             <tr>
                 {{-- Increment from 1 across the item rows; not sourced from the database. --}}
                 <td class="border border-gray-300 px-2 py-2 text-center text-gray-900">{{ $loop->iteration }}</td>
-                <td class="border border-gray-300 px-3 py-2 text-gray-900">{{ $projectItem->item?->name ?? '—' }}</td>
+                <td class="border border-gray-300 px-3 py-2 text-gray-900 break-words">{{ $projectItem->item?->name ?? '-' }}</td>
                 <td class="border border-gray-300 px-2 py-2 text-right text-gray-900">{{ $remaining }}</td>
                 <td class="border border-gray-300 px-2 py-2 text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
                 {{-- Not sourced from the database — intentionally blank --}}

@@ -79,7 +79,7 @@
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-100">
                     <div class="min-w-0">
-                        <p class="font-bold text-gray-900">{{ $item['name'] }}</p>
+                        <p class="font-bold text-gray-900 break-words">{{ $item['name'] }}</p>
                         <p class="mt-1 text-xs text-gray-500">
                             @if(!empty($item['shelf_life']))
                                 Shelf life required:

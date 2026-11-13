@@ -134,7 +134,7 @@
                     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                         {{-- Item header --}}
                         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                            <p class="font-bold text-gray-900">{{ $group['name'] }}</p>
+                            <p class="font-bold text-gray-900 break-words">{{ $group['name'] }}</p>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                                 {{ $group['total'] }}
                             </span>

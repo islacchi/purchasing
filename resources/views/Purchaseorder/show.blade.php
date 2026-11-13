@@ -263,7 +263,7 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="px-3 py-2 text-center text-xs text-gray-400">{{ $loop->iteration }}</td>
                                 <td class="px-3 py-2">
-                                    <p class="font-medium text-gray-900">{{ $item->item?->name ?? 'Item removed' }}</p>
+                                    <p class="font-medium text-gray-900 break-words">{{ $item->item?->name ?? 'Item removed' }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">{{ $item->item?->unit ?? '' }}</p>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2 text-center text-gray-700">{{ $item->qty }}</td>

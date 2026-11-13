@@ -152,7 +152,7 @@
                                                        {{ $isQuoted ? 'checked' : 'disabled' }}>
                                             </td>
                                             <td class="px-3 py-4">
-                                                <p class="font-medium {{ $isQuoted ? 'text-gray-900' : 'text-gray-500' }}">{{ $item['name'] }}</p>
+                                                <p class="font-medium break-words {{ $isQuoted ? 'text-gray-900' : 'text-gray-500' }}">{{ $item['name'] }}</p>
                                                 <p class="mt-0.5 text-xs text-gray-500">
                                                     {{ $item['unit'] }}
                                                     <span class="mx-1 text-gray-300">&middot;</span>
