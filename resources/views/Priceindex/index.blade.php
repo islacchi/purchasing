@@ -367,6 +367,11 @@
                             <p class="text-sm font-medium text-gray-600">No items to compare yet.</p>
                             <p class="mt-1 text-xs text-gray-500">Create a project and submit supplier quotations first.</p>
                         </div>
+                    @else
+                        <div class="py-10 text-center">
+                            <p class="text-sm font-medium text-gray-600">Select an item from the board.</p>
+                            <p class="mt-1 text-xs text-gray-500">Choose a row with quotes to compare supplier prices.</p>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -605,12 +610,35 @@
             const trendLegend = document.getElementById('trendLegend');
             const trendEmpty = document.getElementById('trendEmpty');
             const trendCanvas = document.getElementById('priceTrendChart');
+            const comparePlaceholder = compareBody.innerHTML;
 
             let chart = null;
             let selectedId = null;
 
             function findItem(id) {
                 return priceData.find(function (item) { return item.id === id; });
+            }
+
+            function resetComparison() {
+                selectedId = null;
+
+                document.querySelectorAll('.price-row').forEach(function (row) {
+                    row.classList.remove('selected-row');
+                });
+
+                compareSubtitle.textContent = 'Select an item from the board to compare its quotes.';
+                compareBadge.classList.add('hidden');
+                compareBody.innerHTML = comparePlaceholder;
+
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
+                trendLegend.innerHTML = '';
+                trendCanvas.classList.remove('hidden');
+                trendEmpty.classList.add('hidden');
+                trendEmpty.querySelector('p').textContent = 'No price history for this item yet.';
+                trendSubtitle.textContent = 'Movement of the selected item\'s quoted price.';
             }
 
             function renderComparison(item) {
@@ -1001,6 +1029,14 @@
                 document.querySelectorAll('.savings-row').forEach(function (row) {
                     row.classList.toggle('hidden', !matchesFilters(row.dataset));
                 });
+
+                if (selectedId !== null) {
+                    const selectedRow = document.querySelector('.price-row[data-item-id="' + selectedId + '"]');
+
+                    if (!selectedRow || selectedRow.classList.contains('hidden')) {
+                        resetComparison();
+                    }
+                }
             }
 
             searchInput.addEventListener('input', applyFilters);
@@ -1028,13 +1064,6 @@
             if (initialItem) {
                 selectItem(initialItem.id, false);
             }
-
-            // Keep the selected row highlighted only while it is visible.
-            searchInput.addEventListener('input', function () {
-                document.querySelectorAll('.price-row').forEach(function (row) {
-                    row.classList.remove('selected-row');
-                });
-            });
         })();
     </script>
 @endsection

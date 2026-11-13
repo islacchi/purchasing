@@ -228,7 +228,9 @@ class PriceIndexTest extends TestCase
             ->assertSee('MedSource Inc.')
             ->assertSee('Brand / expiry')
             ->assertSee('current quotes across the catalogue')
-            ->assertSee('Ties count as a win for every tied supplier.');
+            ->assertSee('Ties count as a win for every tied supplier.')
+            ->assertSee('Select an item from the board.')
+            ->assertDontSee('No items to compare yet.');
     }
 
     public function test_price_index_project_filter_uses_ids_for_duplicate_and_pipe_titles(): void
@@ -438,6 +440,7 @@ class PriceIndexTest extends TestCase
             ->assertSee('No items with quotation activity yet.')
             ->assertSee('No suppliers have quoted yet.')
             ->assertSee('No items to compare yet.')
+            ->assertDontSee('Select an item from the board.')
             ->assertSee('No comparable savings yet.');
     }
 }
