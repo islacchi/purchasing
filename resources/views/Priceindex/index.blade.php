@@ -693,11 +693,35 @@
 
                 let html = '';
 
-                // Best price summary
+                // Best price and best expiry, side by side: lowest price vs latest supplier-stated expiry.
+                const bestExpiryQuote = item.quotes.reduce(function (best, quote) {
+                    if (!quote.expiry_iso) {
+                        return best;
+                    }
+                    return !best || quote.expiry_iso > best.expiry_iso ? quote : best;
+                }, null);
+                const bestExpiry = bestExpiryQuote ? expiryView(bestExpiryQuote) : null;
+                let bestExpiryRemaining = '';
+
+                if (bestExpiryQuote) {
+                    const parts = bestExpiryQuote.expiry_iso.split('-');
+                    const expiryDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const days = Math.round((expiryDate - today) / 86400000);
+                    const absoluteDays = Math.abs(days);
+                    bestExpiryRemaining = days < 0
+                        ? absoluteDays + ' day' + (absoluteDays === 1 ? '' : 's') + ' overdue'
+                        : days + ' day' + (days === 1 ? '' : 's') + ' left';
+                }
+
+                const bestExpiryBrand = bestExpiryQuote && bestExpiryQuote.brand ? bestExpiryQuote.brand : null;
+
+                html += '<div class="grid gap-4 md:grid-cols-2">';
+
                 html += '<div class="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">';
                 html += '<div>';
                 html += '<p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Best price</p>';
-                const bestExpiry = expiryView(bestQuote);
                 html += '<p class="mt-1 text-2xl font-bold ' + (isComparable ? 'text-green-600' : 'text-gray-800') + '">'
                     + peso(item.best)
                     + ' <span class="text-xs font-normal text-gray-500">/ ' + escapeHtml(item.unit) + '</span></p>';
@@ -706,7 +730,6 @@
                     html += ' <span class="font-semibold text-green-600">· ' + delta.toFixed(1) + '% below average</span>';
                 }
                 html += '</p>';
-                html += '<p class="mt-0.5 text-xs ' + bestExpiry.className + '" title="Supplier-stated expiry">Best expiry: ' + bestExpiry.text + '</p>';
                 html += '</div>';
                 html += '<div class="text-right">';
                 html += '<p class="text-xs text-gray-500">Extended cost · ' + requestedLabel + '</p>';
@@ -719,6 +742,36 @@
                     + '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M9 5l7 7-7 7"/></svg>'
                     + '</a>';
                 html += '</div>';
+                html += '</div>';
+
+                html += '<div class="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">';
+                if (bestExpiryQuote) {
+                    html += '<div>';
+                    html += '<p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Best expiry</p>';
+                    html += '<p class="mt-1 text-2xl font-bold ' + bestExpiry.className + '" title="Latest supplier-stated expiry">' + bestExpiry.text + '</p>';
+                    html += '<p class="mt-1 text-xs text-gray-600">' + escapeHtml(bestExpiryQuote.short)
+                        + ' · ' + bestExpiryRemaining + '</p>';
+                    html += '</div>';
+                    html += '<div class="text-right">';
+                    html += '<p class="text-xs text-gray-500">Brand</p>';
+                    html += '<p class="text-sm font-semibold ' + (bestExpiryBrand ? 'text-gray-800' : 'text-gray-400') + '">'
+                        + (bestExpiryBrand ? escapeHtml(bestExpiryBrand) : 'Not stated') + '</p>';
+                    html += '<a href="' + quotationBase + '/' + bestExpiryQuote.quotation_id
+                        + '" class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#2a7a94] hover:underline">'
+                        + 'View quotation'
+                        + '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">'
+                        + '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M9 5l7 7-7 7"/></svg>'
+                        + '</a>';
+                    html += '</div>';
+                } else {
+                    html += '<div>';
+                    html += '<p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Best expiry</p>';
+                    html += '<p class="mt-1 text-2xl font-bold text-gray-400">—</p>';
+                    html += '<p class="mt-1 text-xs text-gray-500">No submitted quote states an expiry.</p>';
+                    html += '</div>';
+                }
+                html += '</div>';
+
                 html += '</div>';
 
                 if (!isComparable) {
@@ -798,6 +851,7 @@
                     html += '<p class="mt-3 text-xs text-gray-500">Best price is the lowest normalised unit price.</p>';
                 }
 
+                html += '<p class="mt-2 text-xs text-gray-500">Best expiry is the latest supplier-stated expiry.</p>';
                 html += '<p class="mt-2 text-xs text-gray-500">Brand and expiry are supplier-stated. '
                     + 'Check expiry against the project delivery date and required shelf life.</p>';
 

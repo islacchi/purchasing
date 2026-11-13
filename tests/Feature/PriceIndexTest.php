@@ -189,6 +189,7 @@ class PriceIndexTest extends TestCase
         $this->assertSame('Feb 10, 2026', $greenQuote['quoted_at']);
         $this->assertSame('MediCore', $greenQuote['brand']);
         $this->assertSame(Carbon::parse($greenExpiry)->format('M j, Y'), $greenQuote['expiry']);
+        $this->assertSame(Carbon::parse($greenExpiry)->toDateString(), $greenQuote['expiry_iso']);
         $this->assertNull($greenQuote['expiry_state']);
         $this->assertArrayNotHasKey('coverage', $greenQuote);
 
@@ -196,6 +197,7 @@ class PriceIndexTest extends TestCase
         $this->assertEqualsWithDelta(360.00, $medQuote['price'], 0.001);
         $this->assertSame('PharmaCorp', $medQuote['brand']);
         $this->assertSame(Carbon::parse($medExpiry)->format('M j, Y'), $medQuote['expiry']);
+        $this->assertSame(Carbon::parse($medExpiry)->toDateString(), $medQuote['expiry_iso']);
         $this->assertNull($medQuote['expiry_state']);
         $this->assertArrayNotHasKey('coverage', $medQuote);
 
@@ -231,7 +233,7 @@ class PriceIndexTest extends TestCase
             ->assertSee('Ties count as a win for every tied supplier.')
             ->assertSee('Select an item from the board.')
             ->assertDontSee('No items to compare yet.')
-            ->assertSee('Best expiry:', false)
+            ->assertSee('Best expiry is the latest supplier-stated expiry.')
             ->assertSee('The chart spans from the first quoted month within the selected period.')
             ->assertSee('id="savingsTableWrapper"', false)
             ->assertSee('id="savingsEmptyState"', false)
@@ -352,9 +354,12 @@ class PriceIndexTest extends TestCase
 
         $this->assertSame('OldBatch', $expiredQuote['brand']);
         $this->assertSame('expired', $expiredQuote['expiry_state']);
+        $this->assertSame(now()->subDay()->toDateString(), $expiredQuote['expiry_iso']);
         $this->assertSame('NearBatch', $soonQuote['brand']);
         $this->assertSame('soon', $soonQuote['expiry_state']);
+        $this->assertSame(now()->addDays(10)->toDateString(), $soonQuote['expiry_iso']);
         $this->assertSame('FreshBatch', $goodQuote['brand']);
+        $this->assertSame(now()->addYear()->toDateString(), $goodQuote['expiry_iso']);
         $this->assertNull($goodQuote['expiry_state']);
     }
 

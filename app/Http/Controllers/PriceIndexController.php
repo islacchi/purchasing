@@ -141,6 +141,7 @@ class PriceIndexController extends Controller
                         'price' => round((float) $row->unit_price, 2),
                         'brand' => $row->brand,
                         'expiry' => $expiry?->format('M j, Y'),
+                        'expiry_iso' => $expiry?->toDateString(),
                         'expiry_state' => $expiryState,
                         'quoted_at' => $quotedAt ? Carbon::parse($quotedAt)->format('M j, Y') : '—',
                         'quotation_id' => (int) $row->quotation_id,
