@@ -40,8 +40,9 @@
             #printPreviewModal,
             #projectDeleteModal { display: none !important; }
             .print-sheet { display: block !important; width: 100% !important; padding: 0 !important; }
+            #mainContent { margin-left: 0 !important; }
             html, body { overflow: visible !important; height: auto !important; background: #fff !important; }
-            main { overflow: visible !important; background: #fff !important; padding: 0 !important; }
+            main { overflow: visible !important; background: #fff !important; padding: 0 !important; margin: 0 !important; }
             .rounded-lg { border-radius: 0 !important; }
             table thead { display: table-header-group; }
             table tr { page-break-inside: avoid; }
