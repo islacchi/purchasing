@@ -91,7 +91,7 @@
 
         {{-- Filter bar --}}
         <div class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 <div class="relative">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -116,13 +116,6 @@
                     @foreach ($projectOptions as $projectId => $projectLabel)
                         <option value="{{ $projectId }}">{{ $projectLabel }}</option>
                     @endforeach
-                </select>
-
-                <select id="pricePeriod"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                    <option value="3">Last 3 months</option>
-                    <option value="6" selected>Last 6 months</option>
-                    <option value="12">Last 12 months</option>
                 </select>
             </div>
         </div>
@@ -441,7 +434,18 @@
                     <h2 class="text-sm font-bold uppercase tracking-wider text-gray-700">Price trend</h2>
                     <p id="trendSubtitle" class="mt-0.5 text-xs text-gray-500">Movement of the selected item's quoted price.</p>
                 </div>
-                <div id="trendLegend" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600"></div>
+                <div class="flex flex-wrap items-center justify-end gap-3">
+                    <div id="trendLegend" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600"></div>
+
+                    <label for="pricePeriod" class="sr-only">Price trend period</label>
+                    <select id="pricePeriod"
+                            aria-label="Price trend period"
+                            class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
+                        <option value="3">Last 3 months</option>
+                        <option value="6" selected>Last 6 months</option>
+                        <option value="12">Last 12 months</option>
+                    </select>
+                </div>
             </div>
 
             <div class="px-6 py-5">

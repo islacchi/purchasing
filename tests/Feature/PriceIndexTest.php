@@ -222,6 +222,7 @@ class PriceIndexTest extends TestCase
         $response->assertSee('Live quotation data')
             ->assertDontSee('Dummy data')
             ->assertSee('id="pricePeriod"', false)
+            ->assertSee('aria-label="Price trend period"', false)
             ->assertSee('Amoxicillin 500mg')
             ->assertSee('GreenCore Pharmaceuticals')
             ->assertSee('MedSource Inc.')
