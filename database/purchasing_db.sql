@@ -1,5 +1,5 @@
 -- Purchasing database dump
--- Generated: 2026-11-13 07:22:29
+-- Generated: 2026-11-13 07:30:51
 SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -640,4 +640,4 @@ INSERT INTO `users` (`id`,`role_id`,`name`,`email`,`password`,`is_active`,`creat
 (5,4,'kyle','kyle@gmail.com','$2y$12$LA2Sh0JIv5jegbi3CZYHReHuu1QdwYDKdC3e7ZlM9eoC7xjeEW1ZO',1,'2026-11-09 03:22:38','2026-11-12 06:31:14');
 
 SET FOREIGN_KEY_CHECKS=1;
--- Dump completed: 2026-11-13 07:22:30
+-- Dump completed: 2026-11-13 07:30:51
