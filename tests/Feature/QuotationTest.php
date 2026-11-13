@@ -455,6 +455,49 @@ class QuotationTest extends TestCase
             ->assertSee('supplierQuotationForm', false);
     }
 
+    public function test_viewer_sees_access_restricted_modal_for_proceed_to_po(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 30]);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 12],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 12,
+            'unit_price' => 305.00,
+            'quoted_at' => now(),
+        ]);
+
+        $viewer = User::where('name', 'user2')->firstOrFail();
+
+        $this->actingAs($viewer)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('<button type="button" data-access-restricted-modal-toggle', false)
+            ->assertDontSee(route('purchase-order.create', ['rfq' => $quotation->id]), false);
+
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee(route('purchase-order.create', ['rfq' => $quotation->id]), false)
+            ->assertDontSee('<button type="button" data-access-restricted-modal-toggle', false);
+    }
+
     public function test_quotation_show_displays_quoted_items_and_flags_the_expiry(): void
     {
         Storage::fake('local');

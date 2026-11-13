@@ -89,7 +89,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Activity logging** — `activity_logs` table + `App\Support\ActivityLogger`; every module's create/edit/delete writes a row (who, what, when, record label), plus user/role-matrix changes from Settings; Settings → Logs viewer is live (module/user filters, date range)
 - [x] **Settings → Privileges** — admin-only user/role management with live search **and** the role × module access matrix (changes logged to the activity trail)
 - [x] **Settings → Backup** — administrator-only page; one-click full database back-up (schema and contents), dumped through the app's own connection (no external mysqldump binary; verified restorable against the dev MySQL database); back-ups live under `storage/app/private/backups/`, the 15 newest are kept, and each entry can be downloaded or deleted
-- [x] **Tests** — 200 passing (1268 assertions) on every module above, including RBAC (`ModuleAccessTest`), viewer-affordance coverage (restricted dialogs, inert buttons, receive checkboxes, variation per role), and price-index aggregation (`PriceIndexTest`)
+- [x] **Tests** — 201 passing (1275 assertions) on every module above, including RBAC (`ModuleAccessTest`), viewer-affordance coverage (restricted dialogs, inert buttons, receive checkboxes, variation per role), and price-index aggregation (`PriceIndexTest`)
 
 ### Not yet done
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
@@ -165,7 +165,7 @@ Seeded module grants: **Procurement Officer → Manage** on all six modules, **V
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **200 passed / 1268 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **201 passed / 1275 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
