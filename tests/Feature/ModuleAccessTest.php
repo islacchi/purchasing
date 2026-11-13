@@ -381,13 +381,15 @@ class ModuleAccessTest extends TestCase
             ->assertOk()
             ->assertSee('data-access-restricted-modal-toggle', false)
             ->assertDontSee('id="projectDeleteBtn"', false)
-            ->assertSee('id="accessRestrictedModal"', false);
+            ->assertSee('id="accessRestrictedModal"', false)
+            ->assertDontSee('id="printProjectBtn"', false);
 
-        // An administrator keeps the working confirmation flow.
+        // An administrator keeps the working confirmation flow and Print button.
         $this->actingAs($admin)
             ->get(route('projects.show', ['project' => $project->id]))
             ->assertOk()
             ->assertSee('id="projectDeleteBtn"', false)
-            ->assertSee('id="projectDeleteModal"', false);
+            ->assertSee('id="projectDeleteModal"', false)
+            ->assertSee('id="printProjectBtn"', false);
     }
 }
