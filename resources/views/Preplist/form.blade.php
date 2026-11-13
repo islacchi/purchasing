@@ -115,9 +115,11 @@
                         && $selectedProjectItems === $project->items->count();
                 @endphp
 
-                <div class="project-card bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div class="project-card bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden" data-project-collapsible>
                     {{-- Card header: checkbox + project name + RFQ reference --}}
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    {{-- Clicking anywhere in this row toggles the item list --}}
+                    <button type="button" class="project-header flex w-full items-center justify-between px-5 py-4 border-b border-gray-100 text-left bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300"
+                            data-project-toggle aria-expanded="false">
                         <label class="flex items-center gap-3 cursor-pointer select-none">
                             <input type="checkbox"
                                    class="project-check w-4 h-4 rounded border-gray-300 accent-[#2a7a94] text-[#2a7a94] focus:ring-teal-300"
@@ -125,13 +127,18 @@
                                    {{ $allProjectItemsSelected ? 'checked' : '' }}>
                             <span class="font-bold text-gray-900">{{ $project->title }}</span>
                         </label>
-                        <span class="text-sm text-gray-400 font-medium">
-                            {{ $project->procuringEntity?->name ? $project->procuringEntity->name.' - ' : '' }}{{ $project->reference_no }}
-                        </span>
-                    </div>
+                        <div class="flex shrink-0 items-center gap-3">
+                            <span class="text-sm text-gray-400 font-medium">
+                                {{ $project->procuringEntity?->name ? $project->procuringEntity->name.' - ' : '' }}{{ $project->reference_no }}
+                            </span>
+                            <svg class="chevron-down h-4 w-4 text-gray-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </div>
+                    </button>
 
                     {{-- Item rows --}}
-                    <div class="divide-y divide-gray-100">
+                    <div class="divide-y divide-gray-100 hidden" data-project-items>
                         @foreach($project->items as $projectItem)
                             @php
                                 $isSelected = in_array((string) $projectItem->id, $selectedSourceIds, true);
@@ -224,7 +231,6 @@
         // Selection handling for project headers, item checkboxes, and the summary.
         (function () {
             const summaryEl = document.getElementById('summaryText');
-
             // Keeps the row highlight in step with its checkbox. Selected rows
             // get the brand tint; unselected rows fall back to the hover style.
             function applyItemState(itemCheck) {
@@ -283,6 +289,30 @@
             document.querySelectorAll('.item-check').forEach(applyItemState);
             document.querySelectorAll('.project-card').forEach(syncProjectCheck);
             syncSummary();
+        })();
+
+        // Collapsible project cards: clicking the header row shows/hides the item list.
+        (function () {
+            document.querySelectorAll('[data-project-toggle]').forEach(function (toggle) {
+                toggle.addEventListener('click', function (event) {
+                    const card = toggle.closest('[data-project-collapsible]');
+                    const items = card ? card.querySelector('[data-project-items]') : null;
+                    const expanded = toggle.getAttribute('aria-expanded') === 'true';
+                    var chevron = toggle.querySelector('.chevron-down');
+
+                    toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                    if (items) items.classList.toggle('hidden', expanded);
+                    if (chevron) chevron.style.transform = expanded ? '' : 'rotate(180deg)';
+                });
+
+                // Clicks on the header checkbox / its label must not collapse the card.
+                var label = toggle.querySelector('.project-check') ? toggle.querySelector('.project-check').closest('label') : null;
+                if (label) {
+                    label.addEventListener('click', function (event) {
+                        event.stopPropagation();
+                    });
+                }
+            });
         })();
     </script>
 @endsection
