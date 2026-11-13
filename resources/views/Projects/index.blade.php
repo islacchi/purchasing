@@ -289,17 +289,17 @@
                 <tbody class="divide-y divide-gray-100">
                     @forelse($projects as $project)
                         <tr class="hover:bg-gray-50 transition-colors cursor-pointer" data-href="{{ route('projects.show', ['project' => $project->id]) }}">
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-2 whitespace-nowrap">
                                 <span class="text-sm font-semibold text-gray-900">{{ $project->title }}</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $project->reference_no }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $project->procuringEntity?->name ?? '—' }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-700">{{ $project->reference_no }}</td>
+                            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-700">{{ $project->procuringEntity?->name ?? '—' }}</td>
+                            <td class="px-6 py-2 whitespace-nowrap">
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$project->statusColor()] }}">
                                     {{ $project->statusLabel() }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-6 py-2 whitespace-nowrap">
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm text-gray-700">{{ $project->fulfilledItemCount() }}/{{ $project->totalItemCount() }}</span>
                                     <div class="w-24 bg-gray-200 rounded-full h-1.5">
@@ -307,10 +307,10 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-700">
                                 {{ $project->amount_awarded !== null ? '₱ ' . number_format((float) $project->amount_awarded, 2) : '—' }}
                             </td>
-                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                            <td class="px-6 py-2 text-center whitespace-nowrap">
                                 @if (auth()->user()?->canModule('projects', 'manage'))
                                     <a href="{{ route('projects.edit', ['project' => $project->id]) }}"
                                        class="inline-flex p-2 text-gray-400 hover:text-[#2a7a94] hover:bg-gray-100 rounded-lg transition-colors"
