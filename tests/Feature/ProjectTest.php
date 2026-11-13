@@ -295,4 +295,39 @@ class ProjectTest extends TestCase
 
         $this->assertDatabaseCount('projects', 0);
     }
+
+    public function test_projects_module_paginates_and_preserves_the_search(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        for ($i = 1; $i <= 12; $i++) {
+            $this->project($user, $entity, [
+                'title' => sprintf('Paginated fixture %02d', $i),
+                'reference_no' => sprintf('RF-PG-%02d', $i),
+            ]);
+        }
+
+        $pageOne = $this->actingAs($user)->get('/projects')->assertOk();
+        $pageOne->assertSee('aria-label="Pagination Navigation"', false)
+            ->assertSee('page=2', false)
+            ->assertSee('results', false);
+
+        $projects = $pageOne->viewData('projects');
+        $this->assertSame(10, $projects->count());
+        $this->assertSame(12, $projects->total());
+        $this->assertSame(1, $projects->currentPage());
+        $this->assertNotNull($projects->nextPageUrl());
+
+        $pageTwo = $this->actingAs($user)->get('/projects?page=2')->assertOk();
+        $secondPage = $pageTwo->viewData('projects');
+        $this->assertSame(2, $secondPage->count());
+        $pageTwo->assertSee('Paginated fixture 01')
+            ->assertSee('Paginated fixture 02')
+            ->assertDontSee('Paginated fixture 12');
+
+        $searchPage = $this->actingAs($user)->get('/projects?q=fixture&page=2')->assertOk();
+        $this->assertSame(2, $searchPage->viewData('projects')->count());
+        $this->assertStringContainsString('q=fixture', $searchPage->viewData('projects')->previousPageUrl() ?? '');
+    }
 }

@@ -341,6 +341,13 @@
         </div>
     </div>
     </div><!-- /scrollable content holder -->
+
+    {{-- Pagination (shared by the Content / Details / List views) --}}
+    @if ($projects->hasPages())
+        <div class="mt-4">
+            {{ $projects->links() }}
+        </div>
+    @endif
     </div><!-- /flex column -->
 
     <script>

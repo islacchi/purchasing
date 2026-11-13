@@ -59,7 +59,8 @@ class ProjectController extends Controller
                 });
             })
             ->orderByDesc('id')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('Projects.index', compact('projects', 'search'));
     }
