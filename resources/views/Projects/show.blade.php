@@ -342,20 +342,13 @@
                         class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                     Close
                 </button>
-                <button type="button" id="printPreviewSaveBtn"
-                        class="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                        title="Save as PDF via your browser">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                    </svg>
-                    Save file
-                </button>
                 <button type="button" id="printPreviewPrintBtn"
-                        class="flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80] transition-colors">
+                        class="flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80] transition-colors"
+                        title="Opens the print dialog — pick your printer or 'Save as PDF'">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 17h12M6 13H4a2 2 0 01-2-2v-3a2 2 0 012-2h16a2 2 0 012 2v3a2 2 0 01-2 2h-2m-12 0v6a1 1 0 001 1h10a1 1 0 001-1v-6"/>
                     </svg>
-                    Print
+                    Print / Save as PDF…
                 </button>
             </div>
         </div>
@@ -397,12 +390,11 @@
     @push('scripts')
     <script>
         // Print preview → click Print Project opens a modal with the print sheet;
-        // only the Print button inside the modal actually sends it to the printer.
+        // the merged "Print / Save as PDF…" button sends it to the browser dialog.
         (function () {
             var openBtn = document.getElementById('printProjectBtn');
             var closeButtons = document.querySelectorAll('[data-close-print-modal]');
             var printBtn = document.getElementById('printPreviewPrintBtn');
-            var saveBtn = document.getElementById('printPreviewSaveBtn');
             var modal = document.getElementById('printPreviewModal');
             var overlay = document.getElementById('printPreviewOverlay');
 
@@ -428,17 +420,15 @@
             if (openBtn) openBtn.addEventListener('click', openModal);
             closeButtons.forEach(function (btn) { btn.addEventListener('click', closeModal); });
             if (overlay) overlay.addEventListener('click', closeModal);
-            if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
 
-            // "Save file" opens the print dialog; the user picks "Save as PDF"
-            // there. Rename the document first so the suggested filename matches
-            // the project's reference number.
-            if (saveBtn) {
-                saveBtn.addEventListener('click', function () {
+            // The print dialog doubles as "Save as PDF"; rename the document
+            // first so the suggested PDF filename matches the project's
+            // reference number, then restore it once the dialog closes.
+            if (printBtn) {
+                printBtn.addEventListener('click', function () {
                     var originalTitle = document.title;
                     document.title = sanitizeFilename(@json($project->reference_no . '_Project'));
                     window.print();
-                    // Restore after the dialog closes (best-effort).
                     window.addEventListener('afterprint', function restoreTitle() {
                         document.title = originalTitle;
                         window.removeEventListener('afterprint', restoreTitle);
