@@ -14,6 +14,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EntityController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PreplistController;
+use App\Http\Controllers\PriceIndexController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\QuotationController;
@@ -106,7 +107,7 @@ Route::middleware(['auth', 'session.active'])->group(function () {
     });
 
     Route::middleware('module:priceindex')->group(function () {
-        Route::get('/priceindex', [PageController::class, 'show'])->defaults('page', 'Priceindex.index')->name('priceindex');
+        Route::get('/priceindex', [PriceIndexController::class, 'index'])->name('priceindex');
     });
 
     Route::middleware('module:entities')->group(function () {

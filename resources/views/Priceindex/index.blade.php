@@ -8,202 +8,11 @@
 
 @section('content')
 
-    {{-- @TODO: Replace the hardcoded data below with real submitted quotation lines, e.g.
-         $lines = QuotationItem::with(['item', 'quotation.supplier', 'allocations.project'])
-             ->whereNotNull('unit_price')
-             ->latest('quoted_at')
-             ->get()
-             ->groupBy('item_id');
-         Use the latest quote per supplier, normalise pack sizes/units before comparing,
-         and replace the generated price history with actual quote records. --}}
     @php
         $peso = function ($amount) {
-            return '₱' . number_format($amount, 2);
+            return '₱' . number_format((float) $amount, 2);
         };
-
-        $suppliers = [
-            'greencore'  => ['name' => 'GreenCore Pharmaceuticals', 'short' => 'GreenCore',  'color' => '#2a7a94'],
-            'medsource'  => ['name' => 'MedSource Inc.',            'short' => 'MedSource',  'color' => '#3b82f6'],
-            'tripletact' => ['name' => 'Triple Tact',               'short' => 'Triple Tact', 'color' => '#f59e0b'],
-        ];
-
-        // One row per item. "quotes" holds one entry per supplier quote line.
-        $items = [
-            [
-                'id' => 1,
-                'name' => 'Amoxicillin 500mg',
-                'unit' => 'box of 100',
-                'category' => 'drugs and medicines',
-                'requested' => 100,
-                'projects' => ['Pharma supplies Q3', 'Laboratory reagents'],
-                'quotes' => [
-                    ['supplier' => 'greencore',  'price' => 305.00, 'quoted_at' => 'Jul 12', 'coverage' => '100 / 100', 'quotation_id' => 2],
-                    ['supplier' => 'medsource',  'price' => 338.00, 'quoted_at' => 'Jul 10', 'coverage' => '100 / 100', 'quotation_id' => 3],
-                    ['supplier' => 'tripletact', 'price' => 372.00, 'quoted_at' => 'Jul 08', 'coverage' => '50 / 100',  'quotation_id' => 1],
-                ],
-            ],
-            [
-                'id' => 2,
-                'name' => 'Surgical gloves',
-                'unit' => 'box of 50',
-                'category' => 'supplies and equipments',
-                'requested' => 40,
-                'projects' => ['Pharma supplies Q3'],
-                'quotes' => [
-                    ['supplier' => 'medsource',  'price' => 280.00, 'quoted_at' => 'Jul 11', 'coverage' => '40 / 40', 'quotation_id' => 3],
-                    ['supplier' => 'tripletact', 'price' => 301.00, 'quoted_at' => 'Jul 09', 'coverage' => '40 / 40', 'quotation_id' => 1],
-                ],
-            ],
-            [
-                'id' => 3,
-                'name' => 'Sodium chloride 0.9% 500mL',
-                'unit' => 'box of 24',
-                'category' => 'drugs and medicines',
-                'requested' => 60,
-                'projects' => ['Laboratory reagents'],
-                'quotes' => [
-                    ['supplier' => 'medsource', 'price' => 850.00, 'quoted_at' => 'Jul 10', 'coverage' => '60 / 60', 'quotation_id' => 3],
-                ],
-            ],
-            [
-                'id' => 4,
-                'name' => 'Microscope slides',
-                'unit' => 'box of 100',
-                'category' => 'supplies and equipments',
-                'requested' => 25,
-                'projects' => ['Laboratory reagents'],
-                'quotes' => [
-                    ['supplier' => 'medsource',  'price' => 220.00, 'quoted_at' => 'Jul 11', 'coverage' => '25 / 25', 'quotation_id' => 3],
-                    ['supplier' => 'tripletact', 'price' => 240.00, 'quoted_at' => 'Jul 08', 'coverage' => '25 / 25', 'quotation_id' => 1],
-                    ['supplier' => 'greencore',  'price' => 250.00, 'quoted_at' => 'Jul 05', 'coverage' => '15 / 25', 'quotation_id' => 2],
-                ],
-            ],
-            [
-                'id' => 5,
-                'name' => 'Sterile syringes 5mL',
-                'unit' => 'box of 100',
-                'category' => 'supplies and equipments',
-                'requested' => 30,
-                'projects' => ['Pharma supplies Q3', 'Laboratory reagents'],
-                'quotes' => [
-                    ['supplier' => 'greencore', 'price' => 420.00, 'quoted_at' => 'Jul 12', 'coverage' => '30 / 30', 'quotation_id' => 2],
-                    ['supplier' => 'medsource', 'price' => 445.00, 'quoted_at' => 'Jul 09', 'coverage' => '30 / 30', 'quotation_id' => 3],
-                ],
-            ],
-            [
-                'id' => 6,
-                'name' => 'Laboratory gloves',
-                'unit' => 'box of 50',
-                'category' => 'supplies and equipments',
-                'requested' => 20,
-                'projects' => ['Laboratory reagents'],
-                'quotes' => [],
-            ],
-        ];
-
-        // Derived comparison stats + supplier scorecard.
-        $scorecard = [];
-        foreach ($suppliers as $key => $supplier) {
-            $scorecard[$key] = [
-                'quotes' => 0,
-                'compared' => 0,
-                'wins' => 0,
-                'premium_sum' => 0.0,
-            ];
-        }
-
-        $totalSavings = 0.0;
-        $spreadSum = 0.0;
-        $spreadCount = 0;
-        $itemsWithQuotes = 0;
-        $totalQuoteLines = 0;
-
-        foreach ($items as $index => $item) {
-            $prices = array_column($item['quotes'], 'price');
-            $count = count($prices);
-            $best = $count ? min($prices) : null;
-            $max = $count ? max($prices) : null;
-            $avg = $count ? array_sum($prices) / $count : null;
-
-            $bestSupplier = null;
-            foreach ($item['quotes'] as $quote) {
-                if ($best !== null && $quote['price'] === $best) {
-                    $bestSupplier = $quote['supplier'];
-                    break;
-                }
-            }
-
-            $spread = ($count > 1 && $best > 0) ? (($max - $best) / $best) * 100 : null;
-            $itemSavings = ($count > 1) ? ($avg - $best) * $item['requested'] : 0.0;
-
-            if ($count > 0) {
-                $itemsWithQuotes++;
-                $totalQuoteLines += $count;
-            }
-            if ($spread !== null) {
-                $spreadSum += $spread;
-                $spreadCount++;
-            }
-            $totalSavings += $itemSavings;
-
-            foreach ($item['quotes'] as $quote) {
-                $key = $quote['supplier'];
-                $scorecard[$key]['quotes']++;
-
-                if ($count > 1) {
-                    $scorecard[$key]['compared']++;
-                    $scorecard[$key]['premium_sum'] += (($quote['price'] - $best) / $best) * 100;
-                    if ($quote['price'] === $best) {
-                        $scorecard[$key]['wins']++;
-                    }
-                }
-            }
-
-            $items[$index]['stats'] = [
-                'count' => $count,
-                'best' => $best,
-                'max' => $max,
-                'avg' => $avg,
-                'spread' => $spread,
-                'savings' => $itemSavings,
-                'best_supplier' => $bestSupplier,
-            ];
-        }
-
-        $avgSpread = $spreadCount ? $spreadSum / $spreadCount : 0;
-        $activeSuppliers = count(array_filter($scorecard, fn ($row) => $row['quotes'] > 0));
-
-        // Data handed to the client-side comparison panel.
-        $priceData = [];
-        foreach ($items as $item) {
-            $priceData[] = [
-                'id' => $item['id'],
-                'name' => $item['name'],
-                'unit' => $item['unit'],
-                'category' => $item['category'],
-                'requested' => $item['requested'],
-                'projects' => $item['projects'],
-                'best' => $item['stats']['best'],
-                'avg' => $item['stats']['avg'],
-                'count' => $item['stats']['count'],
-                'spread' => $item['stats']['spread'],
-                'savings' => $item['stats']['savings'],
-                'quotes' => array_map(function ($quote) use ($suppliers) {
-                    return [
-                        'supplier' => $quote['supplier'],
-                        'name' => $suppliers[$quote['supplier']]['name'],
-                        'short' => $suppliers[$quote['supplier']]['short'],
-                        'color' => $suppliers[$quote['supplier']]['color'],
-                        'price' => $quote['price'],
-                        'quoted_at' => $quote['quoted_at'],
-                        'coverage' => $quote['coverage'],
-                        'quotation_id' => $quote['quotation_id'],
-                    ];
-                }, $item['quotes']),
-            ];
-        }
     @endphp
-
     <div class="pb-16">
 
         {{-- Page heading --}}
@@ -213,9 +22,9 @@
             </p>
 
             <div class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
-                    <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                    Dummy data
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                    <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                    Live quotation data
                 </span>
             </div>
         </div>
@@ -234,7 +43,7 @@
                     </span>
                 </div>
                 <p class="mt-3 text-2xl font-bold text-gray-900">{{ $itemsWithQuotes }}</p>
-                <p class="mt-1 text-xs text-gray-500">of {{ count($items) }} catalog items requested</p>
+                <p class="mt-1 text-xs text-gray-500">of {{ count($items) }} catalog items tracked</p>
             </div>
 
             {{-- Suppliers quoting --}}
@@ -309,36 +118,16 @@
                     @endforeach
                 </select>
 
-                {{-- @TODO: Make this filter real once quote history is stored. --}}
                 <select id="pricePeriod"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20"
-                        title="Decorative for now — price history is dummy data">
-                    <option value="6">Last 6 months</option>
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
                     <option value="3">Last 3 months</option>
+                    <option value="6" selected>Last 6 months</option>
                     <option value="12">Last 12 months</option>
                 </select>
             </div>
         </div>
 
         {{-- Best price board --}}
-        @php
-            // Sparkline shape for the dummy six-month best-price history.
-            $trendFactors = [0.94, 0.965, 0.955, 0.98, 0.99, 1.0];
-            $sparkline = function ($price) use ($trendFactors) {
-                $values = array_map(fn ($factor) => $price * $factor, $trendFactors);
-                $min = min($values);
-                $max = max($values);
-                $range = ($max - $min) ?: 1;
-                $points = [];
-                foreach ($values as $i => $value) {
-                    $x = ($i / (count($values) - 1)) * 64;
-                    $y = 18 - (($value - $min) / $range) * 14;
-                    $points[] = round($x, 1) . ',' . round($y, 1);
-                }
-
-                return implode(' ', $points);
-            };
-        @endphp
 
         <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
 
@@ -379,13 +168,13 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            @foreach ($items as $item)
+                            @forelse ($items as $item)
                                 @php
                                     $stats = $item['stats'];
                                     $hasQuotes = $stats['count'] > 0;
                                     $isComparable = $stats['count'] > 1;
                                     $bestSupplier = $stats['best_supplier'] ? $suppliers[$stats['best_supplier']] : null;
-                                    $variance = $isComparable ? ((1 - ($stats['best'] / $stats['avg'])) * 100) : null;
+                                    $variance = $isComparable && $stats['avg'] > 0 ? ((1 - ($stats['best'] / $stats['avg'])) * 100) : null;
                                 @endphp
                                 <tr class="group price-row transition-colors {{ $hasQuotes ? 'cursor-pointer hover:bg-gray-50' : 'bg-gray-50/40' }}"
                                     data-item-id="{{ $item['id'] }}"
@@ -402,7 +191,7 @@
                                         </div>
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right text-gray-700">
-                                        {{ $item['requested'] }}
+                                        {{ $item['requested'] > 0 ? $item['requested'] : '—' }}
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-center">
                                         @if ($hasQuotes)
@@ -450,9 +239,9 @@
                                         @endif
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4">
-                                        @if ($hasQuotes)
+                                        @if ($hasQuotes && $item['sparkline'])
                                             <svg class="h-5 w-16" viewBox="0 0 64 20" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                                                <polyline points="{{ $sparkline($stats['best']) }}" stroke="{{ $isComparable ? '#2a7a94' : '#9ca3af' }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <polyline points="{{ $item['sparkline'] }}" stroke="{{ $isComparable ? '#2a7a94' : '#9ca3af' }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
                                         @else
                                             <span class="text-sm text-gray-300">—</span>
@@ -470,7 +259,14 @@
                                         @endif
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="px-6 py-12 text-center">
+                                        <p class="text-sm font-medium text-gray-600">No items with quotation activity yet.</p>
+                                        <p class="mt-1 text-xs text-gray-500">Items appear here once a project requests them or a supplier quotes them.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -491,16 +287,16 @@
                                 <th scope="col" class="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-gray-50 px-6 py-3 text-left">Item</th>
                                 @foreach ($suppliers as $supplier)
                                     <th scope="col" class="whitespace-nowrap px-5 py-3 text-center">
-                                        <span class="inline-flex items-center gap-2">
-                                            <span class="h-2 w-2 rounded-full" style="background-color: {{ $supplier['color'] }}"></span>
-                                            {{ $supplier['short'] }}
+                                        <span class="inline-flex max-w-[12rem] items-center gap-2" title="{{ $supplier['name'] }}">
+                                            <span class="h-2 w-2 flex-shrink-0 rounded-full" style="background-color: {{ $supplier['color'] }}"></span>
+                                            <span class="truncate">{{ $supplier['short'] }}</span>
                                         </span>
                                     </th>
                                 @endforeach
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            @foreach ($items as $item)
+                            @forelse ($items as $item)
                                 <tr class="matrix-row cursor-pointer transition-colors hover:bg-gray-50"
                                     data-item-id="{{ $item['id'] }}"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
@@ -513,7 +309,7 @@
                                     @foreach ($suppliers as $key => $supplier)
                                         @php
                                             $quote = collect($item['quotes'])->firstWhere('supplier', $key);
-                                            $isBest = $quote && $item['stats']['best'] !== null && $quote['price'] === $item['stats']['best'] && $item['stats']['count'] > 1;
+                                            $isBest = $quote && $item['stats']['best'] !== null && abs($quote['price'] - $item['stats']['best']) < 0.0001 && $item['stats']['count'] > 1;
                                             $isAbove = $quote && $item['stats']['avg'] !== null && $quote['price'] > $item['stats']['avg'];
                                         @endphp
                                         <td class="whitespace-nowrap px-5 py-4 text-center">
@@ -533,7 +329,13 @@
                                         </td>
                                     @endforeach
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="{{ count($suppliers) + 1 }}" class="px-6 py-12 text-center">
+                                        <p class="text-sm font-medium text-gray-600">No items with quotation activity yet.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -567,7 +369,12 @@
                 </div>
 
                 <div id="compareBody" class="px-6 py-5">
-                    {{-- Filled by the inline script from the price data. --}}
+                    @if (count($items) === 0)
+                        <div class="py-10 text-center">
+                            <p class="text-sm font-medium text-gray-600">No items to compare yet.</p>
+                            <p class="mt-1 text-xs text-gray-500">Create a project and submit supplier quotations first.</p>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -579,7 +386,7 @@
                 </div>
 
                 <div class="divide-y divide-gray-100">
-                    @foreach ($suppliers as $key => $supplier)
+                    @forelse ($suppliers as $key => $supplier)
                         @php
                             $row = $scorecard[$key];
                             $winRate = $row['compared'] ? ($row['wins'] / $row['compared']) * 100 : 0;
@@ -589,7 +396,7 @@
                             <div class="flex items-center justify-between gap-3">
                                 <span class="inline-flex min-w-0 items-center gap-2">
                                     <span class="h-2 w-2 flex-shrink-0 rounded-full" style="background-color: {{ $supplier['color'] }}"></span>
-                                    <span class="truncate text-sm font-medium text-gray-800">{{ $supplier['short'] }}</span>
+                                    <span class="truncate text-sm font-medium text-gray-800" title="{{ $supplier['name'] }}">{{ $supplier['short'] }}</span>
                                 </span>
                                 <span class="text-xs font-semibold text-gray-700">
                                     {{ $row['wins'] }} / {{ $row['compared'] }} wins
@@ -613,7 +420,12 @@
                                 @endif
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <div class="px-6 py-10 text-center">
+                            <p class="text-sm font-medium text-gray-600">No suppliers have quoted yet.</p>
+                            <p class="mt-1 text-xs text-gray-500">The scorecard appears once suppliers submit prices.</p>
+                        </div>
+                    @endforelse
                 </div>
 
                 <div class="border-t border-gray-100 px-6 py-3">
@@ -627,7 +439,7 @@
             <div class="flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 px-6 py-4">
                 <div>
                     <h2 class="text-sm font-bold uppercase tracking-wider text-gray-700">Price trend</h2>
-                    <p id="trendSubtitle" class="mt-0.5 text-xs text-gray-500">Six-month movement of the selected item's quoted price.</p>
+                    <p id="trendSubtitle" class="mt-0.5 text-xs text-gray-500">Movement of the selected item's quoted price.</p>
                 </div>
                 <div id="trendLegend" class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600"></div>
             </div>
@@ -643,8 +455,7 @@
                 </div>
 
                 <p class="mt-4 text-xs text-gray-500">
-                    {{-- @TODO: Plot real quote lines grouped by month instead of the generated factors. --}}
-                    Values are illustrative. Real history will be built from submitted quotation lines by month.
+                    One point per supplier per month, from submitted quotation lines.
                 </p>
             </div>
         </div>
@@ -682,7 +493,9 @@
                             @foreach ($savingsItems as $item)
                                 @php
                                     $stats = $item['stats'];
-                                    $bestSupplier = $suppliers[$stats['best_supplier']];
+                                    $bestSupplier = $stats['best_supplier'] !== null
+                                        ? ($suppliers[$stats['best_supplier']] ?? null)
+                                        : null;
                                 @endphp
                                 <tr class="savings-row transition-colors hover:bg-gray-50"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
@@ -692,11 +505,13 @@
                                         <p class="font-semibold text-gray-900">{{ $item['name'] }}</p>
                                         <div class="mt-1 flex flex-wrap items-center gap-2">
                                             <span class="text-xs text-gray-500">{{ $item['unit'] }}</span>
-                                            <span class="text-gray-300">·</span>
-                                            <span class="inline-flex items-center gap-1.5 text-xs text-gray-500">
-                                                <span class="h-1.5 w-1.5 rounded-full" style="background-color: {{ $bestSupplier['color'] }}"></span>
-                                                {{ $bestSupplier['short'] }}
-                                            </span>
+                                            @if ($bestSupplier)
+                                                <span class="text-gray-300">·</span>
+                                                <span class="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                                                    <span class="h-1.5 w-1.5 rounded-full" style="background-color: {{ $bestSupplier['color'] }}"></span>
+                                                    {{ $bestSupplier['short'] }}
+                                                </span>
+                                            @endif
                                         </div>
                                     </td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right font-semibold text-green-600">{{ $peso($stats['best']) }}</td>
@@ -739,17 +554,43 @@
 
     <script>
         (function () {
-            // @TODO: Replace with real data once quotation lines are persisted.
             const priceData = @json($priceData);
             const quotationBase = @json(url('/quotation'));
-            const trendFactors = [0.94, 0.965, 0.955, 0.98, 0.99, 1.0];
-            const trendMonths = ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+            const periodSelect = document.getElementById('pricePeriod');
 
             const peso = function (value) {
                 return '₱' + Number(value).toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                 });
+            };
+
+            const escapeHtml = function (value) {
+                return String(value).replace(/[&<>"']/g, function (character) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;',
+                    }[character];
+                });
+            };
+
+            const monthWindow = function (months) {
+                const window = [];
+                const now = new Date();
+
+                for (let offset = months - 1; offset >= 0; offset--) {
+                    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+                    const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+                    const label = date.toLocaleString('en-US', { month: 'short' })
+                        + ' ' + String(date.getFullYear()).slice(-2);
+
+                    window.push({ key: key, label: label });
+                }
+
+                return window;
             };
 
             const compareBody = document.getElementById('compareBody');
@@ -770,8 +611,11 @@
             function renderComparison(item) {
                 selectedId = item.id;
 
-                compareSubtitle.textContent = item.name + ' · ' + item.unit + ' · '
-                    + item.requested + ' requested · ' + item.projects.join(', ');
+                const subtitleParts = [item.name, item.unit, item.requested + ' requested'];
+                if (item.projects.length) {
+                    subtitleParts.push(item.projects.join(', '));
+                }
+                compareSubtitle.textContent = subtitleParts.join(' · ');
 
                 if (!item.count) {
                     compareBadge.classList.add('hidden');
@@ -786,7 +630,8 @@
                 const sorted = item.quotes.slice().sort(function (a, b) { return a.price - b.price; });
                 const bestQuote = sorted[0];
                 const isComparable = item.count > 1;
-                const delta = isComparable ? ((1 - (item.best / item.avg)) * 100) : null;
+                const delta = isComparable && item.avg > 0 ? ((1 - (item.best / item.avg)) * 100) : null;
+                const requestedLabel = item.requested > 0 ? item.requested + ' requested' : 'no active request';
 
                 compareBadge.classList.toggle('hidden', !isComparable);
 
@@ -798,16 +643,17 @@
                 html += '<p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Best price</p>';
                 html += '<p class="mt-1 text-2xl font-bold ' + (isComparable ? 'text-green-600' : 'text-gray-800') + '">'
                     + peso(item.best)
-                    + ' <span class="text-xs font-normal text-gray-500">/ ' + item.unit + '</span></p>';
-                html += '<p class="mt-1 text-xs text-gray-600">' + bestQuote.short;
-                if (isComparable) {
+                    + ' <span class="text-xs font-normal text-gray-500">/ ' + escapeHtml(item.unit) + '</span></p>';
+                html += '<p class="mt-1 text-xs text-gray-600">' + escapeHtml(bestQuote.short);
+                if (delta !== null) {
                     html += ' <span class="font-semibold text-green-600">· ' + delta.toFixed(1) + '% below average</span>';
                 }
                 html += '</p>';
                 html += '</div>';
                 html += '<div class="text-right">';
-                html += '<p class="text-xs text-gray-500">Extended cost · ' + item.requested + ' requested</p>';
-                html += '<p class="text-sm font-semibold text-gray-800">' + peso(item.best * item.requested) + '</p>';
+                html += '<p class="text-xs text-gray-500">Extended cost · ' + requestedLabel + '</p>';
+                html += '<p class="text-sm font-semibold text-gray-800">'
+                    + (item.requested > 0 ? peso(item.best * item.requested) : '—') + '</p>';
                 html += '<a href="' + quotationBase + '/' + bestQuote.quotation_id
                     + '" class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#2a7a94] hover:underline">'
                     + 'View quotation'
@@ -827,15 +673,15 @@
 
                 // Supplier bars
                 if (isComparable) {
-                    const maxPrice = Math.max.apply(null, item.quotes.map(function (q) { return q.price; }));
+                    const maxPrice = Math.max.apply(null, item.quotes.map(function (q) { return q.price; })) || 1;
 
                     html += '<div class="mt-5 space-y-3">';
                     sorted.forEach(function (quote) {
-                        const isBest = quote.price === item.best;
+                        const isBest = Math.abs(quote.price - item.best) < 0.0001;
                         const width = Math.max(8, (quote.price / maxPrice) * 100);
 
                         html += '<div class="flex items-center gap-3">';
-                        html += '<span class="w-24 flex-shrink-0 truncate text-xs font-medium text-gray-700">' + quote.short + '</span>';
+                        html += '<span class="w-24 flex-shrink-0 truncate text-xs font-medium text-gray-700" title="' + escapeHtml(quote.name) + '">' + escapeHtml(quote.short) + '</span>';
                         html += '<div class="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">'
                             + '<div class="h-full rounded-full" style="width:' + width + '%; background-color:'
                             + (isBest ? '#16a34a' : quote.color) + '"></div></div>';
@@ -860,21 +706,25 @@
                     + '</tr></thead><tbody class="divide-y divide-gray-100">';
 
                 sorted.forEach(function (quote) {
-                    const isBest = quote.price === item.best && isComparable;
-                    const premium = ((quote.price - item.best) / item.best) * 100;
+                    const isBest = isComparable && Math.abs(quote.price - item.best) < 0.0001;
+                    const premium = item.best > 0 ? ((quote.price - item.best) / item.best) * 100 : 0;
+                    const coverage = quote.coverage ? escapeHtml(quote.coverage) : '—';
+                    const coverageClass = quote.coverage
+                        ? (quote.coverage_full ? 'text-gray-600' : 'text-amber-600')
+                        : 'text-gray-400';
 
                     html += '<tr class="hover:bg-gray-50">';
                     html += '<td class="px-4 py-3"><span class="inline-flex items-center gap-2 text-gray-800">'
                         + '<span class="h-2 w-2 rounded-full" style="background-color:' + quote.color + '"></span>'
-                        + quote.name
+                        + escapeHtml(quote.name)
                         + (isBest ? ' <span class="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">Lowest</span>' : '')
                         + '</span></td>';
                     html += '<td class="px-4 py-3 text-right font-semibold ' + (isBest ? 'text-green-600' : 'text-gray-800') + '">' + peso(quote.price) + '</td>';
-                    html += '<td class="px-4 py-3 text-right text-gray-600">' + peso(quote.price * item.requested) + '</td>';
+                    html += '<td class="px-4 py-3 text-right text-gray-600">' + (item.requested > 0 ? peso(quote.price * item.requested) : '—') + '</td>';
                     html += '<td class="px-4 py-3 text-right text-xs ' + (isBest ? 'text-green-600 font-semibold' : 'text-gray-500') + '">'
                         + (!isComparable ? '—' : (isBest ? '—' : '+' + premium.toFixed(1) + '%')) + '</td>';
-                    html += '<td class="px-4 py-3 text-center text-xs text-gray-600">' + quote.quoted_at + '</td>';
-                    html += '<td class="px-4 py-3 text-center text-xs ' + (quote.coverage.split('/')[0].trim() === quote.coverage.split('/')[1].trim() ? 'text-gray-600' : 'text-amber-600') + '">' + quote.coverage + '</td>';
+                    html += '<td class="px-4 py-3 text-center text-xs text-gray-600">' + escapeHtml(quote.quoted_at) + '</td>';
+                    html += '<td class="px-4 py-3 text-center text-xs ' + coverageClass + '">' + coverage + '</td>';
                     html += '<td class="px-4 py-3 text-center">'
                         + '<a href="' + quotationBase + '/' + quote.quotation_id + '" class="inline-flex items-center gap-1 text-xs font-semibold text-[#2a7a94] hover:underline">View'
                         + '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M9 5l7 7-7 7"/></svg>'
@@ -901,18 +751,79 @@
                     trendLegend.innerHTML = '';
                     trendCanvas.classList.add('hidden');
                     trendEmpty.classList.remove('hidden');
+                    trendEmpty.querySelector('p').textContent = 'No price history for this item yet.';
                     trendSubtitle.textContent = 'No quote history for the selected item.';
+                    return;
+                }
+
+                const months = monthWindow(Number(periodSelect.value) || 6);
+                const monthIndex = {};
+
+                months.forEach(function (month, index) {
+                    monthIndex[month.key] = index;
+                });
+
+                const quotedSuppliers = {};
+
+                item.history.forEach(function (point) {
+                    if (monthIndex[point.month] !== undefined) {
+                        quotedSuppliers[point.supplier] = true;
+                    }
+                });
+
+                const supplierIds = Object.keys(quotedSuppliers);
+
+                if (!supplierIds.length) {
+                    if (chart) {
+                        chart.destroy();
+                        chart = null;
+                    }
+                    trendLegend.innerHTML = '';
+                    trendCanvas.classList.add('hidden');
+                    trendEmpty.classList.remove('hidden');
+                    trendEmpty.querySelector('p').textContent = 'No price history in this period.';
+                    trendSubtitle.textContent = item.name + ' — no quotes in the selected period.';
                     return;
                 }
 
                 trendCanvas.classList.remove('hidden');
                 trendEmpty.classList.add('hidden');
+                trendEmpty.querySelector('p').textContent = 'No price history for this item yet.';
                 trendSubtitle.textContent = item.name + ' — quoted unit price by month.';
 
-                trendLegend.innerHTML = item.quotes.map(function (quote) {
+                const quoteBySupplier = {};
+
+                item.quotes.forEach(function (quote) {
+                    quoteBySupplier[quote.supplier] = quote;
+                });
+
+                const datasets = supplierIds.map(function (supplierId) {
+                    const quote = quoteBySupplier[supplierId] || { short: 'Supplier', color: '#9ca3af' };
+
+                    return {
+                        label: quote.short,
+                        data: months.map(function (month) {
+                            const point = item.history.find(function (entry) {
+                                return Number(entry.supplier) === Number(supplierId) && entry.month === month.key;
+                            });
+
+                            return point ? point.price : null;
+                        }),
+                        borderColor: quote.color,
+                        backgroundColor: quote.color,
+                        borderWidth: 2,
+                        tension: 0.35,
+                        pointRadius: 2.5,
+                        pointHoverRadius: 4,
+                        spanGaps: true,
+                        fill: false,
+                    };
+                });
+
+                trendLegend.innerHTML = datasets.map(function (dataset) {
                     return '<span class="inline-flex items-center gap-1.5">'
-                        + '<span class="h-2 w-2 rounded-full" style="background-color:' + quote.color + '"></span>'
-                        + quote.short + '</span>';
+                        + '<span class="h-2 w-2 rounded-full" style="background-color:' + dataset.borderColor + '"></span>'
+                        + escapeHtml(dataset.label) + '</span>';
                 }).join('');
 
                 if (typeof Chart === 'undefined') {
@@ -922,23 +833,10 @@
                     return;
                 }
 
-                const datasets = item.quotes.map(function (quote) {
-                    return {
-                        label: quote.short,
-                        data: trendFactors.map(function (factor) {
-                            return Number((quote.price * factor).toFixed(2));
-                        }),
-                        borderColor: quote.color,
-                        backgroundColor: quote.color,
-                        borderWidth: 2,
-                        tension: 0.35,
-                        pointRadius: 2.5,
-                        pointHoverRadius: 4,
-                        fill: false,
-                    };
-                });
+                const labels = months.map(function (month) { return month.label; });
 
                 if (chart) {
+                    chart.data.labels = labels;
                     chart.data.datasets = datasets;
                     chart.update();
                     return;
@@ -947,7 +845,7 @@
                 chart = new Chart(trendCanvas.getContext('2d'), {
                     type: 'line',
                     data: {
-                        labels: trendMonths,
+                        labels: labels,
                         datasets: datasets,
                     },
                     options: {
@@ -1030,6 +928,12 @@
 
             tableBtn.addEventListener('click', function () { setView('table'); });
             matrixBtn.addEventListener('click', function () { setView('matrix'); });
+
+            periodSelect.addEventListener('change', function () {
+                if (selectedId !== null) {
+                    renderChart(findItem(selectedId));
+                }
+            });
 
             // --- Filters ---
             const searchInput = document.getElementById('priceSearch');

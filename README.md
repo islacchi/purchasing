@@ -2,7 +2,7 @@
 
 A Laravel 12 application that runs the procurement cycle end to end: **Projects → Prep Lists → Request for Quotation → Quotation tracking → Purchase Orders → Receiving**, plus the supplier / procuring-entity directory, price-index tracking, and settings & privileges. Built for Philippine government-style procurement but works for any institution.
 
-> **Status:** actively developed. The procurement chain (Projects → Preplist → Quotation → Purchase Order → Receiving) is functional and database-backed, with role-based access control (None/View/Manage) enforced server-side and reflected in the UI, and an activity log wired across modules. Role × module matrix, settings, and the admin area are Administrator-only. The Price Index module and Settings → Backup still render sample data. See [Project status](#project-status) for an exact, honest breakdown.
+> **Status:** actively developed. The procurement chain (Projects → Preplist → Quotation → Purchase Order → Receiving) is functional and database-backed, with role-based access control (None/View/Manage) enforced server-side and reflected in the UI, and an activity log wired across modules. Role × module matrix, settings, and the admin area are Administrator-only. The Price Index is database-backed and Settings → Backup still renders sample data. See [Project status](#project-status) for an exact, honest breakdown.
 
 ---
 
@@ -18,7 +18,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 | **Entities** | Directory of procuring entities (DOH offices, PGH, …) and suppliers with contact details | ✅ Database-backed, working |
 | **Notifications (bell)** | Live delivery-deadline alerts derived from due dates + project fulfillment progress | ✅ Real, data-driven |
 | **Role-based access control** | Role × module matrix (None / View / Manage) enforced server-side on every module route, admin bypass, greyed/hidden write affordances for view-only roles, shared access-restricted dialog, friendly 403 page | ✅ Working |
-| **Price Index** | Per-item supplier price comparison across quotations | 🚧 Sample data only — not wired to the database |
+| **Price Index** | Per-item supplier price comparison across quotations: latest quote per supplier, requested quantities, best/average/spread/savings, supplier scorecard, monthly trend | ✅ Database-backed, working |
 | **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage). Administrator rows are locked full access | ✅ Working |
 | **Settings → Logs** | Activity/log viewer — real rows written by `ActivityLogger` on every module create/edit/delete, plus user/matrix changes | ✅ Working |
 | **Settings → Backup** | Database backup download | 🚧 Placeholder (hardcoded sample rows) |
@@ -79,6 +79,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **RFQ Excel generation** — letterhead template, dynamic item rows, `.xlsx` download, ZIP for multiple suppliers
 - [x] **Quotation** — database-backed tracker (grouped by prep list), supplier-file upload with strict template validation, per-item price/brand/expiry extraction, per-project expiry-vs-delivery color coding, short-dated warning, delete the uploaded file (doesn't delete the entry)
 - [x] **Purchase Order** — create from awarded quotation (proportional allocation across project sources), draft → Sent → Partially received → Completed, cancel with reason, admin-only delete of draft/cancelled POs, Excel download on generation
+- [x] **Price Index** — per-item comparison built from priced quotation lines: latest quote per supplier, requested quantities from project items, best/average/spread/savings, supplier scorecard, real monthly trend with a functional 3/6/12-month filter
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days or never started and due ≤ 14 days)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while referenced by a quotation; a quotation cannot be deleted once quoted (upload removal is separate)
 - [x] **Unique junction indexes** — composite unique constraints on `preplist_items` / `quotation_items` / `purchase_order_items` to prevent duplicate lines; duplicate key violations surface as validation errors
@@ -87,10 +88,9 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons (Add project / Add entity / Add Supplier / Compile prep list / Edit project / Edit entity) and access-restricted dialogs for blocked actions (Edit prep list, Generate RFQ, PO receive checkboxes, Delete project, quotation document removal for view-only). Seeded defaults: Procurement Officer = Manage everywhere, Viewer = View everywhere
 - [x] **Activity logging** — `activity_logs` table + `App\Support\ActivityLogger`; every module's create/edit/delete writes a row (who, what, when, record label), plus user/role-matrix changes from Settings; Settings → Logs viewer is live (module/user filters, date range)
 - [x] **Settings → Privileges** — admin-only user/role management with live search **and** the role × module access matrix (changes logged to the activity trail)
-- [x] **Tests** — 173 passing (926 assertions) on every module above, including RBAC (`ModuleAccessTest`) and viewer-affordance coverage (restricted dialogs, inert buttons, receive checkboxes, variation per role)
+- [x] **Tests** — 177 passing (992 assertions) on every module above, including RBAC (`ModuleAccessTest`), viewer-affordance coverage (restricted dialogs, inert buttons, receive checkboxes, variation per role), and price-index aggregation (`PriceIndexTest`)
 
 ### Not yet done
-- [ ] **Price Index** — wiring the price-comparison page to real quotation lines (all rendering is sample data)
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
 - [ ] **Settings → Backup** — real database backup (page hardcodes sample filenames)
 - [ ] **Partial receipts** — receiving is all-or-nothing per line; `purchase_order_receipts` already has `received_qty`, `lot_no`, `expiry_date`, but the UI doesn't capture them
