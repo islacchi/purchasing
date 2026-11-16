@@ -6,6 +6,8 @@ use App\Models\PreplistItem;
 use App\Models\PurchaseOrder;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
+use App\Models\Supplier;
+use App\Models\User;
 use App\Support\ActivityLogger;
 use App\Support\Pagination;
 use App\Support\QuotationWorkbookParser;
@@ -35,12 +37,49 @@ class QuotationController extends Controller
     /**
      * Show the quotation tracker using real database records.
      * Paginates one prep list group per page instead of every RFQ in one page.
+     * Server-side search and filters compose with per_page; pagination links
+     * preserve them via withQueryString().
      */
     public function index(Request $request)
     {
+        $search = trim((string) $request->query('q', ''));
+        $supplier = trim((string) $request->query('supplier', ''));
+        $createdBy = trim((string) $request->query('created_by', ''));
+        $status = trim((string) $request->query('status', ''));
         $perPage = Pagination::perPage($request, 5);
 
-        $groups = Quotation::query()
+        $statusAllowed = in_array($status, ['quoted', 'pending'], true) ? $status : '';
+
+        $base = Quotation::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('rfq_number', 'like', '%'.$search.'%')
+                        ->orWhereHas('preplist', function ($query) use ($search) {
+                            $query->where('name', 'like', '%'.$search.'%')
+                                ->orWhere('reference_no', 'like', '%'.$search.'%');
+                        })
+                        ->orWhereHas('supplier', function ($query) use ($search) {
+                            $query->where('name', 'like', '%'.$search.'%');
+                        });
+                });
+            })
+            ->when($supplier !== '' && ctype_digit($supplier), function ($query) use ($supplier) {
+                $query->where('supplier_id', (int) $supplier);
+            })
+            ->when($createdBy !== '' && ctype_digit($createdBy), function ($query) use ($createdBy) {
+                $query->where('created_by', (int) $createdBy);
+            })
+            ->when($statusAllowed !== '', function ($query) use ($statusAllowed) {
+                if ($statusAllowed === 'quoted') {
+                    $query->whereHas('items', fn ($query) => $query->whereNotNull('unit_price'));
+                } else {
+                    $query->whereDoesntHave('items', fn ($query) => $query->whereNotNull('unit_price'));
+                }
+            });
+
+        // A prep list group shows when at least one of its quotations matches;
+        // inside the group only the matching quotations are rendered.
+        $groups = (clone $base)
             ->select('preplist_id', DB::raw('MAX(id) as latest_id'))
             ->groupBy('preplist_id')
             ->orderByDesc('latest_id')
@@ -51,7 +90,7 @@ class QuotationController extends Controller
 
         $quotations = $pageIds->isEmpty()
             ? collect()
-            : Quotation::query()
+            : (clone $base)
                 ->with(['preplist.items', 'supplier', 'items'])
                 ->whereIn('preplist_id', $pageIds)
                 ->orderByDesc('id')
@@ -94,10 +133,35 @@ class QuotationController extends Controller
                 ];
             })->values();
 
+        $suppliers = Supplier::query()
+            ->whereIn('id', Quotation::query()->select('supplier_id'))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $developers = User::query()
+            ->whereIn('id', Quotation::query()->select('created_by'))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $activeFilters = collect([
+            $supplier !== '' ? $supplier : null,
+            $createdBy !== '' ? $createdBy : null,
+            $statusAllowed !== '' ? $statusAllowed : null,
+        ])->filter()->count();
+        $filtersActive = $search !== '' || $activeFilters > 0;
+
         return view('Quotation.index', [
             'preplistGroups' => $orderedGroups,
             'groups' => $groups,
             'perPage' => $perPage,
+            'search' => $search,
+            'supplier' => $supplier,
+            'createdBy' => $createdBy,
+            'status' => $statusAllowed,
+            'suppliers' => $suppliers,
+            'developers' => $developers,
+            'activeFilters' => $activeFilters,
+            'filtersActive' => $filtersActive,
         ]);
     }
 

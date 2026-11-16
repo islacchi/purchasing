@@ -8,20 +8,96 @@
 
 @section('content')
     <div class="pb-24">
-        {{-- Page heading --}}
-        <div class="mb-6 flex items-end justify-between gap-4">
-            <!-- <h2 class="text-xl font-bold text-gray-900">Quotation</h2> -->
-            <p class="text-xs text-gray-500">Supplier responses to sent RFQs</p>
+        {{-- Search and filter bar --}}
+        <div class="mb-6 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4 flex-1">
+                <form method="GET" action="{{ route('quotation') }}" class="flex max-w-xl w-full items-center gap-2">
+                    <div class="relative min-w-0 flex-1">
+                        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
+                            </svg>
+                        </span>
+                        <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search by supplier / prep list name / RFQ number..."
+                               class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
+                    </div>
+                </form>
 
-            <form method="GET" action="{{ route('quotation') }}">
-                <label class="sr-only" for="quotationPerPage">Prep list groups per page</label>
-                <select id="quotationPerPage" name="per_page" aria-label="Prep list groups per page" onchange="this.form.requestSubmit()"
-                        class="rounded-lg border border-gray-200 bg-white py-2 pl-2 pr-6 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                    @foreach (\App\Support\Pagination::options() as $value => $label)
-                        <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
-                    @endforeach
-                </select>
-            </form>
+                {{-- Filter dropdown: supplier · created by · quotation status · page size --}}
+                <div id="quotationFilterWrap" class="relative">
+                    <button type="button" id="quotationFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="quotationFilterMenu"
+                            class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 4h18M6 9h12M10 14h4"/>
+                        </svg>
+                        <span>Filter</span>
+                        @if ($activeFilters > 0)
+                            <span class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#2a7a94] px-1 text-[10px] font-bold text-white">{{ $activeFilters }}</span>
+                        @endif
+                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m19 9-7 7-7-7"/>
+                        </svg>
+                    </button>
+
+                    <div id="quotationFilterMenu" role="group" aria-labelledby="quotationFilterBtn" aria-hidden="true"
+                         class="hidden absolute left-0 top-full mt-2 z-10 w-64 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                        <form method="GET" action="{{ route('quotation') }}" id="quotationFilterForm" class="space-y-2 px-2">
+                            <input type="hidden" name="q" value="{{ $search ?? '' }}">
+
+                            <div>
+                                <label for="quotationSupplier" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Supplier</label>
+                                <select id="quotationSupplier" name="supplier" aria-label="Filter by supplier" onchange="this.form.requestSubmit()"
+                                        class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                    <option value="">All suppliers</option>
+                                    @foreach ($suppliers as $option)
+                                        <option value="{{ $option->id }}" @selected((int) $supplier === $option->id)>{{ $option->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="quotationCreatedBy" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Created by</label>
+                                <select id="quotationCreatedBy" name="created_by" aria-label="Filter by creator" onchange="this.form.requestSubmit()"
+                                        class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                    <option value="">All users</option>
+                                    @foreach ($developers as $option)
+                                        <option value="{{ $option->id }}" @selected((int) $createdBy === $option->id)>{{ $option->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="quotationStatus" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Quotation status</label>
+                                <select id="quotationStatus" name="status" aria-label="Filter by quotation status" onchange="this.form.requestSubmit()"
+                                        class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                    <option value="">All statuses</option>
+                                    <option value="quoted" @selected($status === 'quoted')>Quoted</option>
+                                    <option value="pending" @selected($status === 'pending')>Awaiting quote</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="quotationPerPage" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Items per page</label>
+                                <select id="quotationPerPage" name="per_page" aria-label="Prep list groups per page" onchange="this.form.requestSubmit()"
+                                        class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                    @foreach (\App\Support\Pagination::options() as $value => $label)
+                                        <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            @if ($activeFilters > 0)
+                                <a href="{{ route('quotation', array_filter(['q' => ($search ?? '') !== '' ? $search : null, 'per_page' => $perPage])) }}"
+                                   class="mt-1 flex items-center justify-center rounded-md border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                    Clear filters
+                                </a>
+                            @endif
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-xs text-gray-500">Supplier responses to sent RFQs</p>
         </div>
 
         {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
@@ -155,7 +231,9 @@
                         @empty
                             <tr>
                                 <td colspan="4" class="px-6 py-12 text-center text-sm text-gray-500">
-                                    No quotations yet. Quotations are created when you generate the RFQ files from a prep list.
+                                    {{ $filtersActive
+                                        ? 'No quotations match the current filters. Try clearing one or more filters.'
+                                        : 'No quotations yet. Quotations are created when you generate the RFQ files from a prep list.' }}
                                 </td>
                             </tr>
                         @endforelse
@@ -176,6 +254,33 @@
                 // Guard against double execution if the layout ever renders @stack('scripts') itself.
                 if (window.__quotationMenusBound) return;
                 window.__quotationMenusBound = true;
+
+                // Filter dropdown: open/close, Escape and click-outside to close.
+                var filterWrap = document.getElementById('quotationFilterWrap');
+                var filterBtn = document.getElementById('quotationFilterBtn');
+                var filterMenu = document.getElementById('quotationFilterMenu');
+
+                function closeFilterMenu() {
+                    filterMenu.classList.add('hidden');
+                    filterBtn.setAttribute('aria-expanded', 'false');
+                    filterMenu.setAttribute('aria-hidden', 'true');
+                }
+
+                if (filterWrap && filterBtn && filterMenu) {
+                    filterBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var isHidden = filterMenu.classList.toggle('hidden');
+                        filterBtn.setAttribute('aria-expanded', String(!isHidden));
+                        filterMenu.setAttribute('aria-hidden', String(isHidden));
+                    });
+
+                    document.addEventListener('click', function (e) {
+                        if (!filterWrap.contains(e.target)) closeFilterMenu();
+                    });
+                    document.addEventListener('keydown', function (e) {
+                        if (e.key === 'Escape') closeFilterMenu();
+                    });
+                }
 
                 var toggles = document.querySelectorAll('[data-quotation-menu-toggle]');
                 var openToggle = null;
@@ -464,8 +569,5 @@
             })();
         </script>
         @endpush
-
-        {{-- layouts.app has no @stack('scripts') yet, so render the pushed script here. --}}
-        @stack('scripts')
     </div>
 @endsection

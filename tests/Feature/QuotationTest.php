@@ -343,6 +343,77 @@ class QuotationTest extends TestCase
             ->assertDontSee('Group fixture 03');
     }
 
+    public function test_quotation_module_searches_and_filters_by_supplier_and_status(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplierOne = Supplier::create(['name' => 'SearchFilter Alpha Supplies']);
+        $supplierTwo = Supplier::create(['name' => 'SearchFilter Beta Supplies']);
+
+        $alpha = $this->compile($user, [
+            'name' => 'Search filter fixture alpha',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+        $beta = $this->compile($user, [
+            'name' => 'Search filter fixture beta',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+
+        $alphaQuotation = $this->createQuotation($user, $alpha, $supplierOne, ['rfq_number' => 'RFQ-2026-QFILT1']);
+        $this->createQuotation($user, $beta, $supplierTwo, ['rfq_number' => 'RFQ-2026-QFILT2']);
+
+        // Attach a priced line to alpha's quotation so it counts as quoted.
+        $preplistItem = PreplistItem::where('preplist_id', $alpha->id)->firstOrFail();
+        QuotationItem::create([
+            'quotation_id' => $alphaQuotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'unit_price' => 150.00,
+            'quoted_at' => now(),
+        ]);
+
+        // Search by supplier name.
+        $this->actingAs($user)
+            ->get(route('quotation', ['q' => 'SearchFilter Alpha']))
+            ->assertOk()
+            ->assertSee('Search filter fixture alpha')
+            ->assertDontSee('Search filter fixture beta');
+
+        // Search by RFQ number.
+        $this->actingAs($user)
+            ->get(route('quotation', ['q' => 'RFQ-2026-QFILT2']))
+            ->assertOk()
+            ->assertSee('Search filter fixture beta')
+            ->assertDontSee('Search filter fixture alpha');
+
+        // Filter by supplier.
+        $this->actingAs($user)
+            ->get(route('quotation', ['supplier' => $supplierOne->id]))
+            ->assertOk()
+            ->assertSee('Search filter fixture alpha')
+            ->assertDontSee('Search filter fixture beta');
+
+        // Filter to quoted only.
+        $this->actingAs($user)
+            ->get(route('quotation', ['status' => 'quoted']))
+            ->assertOk()
+            ->assertSee('Search filter fixture alpha')
+            ->assertDontSee('Search filter fixture beta');
+
+        // Filter to awaiting quote only.
+        $this->actingAs($user)
+            ->get(route('quotation', ['status' => 'pending']))
+            ->assertOk()
+            ->assertSee('Search filter fixture beta')
+            ->assertDontSee('Search filter fixture alpha');
+    }
+
     public function test_quotation_document_upload_rejects_a_stale_fingerprint(): void
     {
         Storage::fake('local');

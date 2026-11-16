@@ -100,6 +100,8 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 ### Quotation tracker (`/quotation`)
 
 - Quotations are grouped by prep list; each quotation row shows the supplier, attached RFQ number, per-item response status, and upload status.
+- A search bar (supplier / prep list name / reference no. / RFQ number) narrows the tracker server-side; a matching prep list group keeps its matching quotations.
+- A display-filter dropdown (next to the search bar) narrows by **supplier**, **created by** (users who generated quotations), and **quotation status** (Quoted / Awaiting quote, matched on priced lines); selection auto-submits and shows a badge count of active filters; empty filtered results say “No quotations match the current filters.” The prep-list-groups-per-page choice moved inside it.
 - Upload the supplier's returned `.xlsx` (`POST /quotation/{quotation}/document`, `quotation.store-document`):
   - The file is validated against the RFQ template **before** parsing (header layout + column mapping), so garbage files are rejected with a clear message.
   - The parser reads prices, brand, and expiry per item via `App\Support\QuotationWorkbookParser`; expiry values in any format (`MM/YYYY`, month names, ISO) are normalized by `App\Support\ExpiryParser`.
@@ -663,7 +665,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **206 passed / 1311 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **207 passed / 1328 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -693,7 +695,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
 - [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
 - [x] **Settings → Backup** — administrator-only full-database backup with plain-language restore instructions in-place
-- [x] **Tests** — 206 passing (1311 assertions)
+- [x] **Tests** — 207 passing (1328 assertions)
 
 ### Not yet done
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
