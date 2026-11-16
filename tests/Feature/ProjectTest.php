@@ -418,6 +418,77 @@ class ProjectTest extends TestCase
         $this->assertStringContainsString('q=fixture', $searchPage->viewData('projects')->previousPageUrl() ?? '');
     }
 
+    public function test_projects_module_filters_by_entity_mode_status(): void
+    {
+        $user = $this->admin();
+        $entityOne = $this->entity(['name' => 'Entities One']);
+        $entityTwo = $this->entity(['name' => 'Entities Two']);
+
+        $shopping = $this->project($user, $entityOne, [
+            'title' => 'Filter fixture shopping supplies',
+            'reference_no' => 'RF-FILTER-SHOP',
+            'mode_of_procurement' => 'shopping',
+        ]);
+        $smallValue = $this->project($user, $entityTwo, [
+            'title' => 'Filter fixture small value chemicals',
+            'reference_no' => 'RF-FILTER-SV',
+            'mode_of_procurement' => 'small_value',
+        ]);
+
+        $this->addItemWithStatus($shopping, 'fulfilled');
+        $this->addItemWithStatus($smallValue, 'pending');
+
+        $this->actingAs($user)
+            ->get('/projects?entity='.$entityOne->id)
+            ->assertOk()
+            ->assertSee($shopping->title)
+            ->assertDontSee($smallValue->title);
+
+        $this->actingAs($user)
+            ->get('/projects?mode=shopping')
+            ->assertOk()
+            ->assertSee($shopping->title)
+            ->assertDontSee($smallValue->title);
+
+        $this->actingAs($user)
+            ->get('/projects?status=open')
+            ->assertOk()
+            ->assertSee($smallValue->title)
+            ->assertDontSee($shopping->title);
+
+        $this->actingAs($user)
+            ->get('/projects?status=completed')
+            ->assertOk()
+            ->assertSee($shopping->title)
+            ->assertDontSee($smallValue->title);
+
+        $this->actingAs($user)
+            ->get('/projects?q=Filter+fixture&entity='.$entityOne->id.'&mode=shopping&status=open')
+            ->assertOk()
+            ->assertSee('No projects match the current filters');
+    }
+
+    private function addItemWithStatus(Project $project, string $status): ProjectItem
+    {
+        $category = ItemCategory::firstOrCreate([
+            'name' => 'drugs and medicines',
+        ]);
+        $item = Item::create([
+            'category_id' => $category->id,
+            'name' => 'Filter fixture item '.$status.' '.uniqid(),
+            'unit' => 'Box',
+        ]);
+
+        return ProjectItem::create([
+            'project_id' => $project->id,
+            'item_id' => $item->id,
+            'quantity' => 10,
+            'unit_cost' => 100.00,
+            'awarded_unit_price' => 100.00,
+            'fulfillment_status' => $status,
+        ]);
+    }
+
     public function test_project_summary_downloads_an_xlsx_workbook(): void
     {
         $user = $this->admin();

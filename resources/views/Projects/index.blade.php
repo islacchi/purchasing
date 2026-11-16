@@ -7,6 +7,10 @@
 @endsection
 
     @section('content')
+    @php
+        $filtersActive = ($search ?? '') !== '' || ($entity ?? '') !== '' || ($mode ?? '') !== '' || ($status ?? '') !== '';
+        $activeFilters = collect([$entity, $mode, $status])->filter()->count();
+    @endphp
     {{-- Flex column: the toolbar stays fixed while the content holder scrolls --}}
     <div class="flex h-full min-h-0 flex-col">
         {{-- Search, view options and actions bar --}}
@@ -22,15 +26,80 @@
                     <input type="text" name="q" value="{{ $search ?? '' }}" placeholder="Search by project name / title..."
                            class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
-
-                <label class="sr-only" for="projectsPerPage">Projects per page</label>
-                <select id="projectsPerPage" name="per_page" aria-label="Projects per page" onchange="this.form.requestSubmit()"
-                        class="shrink-0 rounded-lg border border-gray-200 bg-white py-2 pl-2 pr-6 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                    @foreach (\App\Support\Pagination::options() as $value => $label)
-                        <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
-                    @endforeach
-                </select>
             </form>
+
+            {{-- Filter dropdown: entity · mode · fulfillment status · page size --}}
+            <div id="projectsFilterWrap" class="relative">
+                <button type="button" id="projectsFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="projectsFilterMenu"
+                        class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 4h18M6 9h12M10 14h4"/>
+                    </svg>
+                    <span>Filter</span>
+                    @if ($activeFilters > 0)
+                        <span class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#2a7a94] px-1 text-[10px] font-bold text-white">{{ $activeFilters }}</span>
+                    @endif
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m19 9-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <div id="projectsFilterMenu" role="group" aria-labelledby="projectsFilterBtn" aria-hidden="true"
+                     class="hidden absolute left-0 top-full mt-2 z-10 w-64 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                    <form method="GET" action="{{ route('projects') }}" id="projectsFilterForm" class="space-y-2 px-2">
+                        <input type="hidden" name="q" value="{{ $search ?? '' }}">
+
+                        <div>
+                            <label for="projectsEntity" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Procuring entity</label>
+                            <select id="projectsEntity" name="entity" aria-label="Filter by procuring entity" onchange="this.form.requestSubmit()"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">All entities</option>
+                                @foreach ($entities as $option)
+                                    <option value="{{ $option->id }}" @selected((int) $entity === $option->id)>{{ $option->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="projectsMode" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Procurement mode</label>
+                            <select id="projectsMode" name="mode" aria-label="Filter by procurement mode" onchange="this.form.requestSubmit()"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">All modes</option>
+                                @foreach (['shopping' => 'Shopping', 'small_value' => 'Small value', 'competitive_bidding' => 'Competitive bidding', 'direct_contracting' => 'Direct contracting'] as $value => $label)
+                                    <option value="{{ $value }}" @selected($mode === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="projectsStatus" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Fulfillment status</label>
+                            <select id="projectsStatus" name="status" aria-label="Filter by fulfillment status" onchange="this.form.requestSubmit()"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">All statuses</option>
+                                <option value="open" @selected($status === 'open')>Open (unfulfilled items)</option>
+                                <option value="completed" @selected($status === 'completed')>Completed (all fulfilled)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="projectsPerPage" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Items per page</label>
+                            <select id="projectsPerPage" name="per_page" aria-label="Projects per page" onchange="this.form.requestSubmit()"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                @foreach (\App\Support\Pagination::options() as $value => $label)
+                                    <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        @if (collect([$entity, $mode, $status])->filter()->count() > 0)
+                            <a href="{{ route('projects', array_filter(['q' => ($search ?? '') !== '' ? $search : null, 'per_page' => $perPage])) }}"
+                               class="mt-1 flex items-center justify-center rounded-md border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                Clear filters
+                            </a>
+                        @endif
+                    </form>
+                </div>
+            </div>
 
             {{-- View options dropdown: Content (default), Details, List --}}
             <div id="projectsViewWrap" class="relative">
@@ -170,9 +239,14 @@
             </div>
         @empty
             <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
-                <h3 class="text-base font-semibold text-gray-900">No projects yet</h3>
-                <p class="mt-1 text-sm text-gray-500">Create a project to start tracking its procurement details.</p>
-                @if (auth()->user()?->canModule('projects', 'manage'))
+                @if ($filtersActive)
+                    <h3 class="text-base font-semibold text-gray-900">No projects match the current filters</h3>
+                    <p class="mt-1 text-sm text-gray-500">Try clearing one or more filters.</p>
+                @else
+                    <h3 class="text-base font-semibold text-gray-900">No projects yet</h3>
+                    <p class="mt-1 text-sm text-gray-500">Create a project to start tracking its procurement details.</p>
+                @endif
+                @if (! $filtersActive && auth()->user()?->canModule('projects', 'manage'))
                     <a href="{{ route('projects.create') }}" class="mt-4 inline-flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80]">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -275,8 +349,13 @@
             </div>
         @empty
             <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
-                <h3 class="text-base font-semibold text-gray-900">No projects yet</h3>
-                <p class="mt-1 text-sm text-gray-500">Create a project to start tracking its procurement details.</p>
+                @if ($filtersActive)
+                    <h3 class="text-base font-semibold text-gray-900">No projects match the current filters</h3>
+                    <p class="mt-1 text-sm text-gray-500">Try clearing one or more filters.</p>
+                @else
+                    <h3 class="text-base font-semibold text-gray-900">No projects yet</h3>
+                    <p class="mt-1 text-sm text-gray-500">Create a project to start tracking its procurement details.</p>
+                @endif
             </div>
         @endforelse
     </div>
@@ -342,7 +421,9 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500">
-                                No projects yet. Use “Add project” to create the first one.
+                                {{ $filtersActive
+                                    ? 'No projects match the current filters.'
+                                    : 'No projects yet. Use “Add project” to create the first one.' }}
                             </td>
                         </tr>
                     @endforelse
@@ -371,6 +452,33 @@
                 details: '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6h16M4 12h16M4 18h10"/></svg>',
                 list: '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>'
             };
+
+            // Filter dropdown: open/close, Escape and click-outside to close.
+            var filterWrap = document.getElementById('projectsFilterWrap');
+            var filterBtn = document.getElementById('projectsFilterBtn');
+            var filterMenu = document.getElementById('projectsFilterMenu');
+
+            function closeFilterMenu() {
+                filterMenu.classList.add('hidden');
+                filterBtn.setAttribute('aria-expanded', 'false');
+                filterMenu.setAttribute('aria-hidden', 'true');
+            }
+
+            if (filterWrap && filterBtn && filterMenu) {
+                filterBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    var isHidden = filterMenu.classList.toggle('hidden');
+                    filterBtn.setAttribute('aria-expanded', String(!isHidden));
+                    filterMenu.setAttribute('aria-hidden', String(isHidden));
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!filterWrap.contains(e.target)) closeFilterMenu();
+                });
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') closeFilterMenu();
+                });
+            }
 
             var wrap = document.getElementById('projectsViewWrap');
             var btn = document.getElementById('projectsViewBtn');

@@ -44,10 +44,14 @@ class ProjectController extends Controller
 
     /**
      * Show the projects list using real database records.
+     * Server-side search, filters and per-page; Blade renders a single slice.
      */
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
+        $entity = trim((string) $request->query('entity', ''));
+        $mode = trim((string) $request->query('mode', ''));
+        $status = trim((string) $request->query('status', ''));
         $perPage = Pagination::perPage($request, 10);
 
         $projects = Project::query()
@@ -61,11 +65,51 @@ class ProjectController extends Controller
                         });
                 });
             })
+            ->when($entity !== '' && ctype_digit($entity), function ($query) use ($entity) {
+                $query->where('procuring_entity_id', (int) $entity);
+            })
+            ->when($mode !== '' && in_array($mode, self::MODES_OF_PROCUREMENT, true), function ($query) use ($mode) {
+                $query->where('mode_of_procurement', $mode);
+            })
+            ->when($status === 'open' || $status === 'completed', function ($query) use ($status) {
+                // Match the isFulfilled() predicate: fulfilled = explicitly set OR on-hand covers quantity.
+                $query->where(function ($query) use ($status) {
+                    if ($status === 'open') {
+                        $query->whereExists(function ($subQuery) {
+                            $subQuery->select('project_items.id')
+                                ->from('project_items')
+                                ->whereColumn('project_items.project_id', 'projects.id')
+                                ->where('fulfillment_status', '!=', 'fulfilled')
+                                ->where(function ($inner) {
+                                    $inner->whereColumn('in_stock', '<', 'quantity')
+                                        ->orWhere('quantity', '<=', 0)
+                                        ->orWhereNull('in_stock');
+                                })
+                                ->limit(1);
+                        });
+                    } else {
+                        $query->whereNotExists(function ($subQuery) {
+                            $subQuery->select('project_items.id')
+                                ->from('project_items')
+                                ->whereColumn('project_items.project_id', 'projects.id')
+                                ->where('fulfillment_status', '!=', 'fulfilled')
+                                ->where(function ($inner) {
+                                    $inner->whereColumn('in_stock', '<', 'quantity')
+                                        ->orWhere('quantity', '<=', 0)
+                                        ->orWhereNull('in_stock');
+                                })
+                                ->limit(1);
+                        });
+                    }
+                });
+            })
             ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
 
-        return view('Projects.index', compact('projects', 'search', 'perPage'));
+        $entities = ProcuringEntity::query()->orderBy('name')->get(['id', 'name']);
+
+        return view('Projects.index', compact('projects', 'search', 'perPage', 'entities', 'entity', 'mode', 'status'));
     }
 
     /**

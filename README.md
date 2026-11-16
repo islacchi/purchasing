@@ -67,6 +67,11 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Per-item fulfillment: each project line has quantity, unit cost, awarded unit price, on-hand stock, and `fulfillment_status` (`pending` / `fulfilled`).
 - Progress bar shows `fulfilled / total items` with a percentage.
 - Search bar filters by title, reference no., or procuring entity (server-side `q`); pagination shows 10 projects per page with the selection persisted across pages.
+- A display-filter row sits between the search bar and the View dropdown; it combines three optional filters that narrow the list server-side:
+  - **Entity** — shows only projects assigned to the selected procuring entity.
+  - **Mode** — shows only projects in the selected mode (Shopping, Small value, Competitive bidding, Direct contracting).
+  - **Fulfillment status** — `Open (unfulfilled items)` shows projects with at least one unfulfilled line; `Completed (all fulfilled)` shows projects with no unfulfilled lines.
+- Empty with filters returns “No projects match the current filters” with the Add button hidden so it doesn't mislead.
 - View modes: **Content** (card list), **Details** (metadata columns), **List** (dense table) — all paged from the same paginated slice (`?page=`).
 - A hidden, folio-sized print sheet renders in print preview (8.5 × 13 in officio, landscape) via a modal; clicking Print calls `window.print()` with the correct `@page` size. The same content streams from `/projects/{project}/download` (`projects.download`) as an `.xlsx` workbook built by `ProjectSummaryWorkbook`.
 - Soft-deleted (`deleted_at`) rather than hard-deleted, so links from prep lists survive; cascade rules prevent deleting a sourced project.
@@ -657,7 +662,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **204 passed / 1283 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **205 passed / 1297 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -687,7 +692,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
 - [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
 - [x] **Settings → Backup** — administrator-only full-database backup with plain-language restore instructions in-place
-- [x] **Tests** — 204 passing (1283 assertions)
+- [x] **Tests** — 205 passing (1297 assertions)
 
 ### Not yet done
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
