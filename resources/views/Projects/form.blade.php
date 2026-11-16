@@ -40,10 +40,14 @@
                     ->values()
                     ->all();
             } else {
-                $items = [
-                    ['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'in_stock' => '', 'unit_cost' => '', 'quoted_price' => ''],
-                ];
+                $items = [['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'in_stock' => '', 'unit_cost' => '', 'quoted_price' => '']];
             }
+        }
+
+        // If every row came back from the failed submission as fully blank,
+        // render one empty row so the user can keep working from here.
+        if (is_array($items) && count($items) === 0) {
+            $items = [['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'in_stock' => '', 'unit_cost' => '', 'quoted_price' => '']];
         }
     @endphp
 

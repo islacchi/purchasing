@@ -258,7 +258,8 @@ class ProjectController extends Controller
     private function validateProject(Request $request): array
     {
         $items = collect($request->input('items', []))
-            ->filter(fn ($item) => is_array($item) && filled($item['description'] ?? null))
+            ->filter(fn ($item) => is_array($item)
+                && collect($item)->contains(fn ($value) => filled($value)))
             ->values()
             ->all();
 

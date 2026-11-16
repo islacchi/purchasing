@@ -130,6 +130,54 @@ class ProjectTest extends TestCase
             ->assertSee('There are issues with your submission.');
     }
 
+    public function test_failed_store_keeps_a_default_empty_item_row(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $this->actingAs($user)
+            ->withHeaders(['Referer' => route('projects.create')])
+            ->followingRedirects()
+            ->post(route('projects.store'), [
+                'title' => 'Incomplete project',
+                'reference_no' => 'RF-BLANK-1',
+                // mode_of_procurement is required; omit it so the store fails and the form re-renders.
+                'items' => [
+                    ['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'unit_cost' => '', 'quoted_price' => '', 'in_stock' => ''],
+                ],
+            ])
+            ->assertOk()
+            ->assertSee('class="item-row', false);
+    }
+
+    public function test_failed_store_preserves_partial_item_rows(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $this->actingAs($user)
+            ->withHeaders(['Referer' => route('projects.create')])
+            ->followingRedirects()
+            ->post(route('projects.store'), [
+                'title' => 'Incomplete project',
+                'reference_no' => 'RF-PARTIAL-1',
+                'mode_of_procurement' => 'small_value',
+                'items' => [
+                    [
+                        'description' => 'Row with only a description',
+                        'category' => '',
+                        'unit' => '',
+                        'quantity' => '',
+                        'unit_cost' => '',
+                        'quoted_price' => '',
+                        'in_stock' => '',
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->assertSee('Row with only a description');
+    }
+
     public function test_project_can_be_created_with_database_record_and_items(): void
     {
         $user = $this->admin();
