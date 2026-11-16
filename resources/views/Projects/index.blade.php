@@ -364,20 +364,20 @@
     <div id="view-list" class="hidden flex-1 min-h-0">
         <div class="h-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="bg-[#0e5266]">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference no.</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entity</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount awarded</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Project</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Reference no.</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Entity</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Progress</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Amount awarded</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($projects as $project)
-                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer" data-href="{{ route('projects.show', ['project' => $project->id]) }}">
+                        <tr class="odd:bg-white even:bg-[#f2f7f8] transition-colors cursor-pointer hover:bg-[#e4edf0]" data-href="{{ route('projects.show', ['project' => $project->id]) }}">
                             <td class="px-6 py-2 whitespace-nowrap">
                                 <span class="text-sm font-semibold text-gray-900">{{ $project->title }}</span>
                             </td>
