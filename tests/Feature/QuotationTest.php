@@ -310,14 +310,18 @@ class QuotationTest extends TestCase
         $entity = $this->entity();
         $project = $this->project($user, $entity);
         $item = $this->item();
-        $projectItem = $this->projectItem($project, $item);
+        $sourceIds = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $source = $this->projectItem($project, $this->item(['name' => sprintf('GroupFixtureLine%02d', $i)]), ['quantity' => 10]);
+            $sourceIds[] = $source->id;
+        }
         $supplier = Supplier::create(['name' => 'Triple Tact']);
 
         for ($i = 1; $i <= 12; $i++) {
             $preplist = $this->compile($user, [
                 'name' => sprintf('Group fixture %02d', $i),
-                'sources' => [$projectItem->id],
-                'shelf_life' => [$projectItem->id => 9],
+                'sources' => [$sourceIds[$i - 1]],
+                'shelf_life' => [$sourceIds[$i - 1] => 9],
             ]);
             $this->createQuotation($user, $preplist, $supplier, [
                 'rfq_number' => sprintf('RFQ-2026-%04d', $i),
@@ -352,6 +356,7 @@ class QuotationTest extends TestCase
         $project = $this->project($user, $entity);
         $item = $this->item();
         $projectItem = $this->projectItem($project, $item);
+        $secondProjectItem = $this->projectItem($project, $this->item(['name' => 'BetaLineCounterpartItem']), ['quantity' => 15]);
         $supplierOne = Supplier::create(['name' => 'SearchFilter Alpha Supplies']);
         $supplierTwo = Supplier::create(['name' => 'SearchFilter Beta Supplies']);
 
@@ -362,8 +367,8 @@ class QuotationTest extends TestCase
         ]);
         $beta = $this->compile($user, [
             'name' => 'Search filter fixture beta',
-            'sources' => [$projectItem->id],
-            'shelf_life' => [$projectItem->id => 9],
+            'sources' => [$secondProjectItem->id],
+            'shelf_life' => [$secondProjectItem->id => 9],
         ]);
 
         $alphaQuotation = $this->createQuotation($user, $alpha, $supplierOne, ['rfq_number' => 'RFQ-2026-QFILT1']);

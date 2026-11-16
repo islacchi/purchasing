@@ -212,12 +212,16 @@ class PreplistTest extends TestCase
         $entity = $this->entity();
         $project = $this->project($user, $entity);
         $item = $this->item();
-        $source = $this->projectItem($project, $item)->id;
+        $sourceIds = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $source = $this->projectItem($project, $this->item(['name' => sprintf('PaginationLine%02d', $i)]), ['quantity' => 10]);
+            $sourceIds[] = $source->id;
+        }
 
         for ($i = 1; $i <= 12; $i++) {
             $this->compile($user, [
                 'name' => sprintf('Pagination fixture %02d', $i),
-                'sources' => [$source],
+                'sources' => [$sourceIds[$i - 1]],
             ]);
         }
 
@@ -336,6 +340,7 @@ class PreplistTest extends TestCase
         $project = $this->project($user, $entity);
         $item = $this->item();
         $projectItem = $this->projectItem($project, $item);
+        $secondProjectItem = $this->projectItem($project, $this->item(['name' => 'SecondBatchSourceItem']), ['quantity' => 20]);
 
         $first = $this->compile($user, [
             'name' => 'First prep list',
@@ -343,7 +348,7 @@ class PreplistTest extends TestCase
         ]);
         $second = $this->compile($user, [
             'name' => 'Second prep list',
-            'sources' => [$projectItem->id],
+            'sources' => [$secondProjectItem->id],
         ]);
 
         $this->assertSame('PL-'.now()->year.'-0001', $first->reference_no);
@@ -571,6 +576,80 @@ class PreplistTest extends TestCase
             ->assertSessionHasErrors('sources.0');
 
         $this->assertDatabaseCount('preplists', 0);
+    }
+
+    public function test_already_sourced_line_is_hidden_from_create_picker(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity, ['reference_no' => 'RF-2026-1001']);
+        $item = $this->item(['name' => 'HiddenSharedSourceLine']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 20, 'in_stock' => 0]);
+
+        $this->compile($user, [
+            'name' => 'First preplist',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 4],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('preplist.create'))
+            ->assertOk()
+            ->assertDontSee('HiddenSharedSourceLine');
+    }
+
+    public function test_already_sourced_line_is_rejected_on_compile(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity, ['reference_no' => 'RF-2026-1002']);
+        $item = $this->item(['name' => 'RejectedSharedSourceLine']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 20, 'in_stock' => 0]);
+
+        $this->compile($user, [
+            'name' => 'First preplist',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 4],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.store'), [
+                'name' => 'Second preplist',
+                'sources' => [$projectItem->id],
+            ])
+            ->assertSessionHasErrors('sources');
+
+        $this->assertDatabaseCount('preplists', 1);
+        $this->assertDatabaseCount('preplist_item_sources', 1);
+    }
+
+    public function test_editing_the_owning_preplist_keeps_its_lines_visible_and_saved(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity, ['reference_no' => 'RF-2026-1003']);
+        $item = $this->item(['name' => 'OwnSourcedLineEditable']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 20, 'in_stock' => 0]);
+
+        $preplist = $this->compile($user, [
+            'name' => 'First preplist',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 4],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('preplist.edit', ['preplist' => $preplist->id]))
+            ->assertOk()
+            ->assertSee('OwnSourcedLineEditable');
+
+        $this->actingAs($user)
+            ->put(route('preplist.update', ['preplist' => $preplist->id]), [
+                'name' => 'First preplist',
+                'sources' => [$projectItem->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('preplist_item_sources', 1);
     }
 
     public function test_generate_rfq_uses_real_preplist_items_and_suppliers(): void
@@ -867,9 +946,10 @@ class PreplistTest extends TestCase
             'name' => 'First prep list',
             'sources' => [$projectItem->id],
         ]);
+        $secondProjectItem = $this->projectItem($project, $this->item(['name' => 'SecondBatchSourceItem']), ['quantity' => 20]);
         $secondPreplist = $this->compile($user, [
             'name' => 'Second prep list',
-            'sources' => [$projectItem->id],
+            'sources' => [$secondProjectItem->id],
         ]);
 
         $secondItem = PreplistItem::query()

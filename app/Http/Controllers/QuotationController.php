@@ -208,6 +208,7 @@ class QuotationController extends Controller
                                     'expiry' => $lineItem->expiry?->toDateString(),
                                     'expiry_label' => $lineItem->expiry?->format('M j, Y'),
                                     'min_remaining_months' => (int) $lineItem->min_remaining_months,
+                                    'on_po' => \App\Models\PurchaseOrderItem::query()->where('quotation_item_id', $lineItem->id)->exists(),
                                 ],
                         ];
                     })->all(),

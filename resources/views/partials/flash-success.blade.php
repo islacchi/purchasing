@@ -14,3 +14,14 @@
         </div>
     </div>
 @endif
+
+@error('cart')
+    <div class="flash-success-overlay" aria-live="assertive">
+        <div class="flash-message flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm" role="alert">
+            <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008M12 3.75l-8.25 15h16.5L12 3.75z"/>
+            </svg>
+            <span>{{ $message }}</span>
+        </div>
+    </div>
+@enderror

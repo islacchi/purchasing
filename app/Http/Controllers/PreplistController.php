@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\NumberSequence;
 use App\Models\Preplist;
 use App\Models\PreplistItem;
+use App\Models\PreplistItemSource;
 use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Models\Quotation;
@@ -160,6 +161,7 @@ class PreplistController extends Controller
     {
         $validated = $this->validatePreplist($request);
         $this->assertNoFulfilledSources($validated);
+        $this->assertNoAlreadySourcedElsewhere($validated);
 
         try {
             $preplist = DB::transaction(function () use ($request, $validated) {
@@ -226,6 +228,7 @@ class PreplistController extends Controller
     {
         $validated = $this->validatePreplist($request);
         $this->assertNoFulfilledSources($validated, $preplist);
+        $this->assertNoAlreadySourcedElsewhere($validated, $preplist);
 
         try {
             DB::transaction(function () use ($preplist, $validated) {
@@ -465,9 +468,9 @@ class PreplistController extends Controller
     /**
      * Available projects that have item rows to compile.
      *
-     * Fulfilled lines (received via PO, or fully covered by on-hand stock)
-     * never appear on the compile page. Lines already sourced into the prep
-     * being edited stay visible so editing cannot silently drop them.
+     * Hidden from the compile page, besides fulfilled lines: any project
+     * line already sourced into another prep list. Lines sourced into the
+     * prep being edited stay visible so editing cannot silently drop them.
      */
     private function projectsWithItems(?Preplist $prepList = null)
     {
@@ -475,19 +478,74 @@ class PreplistController extends Controller
             ? []
             : $prepList->items->flatMap(fn (PreplistItem $item) => $item->sources->pluck('project_item_id'))->all();
 
+        // Project lines already promised to a different prep list are not
+        // offered for a new compile.
+        $sourcedElsewhere = $this->sourcedElsewhereByItem($prepList);
+
         return Project::query()
             ->with(['procuringEntity', 'items.item.category'])
             ->orderByDesc('id')
             ->get()
-            ->map(function (Project $project) use ($sourcedItemIds) {
+            ->map(function (Project $project) use ($sourcedItemIds, $sourcedElsewhere) {
                 $project->setRelation('items', $project->items
-                    ->reject(fn (ProjectItem $item) => $item->isFulfilled() && ! in_array($item->id, $sourcedItemIds, true))
+                    ->reject(fn (ProjectItem $item) => ($item->isFulfilled() || $sourcedElsewhere->has($item->id)) && ! in_array($item->id, $sourcedItemIds, true))
                     ->values());
 
                 return $project;
             })
             ->filter(fn (Project $project) => $project->items->isNotEmpty())
             ->values();
+    }
+
+    /**
+     * Reject source lines already sourced into a different prep list — they
+     * cannot be compiled again. Own lines (editing the prep list that
+     * holds them) remain valid.
+     */
+    private function assertNoAlreadySourcedElsewhere(array $validated, ?Preplist $prepList = null): void
+    {
+        $ids = $validated['sources'] ?? [];
+
+        if ($ids === []) {
+            return;
+        }
+
+        $alreadySourced = PreplistItemSource::query()
+            ->with('preplistItem.preplist')
+            ->whereIn('project_item_id', $ids)
+            ->get()
+            ->filter(fn (PreplistItemSource $source) => $prepList === null
+                || $source->preplistItem?->preplist_id !== $prepList->id);
+
+        if ($alreadySourced->isEmpty()) {
+            return;
+        }
+
+        $refs = $alreadySourced
+            ->map(fn (PreplistItemSource $source) => $source->preplistItem?->preplist?->reference_no ?? 'another prep list')
+            ->unique()
+            ->join(', ');
+
+        throw ValidationException::withMessages([
+            'sources' => 'Already sourced into: '.$refs.'. Remove it from there first.',
+        ]);
+    }
+
+    /**
+     * Project item ids already sourced into prep lists other than the one
+     * being edited (null edits = new prep list, everything is "elsewhere"),
+     * keyed by source id.
+     */
+    private function sourcedElsewhereByItem(?Preplist $prepList): \Illuminate\Support\Collection
+    {
+        return PreplistItemSource::query()
+            ->with('preplistItem.preplist')
+            ->get()
+            ->filter(fn (PreplistItemSource $source) => $prepList === null
+                || $source->preplistItem?->preplist_id !== $prepList->id)
+            ->mapWithKeys(fn (PreplistItemSource $source) => [
+                $source->project_item_id => $source->preplistItem?->preplist?->reference_no ?? 'another prep list',
+            ]);
     }
 
     /**

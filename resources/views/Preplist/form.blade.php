@@ -187,7 +187,7 @@
             @empty
                 <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
                     <h3 class="text-base font-semibold text-gray-900">No project items available</h3>
-                    <p class="mt-1 text-sm text-gray-500">Nothing to compile — items already fulfilled from on-hand stock or by receiving are hidden.</p>
+                    <p class="mt-1 text-sm text-gray-500">Nothing to compile — lines already fulfilled, or already sourced into another prep list, are hidden.</p>
                     <a href="{{ route('projects.create') }}" class="mt-4 inline-flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80]">
                         Add project
                     </a>

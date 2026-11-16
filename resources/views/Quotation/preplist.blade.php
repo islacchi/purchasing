@@ -13,7 +13,7 @@
 @section('content')
 
     {{-- Back to tracker --}}
-    <div class="mb-3">
+    <div class="mb-3 flex items-center justify-between gap-3">
         <a href="{{ route('quotation') }}"
            class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 transition-colors hover:text-[#2a7a94]">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -21,6 +21,15 @@
             </svg>
             Back to tracker
         </a>
+
+        <button type="button" id="preplistPrintBtn"
+                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                title="Print an officio landscape sheet with the full comparison">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 17h12M6 13H4a2 2 0 01-2-2v-3a2 2 0 012-2h16a2 2 0 012 2v3a2 2 0 01-2 2h-2m-12 0v6a1 1 0 001 1h10a1 1 0 001-1v-6"/>
+            </svg>
+            Print comparison
+        </button>
     </div>
 
     {{-- Banner: PREPLIST DETAILS --}}
@@ -131,13 +140,37 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                                     </svg>
                                                 </button>
-                                            @elseif ($otherSupplierHolds)
+                                            @elseif (($line['on_po'] ?? false) === true)
                                                 <button type="button" disabled
-                                                        title="Remove from {{ $otherSupplierName }} before picking {{ $section['supplier'] }}"
-                                                        aria-label="{{ $itemName }} already in cart from {{ $otherSupplierName }}"
+                                                        title="Already on a purchase order — cannot add"
+                                                        aria-label="{{ $itemName }} from {{ $section['supplier'] }} is already on a purchase order"
                                                         class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg bg-gray-100 text-gray-300">
                                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 10a2 2 0 100 4m8-4a2 2 0 100 4M8 13h8"/>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                    </svg>
+                                                </button>
+                                            @elseif ($requested <= 0)
+                                                <button type="button" disabled
+                                                        title="Fully covered by on-hand stock — nothing to order"
+                                                        aria-label="{{ $itemName }} fully covered by on-hand stock"
+                                                        class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg bg-gray-100 text-gray-300">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0 0l-8-4m8 4V11M4 7l8 4m-8-4v10l8 4m0-10L4 7"/>
+                                                    </svg>
+                                                </button>
+                                            @elseif ($otherSupplierHolds)
+                                                <button type="button"
+                                                        data-swap-open
+                                                        data-item-name="{{ $itemName }}"
+                                                        data-price="{{ $peso($line['unit_price']) }}"
+                                                        data-from-supplier="{{ $otherSupplierName }}"
+                                                        data-to-supplier="{{ $section['supplier'] }}"
+                                                        data-quotation-item-id="{{ $line['id'] }}"
+                                                        title="In your cart from {{ $otherSupplierName }} — click to switch to {{ $section['supplier'] }}"
+                                                        aria-label="Switch {{ $itemName }} from {{ $otherSupplierName }} to {{ $section['supplier'] }}"
+                                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 ring-1 ring-amber-200 transition-colors hover:bg-amber-100">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 4L3 8l4 4M3 8h13m4 8l-4-4m4 4l-4 4M21 16H8"/>
                                                     </svg>
                                                 </button>
                                             @else
@@ -177,23 +210,31 @@
                         </div>
 
                         <div class="border-t border-gray-100 px-5 py-3">
-                            @if ($quoted >= count($items))
+                            @if ($quoted > 0)
+                                @php
+                                    $unquoted = count($items) - $quoted;
+                                @endphp
                                 <form method="POST" action="{{ route('po-cart.add') }}">
                                     @csrf
                                     <input type="hidden" name="quotation_id" value="{{ $quotation->id }}">
                                     <button type="submit"
                                             class="flex w-full items-center justify-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#236b80]"
-                                            title="Add all {{ $section['supplier'] }} quote to your PO cart at remaining quantities">
+                                            title="{{ $unquoted > 0
+                                                ? 'Add the '.$quoted.' priced line'.($quoted === 1 ? '' : 's').' from '.$section['supplier'].' — the '.$unquoted.' unpriced line'.($unquoted === 1 ? ' will' : 's will').' be skipped'
+                                                : 'Add all of '.$section['supplier'].'\'s quote to your PO cart at remaining quantities' }}">
                                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
                                         </svg>
                                         Add {{ $section['supplier'] }} to cart
+                                        @if ($unquoted > 0)
+                                            <span class="font-normal text-white/80">({{ $quoted }}/{{ count($items) }} priced)</span>
+                                        @endif
                                     </button>
                                 </form>
                             @else
                                 <span class="block cursor-not-allowed rounded-lg bg-gray-100 px-4 py-2 text-center text-xs font-semibold text-gray-400"
-                                      title="Cannot add yet — this quotation has unpriced items">
-                                    Unpriced items in this quotation
+                                      title="Nothing to add yet — this supplier hasn't quoted any priced line">
+                                    Waiting on {{ $section['supplier'] }}'s quote
                                 </span>
                             @endif
                         </div>
@@ -314,6 +355,82 @@
         </div>
     @endif
 
+    {{-- Print-only sheet: what window.print() sends to the printer (officio landscape). --}}
+    @php
+        $winnerByItem = collect($suggestions ?? [])->keyBy(fn ($s) => $s['preplist_item']->id);
+    @endphp
+    <div id="preplistPrintSheet" class="print-sheet" aria-hidden="true">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16pt; border-bottom:2.5pt solid #0e5266; padding-bottom:6pt; margin-bottom:8pt;">
+            <div>
+                <h1 style="margin:0; font-size:15pt; font-weight:700; color:#0e5266;">Quotation Comparison</h1>
+                <p style="margin:2pt 0 0; font-size:9pt; color:#333;">{{ $preplist->name }} · {{ $preplist->reference_no }}</p>
+                <p style="margin:1pt 0 0; font-size:8pt; color:#666;">Generated {{ now()->format('F j, Y · g:i A') }} by Purchasing</p>
+            </div>
+            <div style="text-align:right; font-size:8pt; color:#333;">
+                @foreach ($sections as $section)
+                    <p style="margin:0 0 1.5pt;"><span style="font-weight:700;">{{ $section['supplier'] }}</span> — {{ $section['rfq_number'] }} ({{ $section['status'] }})</p>
+                @endforeach
+            </div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; font-size:8pt;">
+            <thead>
+                <tr>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:left; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.05em;">Item</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:right; font-size:7.5pt; text-transform:uppercase;">Qty</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:left; font-size:7.5pt; text-transform:uppercase;">Unit</th>
+                    @foreach ($sections as $section)
+                        <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:left; font-size:7.5pt; text-transform:uppercase;">{{ $section['supplier'] }}</th>
+                    @endforeach
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:left; font-size:7.5pt; text-transform:uppercase;">Suggested</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($items as $preplistItem)
+                    @php
+                        $printName = $preplistItem->item?->name ?? 'Item';
+                        $printUnit = $preplistItem->item?->unit ?? '';
+                        $printHighlight = $highlights[$preplistItem->id] ?? ['best_price' => null, 'best_expiry' => null];
+                        $printBest = $printHighlight['best_price'];
+                        $printBestExpiry = $printHighlight['best_expiry'];
+                        $printWinner = $winnerByItem->get($preplistItem->id);
+                    @endphp
+                    <tr>
+                        <td style="border:1px solid #000; padding:4pt; font-weight:600;">{{ $printName }}</td>
+                        <td style="border:1px solid #000; padding:4pt; text-align:right;">{{ $preplistItem->remainingQuantity() }}</td>
+                        <td style="border:1px solid #000; padding:4pt;">{{ $printUnit }}</td>
+                        @foreach ($sections as $section)
+                            @php
+                                $printLine = $section['lines'][$preplistItem->id] ?? null;
+                                $printPrice = $printLine !== null && $printLine['unit_price'] !== null ? (float) $printLine['unit_price'] : null;
+                                $printIsBest = $printPrice !== null && $printBest !== null && abs($printPrice - $printBest) < 0.0001;
+                                $printIsExpiry = $printLine !== null && $printLine['expiry'] !== null && $printBestExpiry !== null && $printLine['expiry'] === $printBestExpiry;
+                            @endphp
+                            <td style="border:1px solid #000; padding:4pt; {{ $printIsBest ? 'font-weight:700;' : '' }}">
+                                @if ($printPrice !== null)
+                                    {{ $peso($printPrice) }}{{ $printIsBest ? ' ✔' : '' }}<br>
+                                    <span style="font-size:7pt; color:#555; {{ $printIsExpiry ? 'font-weight:700; color:#0e5266;' : '' }}">{{ ($printLine['brand'] ?: '—') }} · Exp. {{ $printLine['expiry_label'] ?? 'n/a' }}{{ $printIsExpiry ? ' ✔' : '' }}</span>
+                                @else
+                                    <span style="color:#999;">No quote</span>
+                                @endif
+                            </td>
+                        @endforeach
+                        <td style="border:1px solid #000; padding:4pt;">
+                            @if ($printWinner && $printWinner['winner'])
+                                <span style="font-weight:600;">{{ $printWinner['winner']['supplier'] }}</span><br>
+                                <span style="font-size:7pt; color:#555;">{{ $peso($printWinner['winner']['quote']['unit_price']) }}</span>
+                            @else
+                                <span style="color:#999;">Awaiting quote</span>
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <p style="margin:6pt 0 0; font-size:7pt; color:#666;">✔ = best price (green on screen) or best expiry (teal on screen). Brand and expiry are exactly as the suppliers stated them — verify both before awarding.</p>
+    </div>
+
     {{-- Remove-from-cart confirmation modal --}}
     <div id="cartItemModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="cartItemModalTitle">
         <div id="cartItemModalOverlay" class="absolute inset-0 bg-gray-900/50" data-close-cart-item></div>
@@ -349,7 +466,60 @@
         </div>
     </div>
 
+    {{-- Switch-supplier confirmation modal --}}
+    <div id="swapSupplierModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="swapSupplierTitle">
+        <div class="absolute inset-0 bg-gray-900/50" data-close-swap-modal></div>
+
+        <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+            <div class="flex items-start gap-3 px-5 py-4">
+                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-50">
+                    <svg class="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 4L3 8l4 4M3 8h13m4 8l-4-4m4 4l-4 4M21 16H8"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <h3 id="swapSupplierTitle" class="text-base font-bold text-gray-900">Switch supplier?</h3>
+                    <p class="mt-1 text-sm text-gray-500"><span id="swapSupplierContext" class="font-medium text-gray-700"></span></p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                <button type="button" data-close-swap-modal
+                        class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                    Keep current
+                </button>
+                <form id="swapSupplierForm" method="POST" action="{{ route('po-cart.add') }}">
+                    @csrf
+                    <input type="hidden" name="quotation_item_id" id="swapSupplierItemId" value="">
+                    <button type="submit" class="rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#236b80]">
+                        Switch
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .print-sheet { display: none; }
+        @media print {
+            /* Officio (8.5 x 13 in), landscape */
+            @page { size: 13in 8.5in; margin: 10mm; }
+            body * { visibility: hidden; }
+            #preplistPrintSheet, #preplistPrintSheet * { visibility: visible; }
+            #preplistPrintSheet { display: block !important; position: absolute; inset: 0; background: #fff; }
+            #preplistPrintSheet table { page-break-inside: auto; }
+            #preplistPrintSheet tr { page-break-inside: avoid; }
+            table thead { display: table-header-group; }
+            html, body { overflow: visible !important; height: auto !important; background: #fff !important; }
+        }
+    </style>
+
     @push('scripts')
+    <script>
+        document.getElementById('preplistPrintBtn')?.addEventListener('click', function () {
+            window.print();
+        });
+    </script>
     <script>
         (function () {
             var modal = document.getElementById('cartItemModal');
@@ -387,6 +557,55 @@
             Array.prototype.forEach.call(closeButtons, function (btn) {
                 btn.addEventListener('click', closeModal);
             });
+            if (overlay) {
+                overlay.addEventListener('click', closeModal);
+            }
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            var modal = document.getElementById('swapSupplierModal');
+            if (!modal) {
+                return;
+            }
+
+            var context = document.getElementById('swapSupplierContext');
+            var itemId = document.getElementById('swapSupplierItemId');
+            var closeButtons = modal.querySelectorAll('[data-close-swap-modal]');
+            var triggers = document.querySelectorAll('[data-swap-open]');
+
+            function openModal(trigger) {
+                var itemName = trigger.getAttribute('data-item-name') || 'Item';
+                var from = trigger.getAttribute('data-from-supplier') || 'the other supplier';
+                var to = trigger.getAttribute('data-to-supplier') || 'this supplier';
+                var price = trigger.getAttribute('data-price') || '';
+
+                context.textContent = itemName + ' is in your cart from ' + from
+                    + '. Switch to ' + to + (price ? ' at ' + price : '') + '?';
+                if (itemId) {
+                    itemId.value = trigger.getAttribute('data-quotation-item-id') || '';
+                }
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            Array.prototype.forEach.call(triggers, function (trigger) {
+                trigger.addEventListener('click', function () { openModal(trigger); });
+            });
+            Array.prototype.forEach.call(closeButtons, function (btn) {
+                btn.addEventListener('click', closeModal);
+            });
+            var overlay = modal.querySelector('.absolute');
             if (overlay) {
                 overlay.addEventListener('click', closeModal);
             }
