@@ -112,10 +112,10 @@
                 <table class="w-full min-w-[720px] text-sm">
                     <thead class="sticky top-0 z-20 bg-[#0e5266]">
                         <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
-                            <th scope="col" class="whitespace-nowrap px-6 py-2">RFQ</th>
-                            <th scope="col" class="whitespace-nowrap px-6 py-2 expandable-col">Items quoted</th>
-                            <th scope="col" class="whitespace-nowrap px-6 py-2 expandable-col">Status</th>
-                            <th scope="col" class="sticky right-0 z-20 bg-[#0e5266] px-6 py-2 text-center expandable-col">
+                            <th scope="col" class="whitespace-nowrap px-6 py-3">RFQ</th>
+                            <th scope="col" class="whitespace-nowrap px-6 py-3 expandable-col">Items quoted</th>
+                            <th scope="col" class="whitespace-nowrap px-6 py-3 expandable-col">Status</th>
+                            <th scope="col" class="sticky right-0 z-20 bg-[#0e5266] px-6 py-3 text-center expandable-col">
                                 Action
                             </th>
                         </tr>
