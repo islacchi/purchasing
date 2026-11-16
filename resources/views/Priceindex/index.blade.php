@@ -119,42 +119,74 @@
             </div>
         </div>
 
-        {{-- Filter bar --}}
-        <div class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div class="relative">
-                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
-                        </svg>
-                    </span>
-                    <input type="text" id="priceSearch" placeholder="Search item…"
-                           class="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-700 placeholder-gray-400 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
+        {{-- Search and filter bar --}}
+        <div class="mb-6 flex flex-wrap items-center gap-4">
+            <div class="relative min-w-0 w-full max-w-xl">
+                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
+                    </svg>
+                </span>
+                <input type="text" id="priceSearch" placeholder="Search item…"
+                       class="w-full rounded-lg border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
+            </div>
+
+            {{-- Filter dropdown: category · project · prep list --}}
+            <div id="priceFilterWrap" class="relative">
+                <button type="button" id="priceFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="priceFilterMenu"
+                        class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 4h18M6 9h12M10 14h4"/>
+                    </svg>
+                    <span>Filter</span>
+                    <span id="priceFilterBadge" class="hidden inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#2a7a94] px-1 text-[10px] font-bold text-white">0</span>
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m19 9-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <div id="priceFilterMenu" role="group" aria-labelledby="priceFilterBtn" aria-hidden="true"
+                     class="absolute left-0 top-full z-30 mt-2 hidden w-72 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                    <div class="space-y-2 px-2">
+                        <div>
+                            <label for="priceCategory" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Category</label>
+                            <select id="priceCategory" aria-label="Filter by category"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">All categories</option>
+                                @foreach (collect($items)->pluck('category')->unique()->sort() as $category)
+                                    <option value="{{ $category }}">{{ $category }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="priceProject" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Project</label>
+                            <select id="priceProject" aria-label="Filter by project"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">All projects</option>
+                                @foreach ($projectOptions as $projectId => $projectLabel)
+                                    <option value="{{ $projectId }}">{{ $projectLabel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="pricePreplist" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Prep list</label>
+                            <select id="pricePreplist" aria-label="Filter by prep list"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">All prep lists</option>
+                                @foreach ($preplistOptions as $preplistId => $preplistReference)
+                                    <option value="{{ $preplistId }}">{{ $preplistReference }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <button type="button" id="priceClearFilters"
+                                class="hidden mt-1 flex w-full items-center justify-center rounded-md border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                            Clear filters
+                        </button>
+                    </div>
                 </div>
-
-                <select id="priceCategory"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                    <option value="">All categories</option>
-                    @foreach (collect($items)->pluck('category')->unique()->sort() as $category)
-                        <option value="{{ $category }}">{{ $category }}</option>
-                    @endforeach
-                </select>
-
-                <select id="priceProject"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                    <option value="">All projects</option>
-                    @foreach ($projectOptions as $projectId => $projectLabel)
-                        <option value="{{ $projectId }}">{{ $projectLabel }}</option>
-                    @endforeach
-                </select>
-
-                <select id="pricePreplist"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                    <option value="">All prep lists</option>
-                    @foreach ($preplistOptions as $preplistId => $preplistReference)
-                        <option value="{{ $preplistId }}">{{ $preplistReference }}</option>
-                    @endforeach
-                </select>
             </div>
         </div>
 
@@ -185,8 +217,8 @@
             <div id="boardTable">
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[1040px] text-sm">
-                        <thead>
-                            <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        <thead class="bg-[#0e5266]">
+                            <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
                                 <th scope="col" class="whitespace-nowrap px-6 py-3">Item</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Requested</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-center">Quotes</th>
@@ -314,9 +346,9 @@
             <div id="boardMatrix" class="hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[760px] text-sm">
-                        <thead>
-                            <tr class="border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                <th scope="col" class="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-gray-50 px-6 py-3 text-left">Item</th>
+                        <thead class="bg-[#0e5266]">
+                            <tr class="text-xs font-semibold uppercase tracking-wider text-white">
+                                <th scope="col" class="sticky left-0 z-10 whitespace-nowrap border-r border-white/15 bg-[#0e5266] px-6 py-3 text-left">Item</th>
                                 @foreach ($suppliers as $supplier)
                                     <th scope="col" class="whitespace-nowrap px-5 py-3 text-center">
                                         <span class="inline-flex max-w-[12rem] items-center gap-2" title="{{ $supplier['name'] }}">
@@ -532,8 +564,8 @@
             @if (count($savingsItems))
                 <div id="savingsTableWrapper" class="overflow-x-auto">
                     <table class="w-full min-w-[760px] text-sm">
-                        <thead>
-                            <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        <thead class="bg-[#0e5266]">
+                            <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
                                 <th scope="col" class="whitespace-nowrap px-6 py-3">Item</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Best price</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Average</th>
@@ -863,7 +895,7 @@
                 // Comparison table
                 html += '<div class="mt-5 overflow-x-auto rounded-lg border border-gray-200">';
                 html += '<table class="w-full min-w-[900px] text-sm">';
-                html += '<thead><tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">'
+                html += '<thead class="bg-[#0e5266]"><tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">'
                     + '<th class="px-4 py-3">Supplier</th>'
                     + '<th class="px-4 py-3">Brand / expiry</th>'
                     + '<th class="px-4 py-3 text-right">Unit price</th>'
@@ -1312,6 +1344,58 @@
             categoryInput.addEventListener('change', applyFilters);
             projectInput.addEventListener('change', applyFilters);
             preplistInput.addEventListener('change', applyFilters);
+
+            // Filter dropdown: same open/close + badge pattern as the other modules.
+            const filterWrap = document.getElementById('priceFilterWrap');
+            const filterBtn = document.getElementById('priceFilterBtn');
+            const filterMenu = document.getElementById('priceFilterMenu');
+            const filterBadge = document.getElementById('priceFilterBadge');
+            const clearFiltersBtn = document.getElementById('priceClearFilters');
+
+            function closeFilterMenu() {
+                filterMenu.classList.add('hidden');
+                filterBtn.setAttribute('aria-expanded', 'false');
+                filterMenu.setAttribute('aria-hidden', 'true');
+            }
+
+            function updateFilterBadge() {
+                const count = [categoryInput, projectInput, preplistInput].filter(function (el) {
+                    return el && el.value;
+                }).length;
+
+                filterBadge.textContent = String(count);
+                filterBadge.classList.toggle('hidden', count === 0);
+                clearFiltersBtn.classList.toggle('hidden', count === 0);
+            }
+
+            if (filterWrap && filterBtn && filterMenu && filterBadge && clearFiltersBtn) {
+                filterBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const isHidden = filterMenu.classList.toggle('hidden');
+                    filterBtn.setAttribute('aria-expanded', String(!isHidden));
+                    filterMenu.setAttribute('aria-hidden', String(isHidden));
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!filterWrap.contains(e.target)) closeFilterMenu();
+                });
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') closeFilterMenu();
+                });
+
+                clearFiltersBtn.addEventListener('click', function () {
+                    categoryInput.value = '';
+                    projectInput.value = '';
+                    preplistInput.value = '';
+                    applyFilters();
+                });
+
+                // Keep the badge in sync with programmatic and user changes.
+                [categoryInput, projectInput, preplistInput].forEach(function (el) {
+                    el.addEventListener('change', updateFilterBadge);
+                });
+                updateFilterBadge();
+            }
 
             // --- Row selection ---
             document.querySelectorAll('.price-row').forEach(function (row) {
