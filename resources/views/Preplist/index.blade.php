@@ -12,8 +12,11 @@
         </div>
     @endif
 
+    {{-- Flex column: the toolbar stays fixed while the table stretches and scrolls internally --}}
+    <div class="flex h-full min-h-0 flex-col">
+
     {{-- Search and actions bar --}}
-    <div class="mb-6 flex items-center justify-between gap-4">
+    <div class="mb-6 flex shrink-0 items-center justify-between gap-4">
         <div class="flex items-center gap-4 flex-1">
             <form method="GET" action="{{ route('preplist') }}" class="flex max-w-xl w-full items-center gap-2">
                 {{-- Preserve the current date-sort across explicit searches. --}}
@@ -125,10 +128,10 @@
         @endif
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div class="overflow-x-auto">
+    <div class="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div class="min-h-0 min-w-0 flex-1 overflow-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="sticky top-0 z-20 bg-gray-50">
                     @php
                         $currentSort = $sort ?? 'date_desc';
                         $sortToggle = function (string $column) use ($search, $currentSort) {
@@ -169,16 +172,16 @@
                         @endphp
                         <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
                             data-href="{{ route('preplist.show', ['preplist' => $preplist->id]) }}">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <td class="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                                 {{ $preplist->name }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-700">
                                 {{ $preplist->creator?->name ?? '—' }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
                                 {{ $preplist->created_at?->format('M d, Y g:i A') ?? '—' }}
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-700">
+                            <td class="px-6 py-2 text-sm text-gray-700">
                                 <div class="relative group inline-block">
                                     <span class="cursor-pointer font-medium text-gray-900 underline decoration-dotted decoration-gray-300 underline-offset-2">
                                         {{ $sourceProjects->count() }}
@@ -192,13 +195,13 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-center">
+                            <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-700 text-center">
                                 {{ $preplist->items->count() }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <td class="px-6 py-2 whitespace-nowrap text-center">
                                 <div class="relative inline-block text-left">
                                     <button type="button"
-                                            class="dropdown-trigger p-2 text-gray-400 hover:text-[#2a7a94] hover:bg-gray-100 rounded-lg transition-colors"
+                                            class="dropdown-trigger p-1.5 text-gray-400 hover:text-[#2a7a94] hover:bg-gray-100 rounded-lg transition-colors"
                                             title="Actions">
                                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M12 8a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4z"/>
@@ -252,10 +255,11 @@
         </div>
 
         @if ($preplists->hasPages())
-            <div class="border-t border-gray-200 px-6 py-3">
+            <div class="shrink-0 border-t border-gray-200 px-6 py-3">
                 {{ $preplists->links() }}
             </div>
         @endif
+    </div>
     </div>
 
     <script>
