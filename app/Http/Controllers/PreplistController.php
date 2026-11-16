@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Models\Quotation;
 use App\Models\Supplier;
+use App\Models\User;
 use App\Support\ActivityLogger;
 use App\Support\Pagination;
 use App\Support\RfqQuotationWorkbook;
@@ -39,19 +40,35 @@ class PreplistController extends Controller
     ];
 
     /**
+     * Item categories accepted as filters and produced by the RFQ/flow.
+     *
+     * @var list<string>
+     */
+    private const ITEM_CATEGORIES = [
+        'drugs and medicines',
+        'supplies and equipments',
+    ];
+
+    /**
      * Show the prep lists list using real database records.
+     * Server-side search, filters, sort and pagination.
      */
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
+        $createdBy = trim((string) $request->query('created_by', ''));
+        $category = trim((string) $request->query('category', ''));
+        $quote = trim((string) $request->query('quote', ''));
         $perPage = Pagination::perPage($request, 10);
         $requestedSort = (string) $request->query('sort', 'date_desc');
         $sort = in_array($requestedSort, self::ALLOWED_SORTS, true) ? $requestedSort : 'date_desc';
         $direction = str_ends_with($sort, '_asc') ? 'asc' : 'desc';
         $sortColumn = substr($sort, 0, (int) strrpos($sort, '_'));
 
+        $categoryAllowed = $category === '' ? null : (in_array($category, self::ITEM_CATEGORIES, true) ? $category : null);
+
         $query = Preplist::query()
-            ->with(['creator', 'items.sources.projectItem.project'])
+            ->with(['creator', 'items.sources.projectItem.project', 'quotations.items'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', '%'.$search.'%')
@@ -60,6 +77,23 @@ class PreplistController extends Controller
                             $query->where('name', 'like', '%'.$search.'%');
                         });
                 });
+            })
+            ->when($createdBy !== '' && ctype_digit($createdBy), function ($query) use ($createdBy) {
+                $query->where('created_by', (int) $createdBy);
+            })
+            ->when($categoryAllowed !== null, function ($query) use ($categoryAllowed) {
+                $query->whereHas('items.item.category', fn ($query) => $query->where('name', $categoryAllowed));
+            })
+            ->when(in_array($quote, ['quoted', 'pending'], true), function ($query) use ($quote) {
+                $hasQuotes = function ($subQuery) {
+                    $subQuery->whereHas('items', fn ($sub) => $sub->whereNotNull('unit_price'));
+                };
+
+                if ($quote === 'quoted') {
+                    $query->whereHas('quotations', $hasQuotes);
+                } else {
+                    $query->whereDoesntHave('quotations', $hasQuotes);
+                }
             });
 
         switch ($sortColumn) {
@@ -94,7 +128,17 @@ class PreplistController extends Controller
             ->groupBy('preplist_id')
             ->pluck('aggregate', 'preplist_id');
 
-        return view('Preplist.index', compact('preplists', 'search', 'sort', 'quotationCounts', 'perPage'));
+        $developers = User::query()
+            ->whereIn('id', Preplist::query()->select('created_by'))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $quoteOptions = ['quoted' => 'Quoted', 'pending' => 'Awaiting quote'];
+
+        $activeFilters = collect([$createdBy !== '' ? $createdBy : null, $categoryAllowed, $quote !== '' ? $quote : null])->filter()->count();
+        $filtersActive = $activeFilters > 0;
+
+        return view('Preplist.index', compact('preplists', 'search', 'sort', 'quotationCounts', 'perPage', 'createdBy', 'categoryAllowed', 'quote', 'developers', 'quoteOptions', 'filtersActive', 'activeFilters'));
     }
 
     /**

@@ -12,6 +12,7 @@ use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Models\Quotation;
+use App\Models\QuotationItem;
 use App\Models\Supplier;
 use App\Models\User;
 use Database\Seeders\AdminUserSeeder;
@@ -142,6 +143,67 @@ class PreplistTest extends TestCase
             ->assertOk()
             ->assertSee($matched->name)
             ->assertDontSee('August laboratory batch');
+    }
+
+    public function test_preplist_module_filters_by_creator_category_quotation_status(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+
+        $drugsItem = $this->item(['category' => 'drugs and medicines', 'name' => 'Filter fixture drugs']);
+        $suppliesItem = $this->item(['category' => 'supplies and equipments', 'name' => 'Filter fixture supplies']);
+
+        $drugs = $this->compile($user, [
+            'name' => 'Filter drugs fixture',
+            'sources' => [$this->projectItem($project, $drugsItem)->id],
+        ]);
+        $supplies = $this->compile($user, [
+            'name' => 'Filter supplies fixture',
+            'sources' => [$this->projectItem($project, $suppliesItem)->id],
+        ]);
+
+        // Quote one of them through a submitted quotation with prices attached.
+        $supplier = Supplier::create(['name' => 'Filter Fixture Supplier']);
+        $quotation = Quotation::create([
+            'preplist_id' => $drugs->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-2026-FILTE01',
+            'generated_at' => now(),
+        ]);
+
+        $preplistItem = PreplistItem::where('preplist_id', $drugs->id)->firstOrFail();
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'unit_price' => 150.00,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('preplist', ['category' => 'drugs and medicines']))
+            ->assertOk()
+            ->assertSee('Filter drugs fixture')
+            ->assertDontSee('Filter supplies fixture');
+
+        $this->actingAs($user)
+            ->get(route('preplist', ['category' => 'supplies and equipments']))
+            ->assertOk()
+            ->assertSee('Filter supplies fixture')
+            ->assertDontSee('Filter drugs fixture');
+
+        $this->actingAs($user)
+            ->get(route('preplist', ['quote' => 'quoted']))
+            ->assertOk()
+            ->assertSee('Filter drugs fixture')
+            ->assertDontSee('Filter supplies fixture');
+
+        $this->actingAs($user)
+            ->get(route('preplist', ['quote' => 'pending']))
+            ->assertOk()
+            ->assertSee('Filter supplies fixture')
+            ->assertDontSee('Filter drugs fixture');
     }
 
     public function test_preplist_module_paginates_and_preserves_search_and_sort(): void

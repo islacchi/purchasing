@@ -84,6 +84,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Sources are recorded in `preplist_item_sources` (quantity sourced per project line) — the provenance chain from project → prep list is intact.
 - A submitted prep list cannot be deleted while a quotation references it (foreign-key restricted “project is in use” errors surface as friendly validation messages).
 - Generating the RFQ from a prep list (`/preplist/{preplist}/generate-rfq`) validates that supplier candidates are chosen and that every item is either quoted or unquoted — nothing partial.
+- A display-filter dropdown (next to the search bar) narrows by **created by** (users who have compiled preplists), **item category** (drugs and medicines / supplies and equipments), and **quotation status** (Quoted / Awaiting quote); selection auto-submits and shows a badge count of active filters; empty filtered results say “No prep lists match the current filters”.
 
 ### Generate RFQ (`/preplist/{preplist}/generate-rfq`)
 
@@ -662,7 +663,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **205 passed / 1297 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **206 passed / 1311 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -692,7 +693,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
 - [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
 - [x] **Settings → Backup** — administrator-only full-database backup with plain-language restore instructions in-place
-- [x] **Tests** — 205 passing (1297 assertions)
+- [x] **Tests** — 206 passing (1311 assertions)
 
 ### Not yet done
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)

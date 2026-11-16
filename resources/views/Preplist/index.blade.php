@@ -28,14 +28,81 @@
                            class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
 
-                <label class="sr-only" for="preplistPerPage">Prep lists per page</label>
-                <select id="preplistPerPage" name="per_page" aria-label="Prep lists per page" onchange="this.form.requestSubmit()"
-                        class="shrink-0 rounded-lg border border-gray-200 bg-white py-2 pl-2 pr-6 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                    @foreach (\App\Support\Pagination::options() as $value => $label)
-                        <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
-                    @endforeach
-                </select>
             </form>
+
+            {{-- Filter dropdown: created by · item category · quotation status · page size --}}
+            <div id="preplistFilterWrap" class="relative">
+            <button type="button" id="preplistFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="preplistFilterMenu"
+                    class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 4h18M6 9h12M10 14h4"/>
+                </svg>
+                <span>Filter</span>
+                @if ($activeFilters > 0)
+                    <span class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#2a7a94] px-1 text-[10px] font-bold text-white">{{ $activeFilters }}</span>
+                @endif
+                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m19 9-7 7-7-7"/>
+                </svg>
+            </button>
+
+            <div id="preplistFilterMenu" role="group" aria-labelledby="preplistFilterBtn" aria-hidden="true"
+                 class="hidden absolute left-0 top-full mt-2 z-10 w-64 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                <form method="GET" action="{{ route('preplist') }}" id="preplistFilterForm" class="space-y-2 px-2">
+                    <input type="hidden" name="q" value="{{ $search ?? '' }}">
+                    <input type="hidden" name="sort" value="{{ $sort }}">
+
+                    <div>
+                        <label for="preplistCreatedBy" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Created by</label>
+                        <select id="preplistCreatedBy" name="created_by" aria-label="Filter by creator" onchange="this.form.requestSubmit()"
+                                class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            <option value="">All users</option>
+                            @foreach ($developers as $user)
+                                <option value="{{ $user->id }}" @selected((int) $createdBy === $user->id)>{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="preplistCategory" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Item category</label>
+                        <select id="preplistCategory" name="category" aria-label="Filter by item category" onchange="this.form.requestSubmit()"
+                                class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            <option value="">All categories</option>
+                            @foreach (['drugs and medicines' => 'Drugs and medicines', 'supplies and equipments' => 'Supplies and equipments'] as $value => $label)
+                                <option value="{{ $value }}" @selected($categoryAllowed === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="preplistQuote" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Quotation status</label>
+                        <select id="preplistQuote" name="quote" aria-label="Filter by quotation status" onchange="this.form.requestSubmit()"
+                                class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            <option value="">All quotation statuses</option>
+                            <option value="quoted" @selected($quote === 'quoted')>Quoted</option>
+                            <option value="pending" @selected($quote === 'pending')>Awaiting quote</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="preplistPerPage" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Items per page</label>
+                        <select id="preplistPerPage" name="per_page" aria-label="Prep lists per page" onchange="this.form.requestSubmit()"
+                                class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            @foreach (\App\Support\Pagination::options() as $value => $label)
+                                <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    @if ($activeFilters > 0)
+                        <a href="{{ route('preplist', array_filter(['q' => ($search ?? '') !== '' ? $search : null, 'sort' => $sort, 'per_page' => $perPage])) }}"
+                           class="mt-1 flex items-center justify-center rounded-md border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                            Clear filters
+                        </a>
+                    @endif
+                </form>
+            </div>
+            </div>
         </div>
 
         {{-- + Compile prep list button (top right, below the nav bar) --}}
@@ -174,7 +241,9 @@
                     @empty
                         <tr>
                             <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">
-                                No prep lists yet. Use “Compile prep list” to create the first one.
+                                {{ $filtersActive
+                                    ? 'No prep lists match the current filters.'
+                                    : 'No prep lists yet. Use “Compile prep list” to create the first one.' }}
                             </td>
                         </tr>
                     @endforelse
@@ -190,6 +259,33 @@
     </div>
 
     <script>
+        // Filter dropdown: open/close, Escape and click-outside to close.
+        var filterWrap = document.getElementById('preplistFilterWrap');
+        var filterBtn = document.getElementById('preplistFilterBtn');
+        var filterMenu = document.getElementById('preplistFilterMenu');
+
+        function closeFilterMenu() {
+            filterMenu.classList.add('hidden');
+            filterBtn.setAttribute('aria-expanded', 'false');
+            filterMenu.setAttribute('aria-hidden', 'true');
+        }
+
+        if (filterWrap && filterBtn && filterMenu) {
+            filterBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isHidden = filterMenu.classList.toggle('hidden');
+                filterBtn.setAttribute('aria-expanded', String(!isHidden));
+                filterMenu.setAttribute('aria-hidden', String(isHidden));
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!filterWrap.contains(e.target)) closeFilterMenu();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeFilterMenu();
+            });
+        }
+
         // Three-dots action dropdown toggling
         document.querySelectorAll('.dropdown-trigger').forEach(function (trigger) {
             trigger.addEventListener('click', function (e) {

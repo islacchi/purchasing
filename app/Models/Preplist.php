@@ -41,6 +41,14 @@ class Preplist extends Model
     }
 
     /**
+     * Quotations generated against this prep list, with prices attached.
+     */
+    public function quotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class);
+    }
+
+    /**
      * Distinct projects that contributed items to this prep list.
      *
      * @return Collection<int, Project>
