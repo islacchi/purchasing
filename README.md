@@ -1,8 +1,8 @@
 # Purchasing — Procurement Management System
 
-A Laravel 12 application that runs the procurement cycle end to end: **Projects → Prep Lists → Request for Quotation → Quotation tracking → Purchase Orders → Receiving**, plus the supplier / procuring-entity directory, price-index tracking, Excel export, back-up tooling, and settings & privileges. Built for Philippine government-style procurement but works for any institution.
+A Laravel 12 application that runs the procurement cycle end to end: **Projects → Prep Lists → Request for Quotation → Quotation tracking → Purchase Orders → Receiving**, plus the supplier / procuring-entity directory, Excel export, back-up tooling, and settings & privileges. Built for Philippine government-style procurement but works for any institution.
 
-> **Status:** actively developed and proven in a small-team deployment. The procurement chain is functional and database-backed, with role-based access control (None / View / Manage) enforced server-side and reflected in the UI, and activity logging wired across modules. Role × module matrix, settings, and the admin area are Administrator-only. The Price Index is database-backed. Settings → Backup works. See [Project status](#project-status) for an exact, honest breakdown.
+> **Status:** actively developed and proven in a small-team deployment. The procurement chain is functional and database-backed, with role-based access control (None / View / Manage) enforced server-side and reflected in the UI, and activity logging wired across modules. Role × module matrix, settings, and the admin area are Administrator-only. Settings → Backup works. See [Project status](#project-status) for an exact, honest breakdown.
 
 ---
 
@@ -42,7 +42,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 | **Entities** | Directory of procuring entities (DOH offices, PGH, …) and suppliers with contact details | ✅ Database-backed |
 | **Notifications (bell)** | Delivery-deadline alerts derived from due dates + project fulfillment progress | ✅ Real, data-driven |
 | **Role-based access control** | Role × module matrix (None / View / Manage) enforced server-side on every module route; admin bypass; greyed/hidden write affordances for view-only roles; shared access-restricted dialog; friendly 403 page | ✅ Working |
-| **Price Index** | Per-item supplier price comparison across quotations: latest quote per supplier, requested quantities from project items, best/average/spread/savings, supplier scorecard, 3/6/12-month trend chart | ✅ Database-backed |
+| **Price Index** | Being repurposed into a consolidated summary of items — the supplier comparison board, competitiveness scorecard, trend and savings features were removed | Placeholder (rebuild pending) |
 | **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage); Administrator rows are locked full access | ✅ Working |
 | **Settings → Logs** | Activity/log viewer — real rows from `ActivityLogger` on every module create/edit/delete, plus user/matrix changes; paginated at 50 rows per page | ✅ Working |
 | **Settings → Backup** | Full database backup (schema **and** contents) via `App\Support\DatabaseDumper` (through the app's own DB connection — no external `mysqldump`); download or delete any backup; built-in restore instructions on the page | ✅ Working |
@@ -132,15 +132,8 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 ### Price Index (`/priceindex`)
 
-- Database-backed per-item comparison of current supplier quotes.
-- Shows: latest quote per supplier, requested quantity (sum over active projects), best / average / spread / savings, supplier count, best supplier name, and a six-month trend per item (minimum 6 months of history; `Slice(-6)`).
-- Filters: search by item name, by category, by project (dropdown), and a 3 / 6 / 12-month selector that scopes the trend chart.
-- The trend **starts at the month of the first priced quote** within the selected period (not a fixed window) and the y-axis auto-fits the data range; changing the period re-fits both.
-- The board renders the **full catalogue** at once — slim rows for every item, with the best supplier highlighted in green and sparing states for unquoted items.
-- **Comparison spotlight** opens the detail for whichever item you select: best price suggestion + its expiry, spread-vs-average, savings-at-requested-quantity, brand/expiry per quote, expiry flags (`expired`, `expires soon`), monthly trend chart, and why-not-pick guidance.
-- **Best expiry** is surfaced alongside the best price in the spotlight (the latest supplier-stated expiry, shown with severity flags).
-- Accessible labels for every control (`sr-only` labels on inputs, `aria-label`s on buttons).
-- `module:priceindex` middleware gates the whole module.
+- **Being repurposed.** The comparison board that used to live here (price board, supplier competitiveness scorecard, item comparison spotlight, price trend, savings opportunities) was removed, along with its computation, client-side filtering and feature tests.
+- A placeholder shell remains at `/priceindex` so the route, sidebar entry and `module:priceindex` grants keep working; the module will be rebuilt as a consolidated summary of items.
 
 ### Settings → Privileges (`/settings/privileges`)
 
@@ -589,7 +582,7 @@ Every list that could contain more than a page of data is paginated server-side;
 | Purchase Orders (`/purchase-order`) | 10 | 10 / 25 / 50 / 100 |
 | Settings → Logs (`/settings/logs`) | 50 | 10 / 25 / 50 / 100 |
 
-Selection persists via the query string (`?page=` preserves `q` and `sort`). Price Index does **not** paginate — the whole catalogue is needed for its cross-item aggregation.
+Selection persists via the query string (`?page=` preserves `q` and `sort`).
 
 ---
 
@@ -653,7 +646,6 @@ Verification checklist after restore:
 - Projects, prep lists, quotations, POs visible in lists (counts match expectations).
 - `/settings/logs` shows the restored entries with today's timestamp for the back-up entry itself.
 - `/purchase-order` shows the restored orders.
-- `/priceindex` shows the same prices as before the restore.
 
 Ask any earlier operator which back-up they need; the history table on the page is authoritative.
 
@@ -665,7 +657,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **216 passed / 1382 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **213 passed / 1282 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -683,7 +675,6 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **RFQ Excel generation** — letterhead template, dynamic item rows, `.xlsx` download, ZIP for multiple suppliers, expiry/brand/unit price/shelf-life fields pre-labelled
 - [x] **Quotation** — database-backed tracker (grouped by prep list), supplier-file upload with strict template validation, per-item price/brand/expiry extraction, per-project expiry-vs-delivery colour coding, short-dated warning, delete/replace the uploaded file (doesn't delete the entry), optimistic fingerprint guard on re-uploads
 - [x] **Purchase Order** — create from awarded quotation (proportional allocation across project sources), draft → Sent → Partially received → Completed, cancel with reason, admin-only delete of draft/cancelled POs, Excel download on generation
-- [x] **Price Index** — per-item comparison built from priced quotation lines: latest quote per supplier, requested quantities from project items, best/average/spread/savings, supplier scorecard, real monthly trend with a functional 3/6/12-month filter, comparison spotlight (best price + best expiry)
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
@@ -695,10 +686,11 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
 - [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
 - [x] **Settings → Backup** — administrator-only full-database backup with plain-language restore instructions in-place
-- [x] **Tests** — 216 passing (1382 assertions)
+- [x] **Tests** — 213 passing (1282 assertions)
 
 ### Not yet done
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
+- [ ] **Price Index (repurposed)** — the module is being rebuilt as a consolidated summary of items (the old comparison board was removed). No timeline.
 - [ ] **Partial receipts** — receiving is all-or-nothing per line; `purchase_order_receipts` already has `received_qty`, `lot_no`, `expiry_date`, but the UI doesn't capture them
 - [ ] **PO re-download** — the PO Excel is produced once at creation; there's no way to re-download it from the detail page
 - [ ] **PO tracking reference numbers** — PO only references the quotation; PO→project links via allocations are not yet surfaced on the PO detail page
@@ -707,7 +699,6 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [ ] **PhpSpreadsheet migration** — if `ext-gd` is enabled later, the manual workbook generator can be replaced
 - [ ] **Project edit hard-fails (500) once any of its items is compiled into a prep list.** `syncItems()` deletes and re-creates `project_items` on every save; `preplist_item_sources.project_item_id` has a restricted FK, so the delete raises an unhandled FK violation. A merge/update strategy (match by identity, update in place, never drop sourced rows) is required — no test covers this path.
 - [ ] **A quotation whose prep list is missing renders a fixed error banner and cannot be re-uploaded or sent to PO.** Only reachable via DB-level preplist deletion or legacy rows predating the delete guard. Recovery is `Preplist::withTrashed()->find($id)->restore()`.
-- [ ] **Price Index comparison is per-item, not per-project.** It cannot pick the supplier for a particular project; that decision stays manual.
 - [ ] **The activity log is unbounded**; it will grow indefinitely unless pruned.
 
 ### Known fragility worth addressing
@@ -722,13 +713,10 @@ Legend: ✅ done · 🚧 in progress / not started.
 
 Accepted trade-offs in the current build — worth knowing before relying on the numbers:
 
-- **Price Index compares per item, not per project.** The best price, savings estimate, and scorecard reflect the lowest/average quote across all suppliers and projects for that item. They do not decide which supplier each project actually buys from.
 - **Requested quantity is an upper bound.** It is the sum of quantities in non-deleted projects; it is not reduced by received PO quantities, stock on hand, or fulfillment status.
 - **Savings estimates exclude real-world costs.** They use the requested quantity × (average − best) from current quotes and ignore freight, taxes, lead time, minimum order quantities, unit conversions, and delivery windows. Supplier-stated brand/expiry are shown but not enforced against a project's delivery date.
 - **Deleting an uploaded quotation file deletes its priced lines.** The price history derived from those lines cannot be rebuilt from the file afterwards.
-- **The trend shows one point per supplier per month** (the latest priced quote within that month). The sparkline compresses the last six monthly best prices; it is not interactive and does not follow the period selector (the selector affects only the trend chart).
-- **The Price Index renders the full catalogue on one page.** There is no server-side pagination for the aggregate comparison; filters run client-side, so very large catalogues will load slowly.
-- **Chart.js is loaded from the jsdelivr CDN** (4.4.3), not vendored. Without network access the trend chart does not render.
+
 - **Supplier colour is not persisted.** Colours are assigned by sorted supplier order, so adding or removing a supplier can reassign chart colours.
 - **Soft-deleted suppliers keep their historical priced lines visible** because the index reads submitted quotation rows. If a supplier's history must remain, restore it under Entities rather than deleting it.
 - **Ties count as a win for every tied supplier** in the competitiveness scorecard.
@@ -765,7 +753,7 @@ purchasing/
 │   └── web.php                 # All routes (login/logout public; rest behind auth + session.active;
 │                               #   six module groups additionally behind module:{module})
 ├── storage/app/private/        # Uploaded supplier files and back-ups live here
-├── tests/Feature/              # Feature suites per module (incl. ModuleAccessTest, PriceIndexTest, …)
+├── tests/Feature/              # Feature suites per module (incl. ModuleAccessTest, PreplistTest, QuotationTest, …)
 └── public/                     # Vite build, favicon, robots.txt, .htaccess
 ```
 
