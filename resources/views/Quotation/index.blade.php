@@ -40,7 +40,7 @@
                     </button>
 
                     <div id="quotationFilterMenu" role="group" aria-labelledby="quotationFilterBtn" aria-hidden="true"
-                         class="hidden absolute left-0 top-full mt-2 z-10 w-64 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                         class="hidden absolute left-0 top-full mt-2 z-30 w-64 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
                         <form method="GET" action="{{ route('quotation') }}" id="quotationFilterForm" class="space-y-2 px-2">
                             <input type="hidden" name="q" value="{{ $search ?? '' }}">
 
