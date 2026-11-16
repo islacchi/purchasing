@@ -234,6 +234,30 @@ class QuotationController extends Controller
             }
 
             $candidates = $candidates->sortBy('quote.unit_price')->values();
+            $winner = $candidates->first();
+
+            // Annotation: raw price win vs freshest stated expiry, so the buyer
+            // sees the trade-off even though the suggestion stays price-only.
+            $expiryNote = null;
+            $withExpiry = $candidates->filter(fn ($candidate) => $candidate['quote']['expiry'] !== null);
+
+            if ($winner !== null && $withExpiry->isNotEmpty()) {
+                $freshest = $withExpiry->sortByDesc('quote.expiry')->first();
+                $winnerExpiry = $winner['quote']['expiry'];
+
+                if ($freshest['supplier'] === $winner['supplier'] && $winnerExpiry === $freshest['quote']['expiry']) {
+                    $expiryNote = 'Best price also owns the freshest expiry.';
+                } elseif ($winnerExpiry === null) {
+                    $expiryNote = $winner['supplier'].' states no expiry; '.$freshest['supplier']
+                        .' has '.date('M j, Y', strtotime($freshest['quote']['expiry']));
+                } else {
+                    $extraDays = (int) round(abs((strtotime($freshest['quote']['expiry']) - strtotime($winnerExpiry)) / 86400));
+                    $priceDelta = (float) $freshest['quote']['unit_price'] - (float) $winner['quote']['unit_price'];
+
+                    $expiryNote = $freshest['supplier'].' lasts '.$extraDays.' days longer'
+                        .($priceDelta > 0.004 ? ' for ₱'.number_format($priceDelta, 2).' more' : '');
+                }
+            }
 
             return [
                 'preplist_item' => $preplistItem,
@@ -241,9 +265,30 @@ class QuotationController extends Controller
                 'unit' => $preplistItem->item?->unit ?? '',
                 'requested' => $preplistItem->remainingQuantity(),
                 'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,
-                'winner' => $candidates->first(),
+                'winner' => $winner,
+                'expiry_note' => $expiryNote,
             ];
         })->values();
+
+        // Per-item highlight map used to color the best price (green) and
+        // best expiry (teal) inside the supplier columns.
+        $highlights = $preplistItems->mapWithKeys(function (PreplistItem $preplistItem) use ($sections) {
+            $lines = collect($sections)
+                ->map(fn ($section) => $section['lines'][$preplistItem->id] ?? null)
+                ->filter(fn ($line) => $line !== null && $line['unit_price'] !== null);
+
+            $bestPrice = $lines->min('unit_price');
+            $bestExpiry = $lines
+                ->filter(fn ($line) => $line['expiry'] !== null)
+                ->max('expiry');
+
+            return [
+                $preplistItem->id => [
+                    'best_price' => $bestPrice !== null ? (float) $bestPrice : null,
+                    'best_expiry' => $bestExpiry,
+                ],
+            ];
+        })->all();
 
         $cartItems = $request->user()?->poCartItems()
             ->with(['quotationItem.quotation.supplier'])
@@ -270,6 +315,7 @@ class QuotationController extends Controller
             'items' => $preplistItems,
             'sections' => $sections,
             'suggestions' => $suggestions,
+            'highlights' => $highlights,
             'cartQuoteItemIds' => $cartQuoteItemIds,
             'cartPreplistIds' => $cartPreplistIds,
             'cartPreplistSupplier' => $cartPreplistSupplier,

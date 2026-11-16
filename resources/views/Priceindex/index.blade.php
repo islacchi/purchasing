@@ -8,6 +8,28 @@
 
 @section('content')
 
+    {{-- Hidden print-only summary: populated by JS with the currently visible rows. --}}
+    <div id="pricePrintSheet" aria-hidden="true">
+        <h1>Price Index Summary</h1>
+        <p id="printSummaryFilters" class="print-muted"></p>
+        <p id="printSummaryCount"></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Unit</th>
+                    <th>Qty</th>
+                    <th>Best price</th>
+                    <th>Best supplier</th>
+                    <th>Best expiry</th>
+                </tr>
+            </thead>
+            <tbody id="printSummaryRows"></tbody>
+        </table>
+        <p id="printSummaryTotals" style="margin-top: 8pt;"></p>
+        <p class="print-muted">Generated {{ now()->format('F j, Y g:i A') }} by Purchasing.</p>
+    </div>
+
     @php
         $peso = function ($amount) {
             return '₱' . number_format((float) $amount, 2);
@@ -22,6 +44,14 @@
             </p>
 
             <div class="flex items-center gap-2">
+                <button id="pricePrintBtn" type="button"
+                        class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                        title="Print a summary of what's in view now">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 17h12M6 13H4a2 2 0 01-2-2v-3a2 2 0 012-2h16a2 2 0 012 2v3a2 2 0 01-2 2h-2m-12 0v6a1 1 0 001 1h10a1 1 0 001-1v-6"/>
+                    </svg>
+                    Print summary
+                </button>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
                     <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
                     Live quotation data
@@ -577,6 +607,20 @@
         /* Keep wide boards scrolling inside their card instead of widening the shell. */
         #mainContent { min-width: 0; }
         .price-row.selected-row { background-color: #eef7fa; }
+
+        /* Printable summary block: hidden on screen, shown only for printing. */
+        #pricePrintSheet { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #pricePrintSheet, #pricePrintSheet * { visibility: visible; }
+            #pricePrintSheet { display: block !important; position: absolute; inset: 0; padding: 12pt; background: #fff; }
+            #pricePrintSheet table { width: 100%; border-collapse: collapse; }
+            #pricePrintSheet th, #pricePrintSheet td { border: 1px solid #000; padding: 6pt; font-size: 9pt; }
+            #pricePrintSheet h1 { font-size: 16pt; margin: 0 0 6pt; }
+            #pricePrintSheet h2 { font-size: 11pt; margin: 12pt 0 4pt; }
+            #pricePrintSheet p { margin: 0 0 4pt; font-size: 9pt; }
+            #pricePrintSheet .print-muted { color: #444; }
+        }
     </style>
 
     <script>
@@ -859,6 +903,23 @@
 
                 html += '</tbody></table></div>';
 
+                if (Array.isArray(item.history_raw) && item.history_raw.length > 0) {
+                    html += '<p class="mt-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Price history (newest first)</p>';
+                    html += '<ul class="mt-2 max-h-64 overflow-auto divide-y divide-gray-100 rounded-lg border border-gray-200">';
+                    item.history_raw.forEach(function (entry) {
+                        html += '<li class="flex items-center justify-between gap-4 px-4 py-2 text-xs">'
+                            + '<span class="inline-flex min-w-0 items-center gap-2 text-gray-700">'
+                            + '<span class="h-2 w-2 flex-shrink-0 rounded-full" style="background-color:' + entry.supplier_color + '"></span>'
+                            + '<span class="truncate">' + escapeHtml(entry.supplier_short) + '</span>'
+                            + '<span class="text-gray-400">·</span>'
+                            + '<span class="text-gray-500">' + escapeHtml(entry.date) + '</span>'
+                            + '</span>'
+                            + '<span class="shrink-0 font-semibold text-gray-800">' + peso(entry.price) + '</span>'
+                            + '</li>';
+                    });
+                    html += '</ul>';
+                }
+
                 if (isComparable) {
                     html += '<p class="mt-3 text-xs text-gray-500">Best price is the lowest normalised unit price.</p>';
                 }
@@ -1083,6 +1144,94 @@
                     renderChart(findItem(selectedId));
                 }
             });
+
+            // --- Print summary ---
+            const pricePrintBtn = document.getElementById('pricePrintBtn');
+            const printRows = document.getElementById('printSummaryRows');
+            const printFilters = document.getElementById('printSummaryFilters');
+            const printCount = document.getElementById('printSummaryCount');
+            const printTotals = document.getElementById('printSummaryTotals');
+
+            function bestQuoteOf(item) {
+                if (!item || !item.quotes || !item.quotes.length) {
+                    return null;
+                }
+
+                return item.quotes.slice().sort(function (a, b) { return a.price - b.price; })[0];
+            }
+
+            function optionLabel(select) {
+                if (!select || !select.options || select.selectedIndex < 0) {
+                    return '';
+                }
+
+                return select.options[select.selectedIndex].text;
+            }
+
+            function printSummary() {
+                if (!printRows || !printFilters || !printCount || !printTotals) {
+                    return;
+                }
+
+                const filterParts = [];
+                const searchTerm = searchInput ? searchInput.value.trim() : '';
+
+                if (searchTerm) filterParts.push('Search: "' + searchTerm + '"');
+                if (categoryInput && categoryInput.value) filterParts.push(optionLabel(categoryInput));
+                if (projectInput && projectInput.value) filterParts.push(optionLabel(projectInput));
+                if (preplistInput && preplistInput.value) filterParts.push(optionLabel(preplistInput));
+
+                printFilters.textContent = filterParts.length ? 'Filters: ' + filterParts.join(' · ') : 'Filters: all items';
+
+                const visibleRows = document.querySelectorAll('.price-row:not(.hidden)');
+                printRows.innerHTML = '';
+
+                let totalRequested = 0;
+                let totalBestCost = 0;
+                let itemsWithQuotes = 0;
+
+                visibleRows.forEach(function (row) {
+                    const itemId = Number(row.getAttribute('data-item-id'));
+                    const item = findItem(itemId);
+
+                    if (!item) {
+                        return;
+                    }
+
+                    const qty = Number(item.requested) || 0;
+                    const best = bestQuoteOf(item);
+                    const unit = best ? best.price : null;
+                    const supplier = best ? best.short : '—';
+                    const expiry = best && best.expiry ? best.expiry : '—';
+                    const lineTotal = unit !== null ? unit * qty : 0;
+
+                    totalRequested += qty;
+                    totalBestCost += lineTotal;
+                    if (item.count > 0) {
+                        itemsWithQuotes += 1;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + escapeHtml(item.name) + '</td>'
+                        + '<td>' + escapeHtml(item.unit) + '</td>'
+                        + '<td style="text-align:right">' + qty + '</td>'
+                        + '<td style="text-align:right">' + (unit !== null ? peso(unit) : '—') + '</td>'
+                        + '<td>' + escapeHtml(supplier) + '</td>'
+                        + '<td>' + escapeHtml(expiry) + '</td>';
+                    printRows.appendChild(tr);
+                });
+
+                printCount.textContent = 'Items: ' + visibleRows.length
+                    + ' · with quotes: ' + itemsWithQuotes
+                    + ' · total requested: ' + totalRequested;
+                printTotals.textContent = 'Estimated best-price cost (Σ requested × lowest quote): ' + peso(totalBestCost);
+
+                window.print();
+            }
+
+            if (pricePrintBtn) {
+                pricePrintBtn.addEventListener('click', printSummary);
+            }
 
             // --- Filters ---
             const searchInput = document.getElementById('priceSearch');

@@ -40,6 +40,12 @@
         </div>
     @else
         <div class="mb-6">
+            <p class="mb-3 text-[11px] text-gray-500">
+                <span class="mr-3 inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-green-600"></span><span class="font-semibold text-green-800">Best price</span></span>
+                <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-[#2a7a94]"></span><span class="font-semibold text-[#0e5266]">Best expiry</span></span>
+                <span class="ml-3 inline-flex items-center gap-1.5"><span class="h-2.5 w-4 rounded-sm ring-1 ring-green-300 bg-[linear-gradient(90deg,#bbf7d0,#99f6e4)]"></span><span class="font-semibold text-green-800">Best price + expiry</span> row</span>
+                <span class="ml-2 text-gray-400">Highlighted per item across supplier columns.</span>
+            </p>
             <div class="grid gap-4" style="grid-template-columns: repeat({{ count($sections) }}, minmax(min-content, 1fr));">
                 @foreach ($sections as $section)
                     @php
@@ -66,8 +72,18 @@
                                     $itemName = $preplistItem->item?->name ?? 'Item';
                                     $unit = $preplistItem->item?->unit ?? '';
                                     $requested = $preplistItem->remainingQuantity();
+                                    $highlight = $highlights[$preplistItem->id] ?? ['best_price' => null, 'best_expiry' => null];
+                                    $lineIsBestPrice = $line !== null
+                                        && $line['unit_price'] !== null
+                                        && $highlight['best_price'] !== null
+                                        && abs((float) $line['unit_price'] - $highlight['best_price']) < 0.0001;
+                                    $lineIsBestExpiry = $line !== null
+                                        && $line['expiry'] !== null
+                                        && $highlight['best_expiry'] !== null
+                                        && $line['expiry'] === $highlight['best_expiry'];
+                                    $lineIsDoubleBest = $lineIsBestPrice && $lineIsBestExpiry;
                                 @endphp
-                                <div class="flex items-start justify-between gap-3 py-3 text-sm">
+                                <div class="flex items-start justify-between gap-3 py-3 text-sm @if ($lineIsDoubleBest) -mx-2 rounded-md px-2 ring-1 ring-green-200 bg-[linear-gradient(90deg,#ecfdf3_0%,#f0fdfa_100%)] @endif">
                                     <div class="min-w-0 break-words">
                                         <p class="text-gray-900"><span class="font-medium">{{ $itemName }}</span>
                                             <span class="text-xs text-gray-500"> · {{ $requested }} {{ $unit }}</span>
@@ -76,7 +92,13 @@
                                             <p class="mt-0.5 text-xs text-gray-500">
                                                 {{ $line['brand'] ?: '—' }}
                                                 @if ($line['expiry_label'])
-                                                    · Exp. {{ $line['expiry_label'] }}
+                                                    ·
+                                                    @if ($lineIsBestExpiry)
+                                                        <span class="font-bold text-[#0e5266]">Exp. {{ $line['expiry_label'] }}</span>
+                                                        <span class="ml-0.5 inline-flex items-center rounded-full bg-[#2a7a94] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Best expiry</span>
+                                                    @else
+                                                        Exp. {{ $line['expiry_label'] }}
+                                                    @endif
                                                 @endif
                                             </p>
                                         @endif
@@ -89,8 +111,13 @@
                                             $otherSupplierHolds = ! $lineInCart && in_array($linePreplistItemId, $cartPreplistIds ?? [], true);
                                             $otherSupplierName = $otherSupplierHolds ? ($cartPreplistSupplier[$linePreplistItemId] ?? 'that supplier') : null;
                                         @endphp
-                                        <div class="flex shrink-0 items-center gap-2">
-                                            <p class="whitespace-nowrap text-sm font-semibold text-gray-900">{{ $peso($line['unit_price']) }}</p>
+                                        <div class="flex shrink-0 flex-col items-end gap-0.5">
+                                            <div class="flex items-center gap-2">
+                                                <p class="whitespace-nowrap text-sm {{ $lineIsBestPrice ? 'font-bold text-green-800' : 'font-semibold text-gray-900' }}">{{ $peso($line['unit_price']) }}
+                                                    @if ($lineIsBestPrice)
+                                                        <span class="ml-0.5 inline-flex items-center rounded-full bg-green-600 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-white">Best price</span>
+                                                    @endif
+                                                </p>
                                             @if ($lineInCart)
                                                 <button type="button"
                                                         data-cart-remove-open
@@ -127,6 +154,20 @@
                                                     </button>
                                                 </form>
                                             @endif
+                                            </div>
+                                            @unless ($lineIsBestPrice)
+                                                @php
+                                                    $bestPrice = $highlight['best_price'] ?? 0.0;
+                                                    $premium = (float) $line['unit_price'] - $bestPrice;
+                                                    $premiumPct = $bestPrice > 0 ? ($premium / $bestPrice) * 100 : 0.0;
+                                                @endphp
+                                                @if ($premium > 0.004)
+                                                    <p class="whitespace-nowrap text-[10px] font-semibold {{ $premiumPct > 10 ? 'text-red-600' : 'text-amber-600' }}"
+                                                       title="Over the cheapest quote for this item">
+                                                        +{{ $peso($premium) }} (+{{ number_format($premiumPct, 1) }}%)
+                                                    </p>
+                                                @endif
+                                            @endunless
                                         </div>
                                     @else
                                         <span class="shrink-0 text-sm text-gray-400">-</span>
@@ -162,13 +203,14 @@
         </div>
     @endif
 
-    {{-- Suggestion: which supplier to buy per item --}}
+    {{-- Suggestion + price matrix --}}
     @if (! empty($items))
-        <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div class="border-b border-gray-100 bg-gray-50 px-6 py-4 text-center">
-                <h2 class="text-xs font-bold uppercase tracking-widest text-gray-600">Suggestion — which supplier to buy per item</h2>
-            </div>
-            <div class="divide-y divide-gray-100">
+        <div class="grid gap-6 xl:grid-cols-2">
+            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-100 bg-gray-50 px-6 py-4 text-center">
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-gray-600">Suggestion — which supplier to buy per item</h2>
+                </div>
+                <div class="divide-y divide-gray-100">
                 @if ($suggestions->isEmpty())
                     <div class="px-6 py-8 text-center text-sm text-gray-500">No items to evaluate.</div>
                 @else
@@ -191,12 +233,82 @@
                                             · No expiry stated
                                         @endif
                                     </p>
+                                    @if (! empty($suggestion['expiry_note']))
+                                        <p class="mt-0.5 text-[11px] font-semibold text-[#0e5266]">{{ $suggestion['expiry_note'] }}</p>
+                                    @endif
                                 @else
                                     <p class="text-sm text-gray-400">Awaiting quote</p>
                                 @endif
                             </div>
                         </div>
                     @endforeach
+                @endif
+            </div>
+            </div>
+
+            {{-- Price matrix: items × suppliers for this prep list --}}
+            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div class="border-b border-gray-100 bg-gray-50 px-6 py-4 text-center">
+                    <h2 class="text-xs font-bold uppercase tracking-widest text-gray-600">Price matrix — suppliers side by side</h2>
+                </div>
+                @if (empty($sections))
+                    <div class="px-6 py-10 text-center text-sm text-gray-500">No quotations yet for this prep list.</div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[480px] text-xs">
+                            <thead>
+                                <tr class="border-b border-gray-200 bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                                    <th scope="col" class="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-gray-50 px-4 py-3 text-left">Item</th>
+                                    @foreach ($sections as $section)
+                                        <th scope="col" class="whitespace-nowrap px-3 py-3 text-center">{{ $section['supplier'] }}</th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                @foreach ($items as $preplistItem)
+                                    @php
+                                        $matrixItemName = $preplistItem->item?->name ?? 'Item';
+                                        $matrixUnit = $preplistItem->item?->unit ?? '';
+                                        $matrixHighlight = $highlights[$preplistItem->id] ?? ['best_price' => null, 'best_expiry' => null];
+                                        $matrixBest = $matrixHighlight['best_price'];
+                                    @endphp
+                                    <tr class="transition-colors hover:bg-gray-50">
+                                        <td class="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-2.5">
+                                            <p class="font-semibold text-gray-900">{{ $matrixItemName }}</p>
+                                            <p class="text-[10px] text-gray-500">{{ $preplistItem->remainingQuantity() }} {{ $matrixUnit }}</p>
+                                        </td>
+                                        @foreach ($sections as $section)
+                                            @php
+                                                $cellLine = $section['lines'][$preplistItem->id] ?? null;
+                                                $cellPrice = $cellLine !== null && $cellLine['unit_price'] !== null ? (float) $cellLine['unit_price'] : null;
+                                                $cellIsBest = $cellPrice !== null && $matrixBest !== null && abs($cellPrice - $matrixBest) < 0.0001;
+                                            @endphp
+                                            <td class="px-3 py-2.5 text-center">
+                                                @if ($cellPrice !== null)
+                                                    @if ($cellIsBest)
+                                                        <span class="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 font-semibold text-green-700">
+                                                            {{ $peso($cellPrice) }}
+                                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m5 13 4 4L19 7"/>
+                                                            </svg>
+                                                        </span>
+                                                    @else
+                                                        <span class="text-gray-700">{{ $peso($cellPrice) }}</span>
+                                                    @endif
+                                                @else
+                                                    <span class="text-gray-300">—</span>
+                                                @endif
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 border-t border-gray-100 px-4 py-2.5 text-[10px] text-gray-500">
+                        <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded bg-green-100 ring-1 ring-green-300"></span> Lowest price per item</span>
+                        <span class="inline-flex items-center gap-1.5"><span class="h-2 w-2 rounded bg-gray-100 ring-1 ring-gray-200"></span> No quote</span>
+                    </div>
                 @endif
             </div>
         </div>

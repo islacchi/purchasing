@@ -234,6 +234,24 @@ class PriceIndexController extends Controller
                 ->sortBy('month')
                 ->values();
 
+            // Raw price quote events for the history list (newest first).
+            $historyRaw = $rows
+                ->map(function ($row) use ($suppliers) {
+                    $date = $row->quoted_at ?? $row->generated_at;
+
+                    return [
+                        'supplier' => (int) $row->supplier_id,
+                        'supplier_short' => $suppliers[$row->supplier_id]['short'] ?? $row->supplier_name,
+                        'supplier_color' => $suppliers[$row->supplier_id]['color'] ?? '#9ca3af',
+                        'date' => $date ? Carbon::parse($date)->format('M j, Y') : null,
+                        'price' => round((float) $row->unit_price, 2),
+                    ];
+                })
+                ->filter(fn ($point) => $point['date'] !== null)
+                ->sortByDesc('date')
+                ->values()
+                ->all();
+
             $monthlyBest = $history
                 ->groupBy('month')
                 ->map(fn ($group) => $group->min('price'))
@@ -260,6 +278,7 @@ class PriceIndexController extends Controller
                 'preplist_ids' => $preplistIds,
                 'quotes' => $quotes->all(),
                 'history' => $history->all(),
+                'history_raw' => $historyRaw,
                 'sparkline' => $this->sparkline($monthlyBest),
                 'stats' => [
                     'count' => $count,
@@ -288,6 +307,7 @@ class PriceIndexController extends Controller
                 'savings' => $item['stats']['savings'],
                 'quotes' => $item['quotes'],
                 'history' => $item['history'],
+                'history_raw' => $item['history_raw'],
             ];
         }, $items);
 
