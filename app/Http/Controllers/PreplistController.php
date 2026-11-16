@@ -431,6 +431,9 @@ class PreplistController extends Controller
             unset($workbook);
         });
 
+        $supplierCount = count($workbooks);
+        session()->flash('status', 'RFQ generated for '.$supplierCount.' supplier'.($supplierCount === 1 ? '' : 's').'. Quotation tracker'.($supplierCount === 1 ? ' was' : 's were').' created.');
+
         if (count($workbooks) === 1) {
             return response($workbooks[0]['content'], 200, [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

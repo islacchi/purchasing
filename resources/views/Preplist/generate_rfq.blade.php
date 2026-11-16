@@ -211,6 +211,7 @@
 
             const GENERATE_URL = @json(route('preplist.generate-rfq.excel', ['preplist' => $prepList->id]));
             const PREP_LIST_REFERENCE = @json($prepList->reference_no);
+            const PREPLIST_INDEX_URL = @json(route('preplist'));
 
             // Item metadata lookup, keyed by each per-item chip's data-item-key.
             const ITEM_DATA_BY_KEY = {};
@@ -461,6 +462,14 @@
                         link.click();
                         link.remove();
                         URL.revokeObjectURL(url);
+
+                        // RFQ files were handed to the browser; take the user
+                        // back to the prep list index.
+                        generateFileBtn.disabled = true;
+                        generateFileBtn.innerHTML = 'Generated — going back to the prep list…';
+                        window.setTimeout(function () {
+                            window.location.assign(PREPLIST_INDEX_URL);
+                        }, 1200);
                     })
                     .catch(function (error) {
                         window.alert(error && error.message ? error.message : 'Unable to generate the RFQ files.');
