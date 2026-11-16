@@ -152,36 +152,31 @@
                                 );
                             @endphp
 
-                            <div class="item-row flex items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-gray-50 {{ $isSelected ? 'is-selected' : '' }}">
-                                <div class="flex items-start gap-3">
-                                    <input type="checkbox"
-                                           name="sources[]"
-                                           value="{{ $projectItem->id }}"
-                                           class="item-check mt-0.5 w-4 h-4 rounded border-gray-300 accent-[#2a7a94] text-[#2a7a94] focus:ring-teal-300"
-                                           {{ $isSelected ? 'checked' : '' }}>
-                                    <div class="min-w-0">
-                                        <span class="item-name break-words text-sm text-gray-700">{{ $projectItem->item?->name ?? 'Item' }}</span>
-                                        @if ($isFulfilled)
-                                            <span class="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-green-700">Fulfilled</span>
-                                        @endif
+                            <div class="item-row flex items-center gap-3 px-3 py-1 transition-colors hover:bg-gray-50 {{ $isSelected ? 'is-selected' : '' }}">
+                                <input type="checkbox"
+                                       name="sources[]"
+                                       value="{{ $projectItem->id }}"
+                                       class="item-check w-4 h-4 shrink-0 rounded border-gray-300 accent-[#2a7a94] text-[#2a7a94] focus:ring-teal-300"
+                                       {{ $isSelected ? 'checked' : '' }}>
+                                <span class="item-name min-w-0 flex-1 truncate text-sm text-gray-700" title="{{ $projectItem->item?->name ?? 'Item' }}">{{ $projectItem->item?->name ?? 'Item' }}</span>
+                                @if ($isFulfilled)
+                                    <span class="inline-flex shrink-0 items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">Fulfilled</span>
+                                @endif
 
-                                        {{-- Shelf life required at delivery (per item) — fills the row width --}}
-                                        <div class="mt-1.5 flex items-center gap-1.5">
-                                            <label class="text-[11px] font-medium text-gray-500 whitespace-nowrap">Min. shelf life at delivery</label>
-                                            <input type="number" min="0" max="1200" step="1"
-                                                   name="shelf_life[{{ $projectItem->id }}]"
-                                                   value="{{ $shelfLife }}"
-                                                   class="shelf-life-input flex-1 min-w-0 w-full px-2 py-0.5 rounded-md border border-gray-300 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300"
-                                                   title="Minimum months of shelf life remaining at delivery"
-                                                   aria-label="Minimum shelf life at delivery in months for {{ $projectItem->item?->name ?? 'item' }}">
-                                            <span class="text-[11px] text-gray-500 whitespace-nowrap">months</span>
-                                            <span class="text-[11px] text-gray-400 whitespace-nowrap">&middot; 0 = non-perishable</span>
-                                        </div>
-                                    </div>
+                                {{-- Shelf life required at delivery (per item), inline on the same row --}}
+                                <div class="flex shrink-0 items-center gap-1.5">
+                                    <span class="whitespace-nowrap text-[11px] font-medium text-gray-500">Min. shelf life</span>
+                                    <input type="number" min="0" max="1200" step="1"
+                                           name="shelf_life[{{ $projectItem->id }}]"
+                                           value="{{ $shelfLife }}"
+                                           class="shelf-life-input w-14 px-1.5 py-0.5 rounded-md border border-gray-300 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                                           title="Minimum months of shelf life remaining at delivery. 0 = non-perishable."
+                                           aria-label="Minimum shelf life at delivery in months for {{ $projectItem->item?->name ?? 'item' }}; 0 means non-perishable">
+                                    <span class="whitespace-nowrap text-[11px] text-gray-500">months</span>
                                 </div>
 
                                 {{-- Read-only quantity to procure --}}
-                                <span class="item-quantity text-sm font-medium text-gray-900 whitespace-nowrap"
+                                <span class="item-quantity shrink-0 whitespace-nowrap text-sm font-medium text-gray-900"
                                       title="Awarded: {{ $projectItem->quantity }} · On-hand stock: {{ $projectItem->in_stock }}">
                                     {{ $projectItem->remainingQuantity() }} {{ $projectItem->item?->unit ?? '' }}
                                 </span>
