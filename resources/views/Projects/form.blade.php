@@ -51,12 +51,21 @@
     <h2 class="shrink-0 text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
 
     @if ($errors->any())
-        <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <ul class="list-disc space-y-1 pl-5">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+        {{-- Same floating overlay pattern the system uses elsewhere (@see partials/flash-success). Floats above the page; fades out and removes itself after a few seconds. --}}
+        <div class="flash-success-overlay" aria-live="assertive">
+            <div class="flash-message flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm" role="alert">
+                <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
+                </svg>
+                <div class="min-w-0">
+                    <p class="font-semibold">There are issues with your submission.</p>
+                    <ul class="mt-1 list-disc space-y-0.5 pl-5 text-xs">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
         </div>
     @endif
 
@@ -422,17 +431,19 @@
             updateDeleteBtn();
         }
 
-        // Only allow adding another row when the last row is completely filled.
+        // Allow adding another row as long as the last row has some data.
+        // A fully empty row blocks the button, but a partially-filled row does not.
         function isRowFilled(row) {
             if (!row) return false;
             const fields = row.querySelectorAll('input, select');
             for (let i = 0; i < fields.length; i++) {
                 const field = fields[i];
-                if (field.classList.contains('item-select')) continue; // tick box is not completeness
-                if ((field.name || '').indexOf('in_stock') !== -1) continue; // stock qty doesn't count as completeness
-                if (String(field.value).trim() === '') return false;
+                if (field.classList.contains('item-select')) continue;
+                if (String(field.value).trim() !== '') {
+                    return true;
+                }
             }
-            return true;
+            return false;
         }
 
         function syncAddButton() {

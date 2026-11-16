@@ -113,6 +113,23 @@ class ProjectTest extends TestCase
             ->assertSee('value="'.$entity->id.'"', false);
     }
 
+    public function test_project_form_shows_validation_banner_on_failed_validation(): void
+    {
+        $user = $this->admin();
+
+        $this->actingAs($user)
+            ->withHeaders(['Referer' => route('projects.create')])
+            ->followingRedirects()
+            ->post(route('projects.store'), [
+                'title' => 'Incomplete project',
+                'reference_no' => 'RF-INCOMPLETE-1',
+            ])
+            ->assertOk()
+            ->assertSee('flash-success-overlay', false)
+            ->assertSee('role="alert"', false)
+            ->assertSee('There are issues with your submission.');
+    }
+
     public function test_project_can_be_created_with_database_record_and_items(): void
     {
         $user = $this->admin();
