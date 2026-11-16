@@ -138,6 +138,20 @@ class PoCartController extends Controller
             return back()->withErrors(['cart' => 'Only '.$remaining.' '.($quotationItem->preplistItem?->item?->unit ?? 'units').' remain for that line.']);
         }
 
+        $preplistItemId = $quotationItem->preplistItem?->id;
+
+        if ($preplistItemId !== null) {
+            // One line per item: the chosen supplier replaces any other supplier
+            // of the same line that was already in the cart.
+            $request->user()->poCartItems()
+                ->whereIn('quotation_item_id', function ($query) use ($preplistItemId) {
+                    $query->select('qi.id')
+                        ->from('quotation_items as qi')
+                        ->where('qi.preplist_item_id', $preplistItemId);
+                })
+                ->delete();
+        }
+
         PoCartItem::query()->updateOrCreate(
             ['user_id' => $request->user()->id, 'quotation_item_id' => $quotationItem->id],
             ['qty' => $qty],
@@ -164,8 +178,12 @@ class PoCartController extends Controller
             ->whereIn('quotation_item_id', $itemIds)
             ->pluck('quotation_item_id')
             ->all();
+        // Preplist items whose line is already in the cart (any supplier) —
+        // suggestion never overwrites the user's chosen line.
         $alreadyInCart = $request->user()->poCartItems()
-            ->pluck('quotation_item_id')
+            ->join('quotation_items as qi', 'qi.id', '=', 'po_cart_items.quotation_item_id')
+            ->pluck('qi.preplist_item_id')
+            ->unique()
             ->all();
 
         $added = 0;
@@ -185,7 +203,7 @@ class PoCartController extends Controller
                 continue;
             }
 
-            if (in_array($best->id, $alreadyInCart, true)) {
+            if (in_array((int) $preplistItemId, $alreadyInCart, true)) {
                 $already++;
                 continue;
             }
@@ -263,7 +281,7 @@ class PoCartController extends Controller
         $this->authorizeLine($request, $cartItem);
         $cartItem->delete();
 
-        return back()->with('status', 'Removed from your cart.');
+        return $this->redirectBack($request, 'Removed from your cart.');
     }
 
     /**
@@ -273,7 +291,18 @@ class PoCartController extends Controller
     {
         $request->user()->poCartItems()->delete();
 
-        return back()->with('status', 'Your cart is empty.');
+        return $this->redirectBack($request, 'Your cart is empty.');
+    }
+
+    private function redirectBack(Request $request, string $message)
+    {
+        $referer = $request->headers->get('referer');
+
+        if ($referer && str_contains($referer, $request->getHttpHost())) {
+            return redirect()->to($referer)->with('status', $message);
+        }
+
+        return redirect()->route('po-cart')->with('status', $message);
     }
 
     /**
@@ -455,6 +484,19 @@ class PoCartController extends Controller
                 $skipped++;
 
                 continue;
+            }
+
+            $preplistItemId = $quotationItem->preplistItem?->id;
+
+            if ($preplistItemId !== null) {
+                // One line per item; this supplier's line wins over any other.
+                $request->user()->poCartItems()
+                    ->whereIn('quotation_item_id', function ($query) use ($preplistItemId) {
+                        $query->select('qi.id')
+                            ->from('quotation_items as qi')
+                            ->where('qi.preplist_item_id', $preplistItemId);
+                    })
+                    ->delete();
             }
 
             PoCartItem::query()->updateOrCreate(

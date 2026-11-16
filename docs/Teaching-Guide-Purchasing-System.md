@@ -126,11 +126,13 @@ This is the busiest screen. Three stages happen here:
 
 For every item on the prep list, you see:
 
-- **Best price** — the cheapest price that a supplier quoted.
-- **Best expiry** — the supplier offering the freshest stock.
-- **Best price board** — a ranking of suppliers by how many items they won.
+- **Best price** - the cheapest price that a supplier quoted.
+- **Best expiry** - the supplier offering the freshest stock.
+- **Best price board** - a ranking of suppliers by how many items they won.
 - The **premium** column shows how many percent each supplier is more expensive than the best price. Example: `+5.0% vs best` means they're 5% more expensive than the cheapest.
 - Lowest price is highlighted in green.
+
+**Suggestion, not decision.** The system suggests the lowest price; it never picks for you. If you want a different supplier for an item - closer relationship, fresher stock, better delivery - open the item on the board and click **Add to cart** on that supplier's row. Your pick wins. Swapping to another supplier replaces the line in the cart before checkout. "Add best prices to cart" (and the per-row cart buttons) are one-click suggestions for the common case of wanting the lowest price.
 
 **Teaching tip:** do not let anyone stare at one supplier and pick by feeling. The board exists so the decision is visible and defendable: *"We picked them because they won 8 out of 10 items at the best price."*
 

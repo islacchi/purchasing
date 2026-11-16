@@ -22,17 +22,6 @@
             </p>
 
             <div class="flex items-center gap-2">
-                <form method="POST" action="{{ route('po-cart.bulk-add') }}">
-                    @csrf
-                    <button type="submit"
-                            class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#236b80]"
-                            title="Add the cheapest quoted line for every item to your PO cart">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
-                        </svg>
-                        Add all best prices to cart
-                    </button>
-                </form>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
                     <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
                     Live quotation data
@@ -102,7 +91,7 @@
 
         {{-- Filter bar --}}
         <div class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <div class="relative">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -126,6 +115,14 @@
                     <option value="">All projects</option>
                     @foreach ($projectOptions as $projectId => $projectLabel)
                         <option value="{{ $projectId }}">{{ $projectLabel }}</option>
+                    @endforeach
+                </select>
+
+                <select id="pricePreplist"
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
+                    <option value="">All prep lists</option>
+                    @foreach ($preplistOptions as $preplistId => $preplistReference)
+                        <option value="{{ $preplistId }}">{{ $preplistReference }}</option>
                     @endforeach
                 </select>
             </div>
@@ -168,7 +165,6 @@
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Average</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Variance</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3">Trend</th>
-                                <th scope="col" class="w-14 px-6 py-3 text-center">Cart</th>
                                 <th scope="col" class="w-14 px-6 py-3 text-center">Action</th>
                             </tr>
                         </thead>
@@ -180,14 +176,13 @@
                                     $isComparable = $stats['count'] > 1;
                                     $bestSupplier = $stats['best_supplier'] ? $suppliers[$stats['best_supplier']] : null;
                                     $variance = $isComparable && $stats['avg'] > 0 ? ((1 - ($stats['best'] / $stats['avg'])) * 100) : null;
-                                    $bestLineId = $hasQuotes ? (collect($item['quotes'])->sortBy('price')->first()['quotation_item_id'] ?? null) : null;
-                                    $bestLineInCart = $bestLineId !== null && $cartQuoteItemIds->has($bestLineId);
                                 @endphp
                                 <tr class="group price-row transition-colors {{ $hasQuotes ? 'cursor-pointer hover:bg-gray-50' : 'bg-gray-50/40' }}"
                                     data-item-id="{{ $item['id'] }}"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
                                     data-project-ids="{{ implode(',', $item['project_ids']) }}"
+                                    data-preplist-ids="{{ implode(',', $item['preplist_ids'] ?? []) }}"
                                     data-has-quotes="{{ $hasQuotes ? '1' : '0' }}">
                                     <td class="px-6 py-4">
                                         <p class="font-semibold text-gray-900 break-words">{{ $item['name'] }}</p>
@@ -255,31 +250,6 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 text-center">
-                                        @if (! $hasQuotes || $bestLineId === null)
-                                            <span class="text-gray-300">-</span>
-                                        @elseif ($bestLineInCart)
-                                            <span class="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-[#2a7a94]" title="Already in your PO cart">
-                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 13l4 4L19 7"/>
-                                                </svg>
-                                                In cart
-                                            </span>
-                                        @else
-                                            <form method="POST" action="{{ route('po-cart.add') }}">
-                                                @csrf
-                                                <input type="hidden" name="quotation_item_id" value="{{ $bestLineId }}">
-                                                <button type="submit"
-                                                        title="Add best price quote to cart ({{ $bestSupplier['short'] ?? $bestSupplier['name'] ?? '' }})"
-                                                        aria-label="Add best price quote to cart for {{ $item['name'] }}"
-                                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#2a7a94]/10 hover:text-[#2a7a94]">
-                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
-                                                    </svg>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 text-center">
                                         @if ($hasQuotes)
                                             <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors group-hover:bg-[#2a7a94]/10 group-hover:text-[#2a7a94]" title="Compare quotes">
                                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -293,7 +263,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="px-6 py-12 text-center">
+                                    <td colspan="9" class="px-6 py-12 text-center">
                                         <p class="text-sm font-medium text-gray-600">No items with quotation activity yet.</p>
                                         <p class="mt-1 text-xs text-gray-500">Items appear here once a project requests them or a supplier quotes them.</p>
                                     </td>
@@ -306,7 +276,7 @@
                 {{-- Empty filter state --}}
                 <div id="tableEmptyState" class="hidden px-6 py-12 text-center">
                     <p class="text-sm font-medium text-gray-600">No items match the current filters.</p>
-                    <p class="mt-1 text-xs text-gray-500">Try clearing the search or choosing another category.</p>
+                    <p class="mt-1 text-xs text-gray-500">Try clearing the search, changing the preplist, or picking another filter.</p>
                 </div>
             </div>
 
@@ -317,7 +287,6 @@
                         <thead>
                             <tr class="border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
                                 <th scope="col" class="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-gray-50 px-6 py-3 text-left">Item</th>
-                                <th scope="col" class="w-16 px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Cart</th>
                                 @foreach ($suppliers as $supplier)
                                     <th scope="col" class="whitespace-nowrap px-5 py-3 text-center">
                                         <span class="inline-flex max-w-[12rem] items-center gap-2" title="{{ $supplier['name'] }}">
@@ -334,38 +303,11 @@
                                     data-item-id="{{ $item['id'] }}"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
-                                    data-project-ids="{{ implode(',', $item['project_ids']) }}">
+                                    data-project-ids="{{ implode(',', $item['project_ids']) }}"
+                                    data-preplist-ids="{{ implode(',', $item['preplist_ids'] ?? []) }}">
                                     <td class="sticky left-0 z-10 border-r border-gray-200 bg-white px-6 py-4 break-words">
                                         <p class="font-semibold text-gray-900 break-words">{{ $item['name'] }}</p>
                                         <p class="mt-0.5 text-xs text-gray-500">{{ $item['unit'] }}</p>
-                                    </td>
-                                    @php
-                                        $matrixHasQuotes = $item['stats']['count'] > 0;
-                                        $matrixBestLineId = $matrixHasQuotes
-                                            ? (collect($item['quotes'])->sortBy('price')->first()['quotation_item_id'] ?? null)
-                                            : null;
-                                        $matrixBestInCart = $matrixBestLineId !== null
-                                            && $cartQuoteItemIds->has($matrixBestLineId);
-                                    @endphp
-                                    <td class="border-r border-gray-200 px-3 py-4 text-center">
-                                        @if (! $matrixHasQuotes || $matrixBestLineId === null)
-                                            <span class="text-gray-300">-</span>
-                                        @elseif ($matrixBestInCart)
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-1 text-[10px] font-semibold text-[#2a7a94]" title="Already in your PO cart">In cart</span>
-                                        @else
-                                            <form method="POST" action="{{ route('po-cart.add') }}">
-                                                @csrf
-                                                <input type="hidden" name="quotation_item_id" value="{{ $matrixBestLineId }}">
-                                                <button type="submit"
-                                                        title="Add best price quote to cart"
-                                                        aria-label="Add best price quote to cart for {{ $item['name'] }}"
-                                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#2a7a94]/10 hover:text-[#2a7a94]">
-                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
-                                                    </svg>
-                                                </button>
-                                            </form>
-                                        @endif
                                     </td>
                                     @foreach ($suppliers as $key => $supplier)
                                         @php
@@ -392,7 +334,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ count($suppliers) + 2 }}" class="px-6 py-12 text-center">
+                                    <td colspan="{{ count($suppliers) + 1 }}" class="px-6 py-12 text-center">
                                         <p class="text-sm font-medium text-gray-600">No items with quotation activity yet.</p>
                                     </td>
                                 </tr>
@@ -428,18 +370,6 @@
                             <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
                             Lowest price
                         </span>
-                        <form id="compareCartForm" method="POST" action="{{ route('po-cart.add') }}" class="hidden">
-                            @csrf
-                            <input type="hidden" name="quotation_item_id" id="compareCartItemId" value="">
-                            <button type="submit" id="compareCartBtn"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-[#2a7a94] bg-white px-3 py-1.5 text-xs font-semibold text-[#2a7a94] transition-colors hover:bg-[#2a7a94]/10"
-                                    title="Add the lowest-priced quote for this item to your PO cart">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
-                                </svg>
-                                Add best price to cart
-                            </button>
-                        </form>
                     </div>
                 </div>
 
@@ -579,7 +509,6 @@
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Average</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Qty</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Potential savings</th>
-                                <th scope="col" class="w-14 px-6 py-3 text-center">Cart</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -589,13 +518,12 @@
                                     $bestSupplier = $stats['best_supplier'] !== null
                                         ? ($suppliers[$stats['best_supplier']] ?? null)
                                         : null;
-                                    $savingsBestLineId = collect($item['quotes'])->sortBy('price')->first()['quotation_item_id'] ?? null;
-                                    $savingsBestInCart = $savingsBestLineId !== null && $cartQuoteItemIds->has($savingsBestLineId);
                                 @endphp
                                 <tr class="savings-row transition-colors hover:bg-gray-50"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
                                     data-category="{{ $item['category'] }}"
-                                    data-project-ids="{{ implode(',', $item['project_ids']) }}">
+                                    data-project-ids="{{ implode(',', $item['project_ids']) }}"
+                                    data-preplist-ids="{{ implode(',', $item['preplist_ids'] ?? []) }}">
                                     <td class="px-6 py-4">
                                         <p class="font-semibold text-gray-900 break-words">{{ $item['name'] }}</p>
                                         <div class="mt-1 flex flex-wrap items-center gap-2">
@@ -613,32 +541,12 @@
                                     <td class="break-words px-6 py-4 text-right text-gray-500">{{ $peso($stats['avg']) }}</td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right text-gray-700">{{ $item['requested'] }}</td>
                                     <td class="break-words px-6 py-4 text-right font-bold text-gray-900">{{ $peso($stats['savings']) }}</td>
-                                    <td class="px-6 py-4 text-center">
-                                        @if ($savingsBestLineId === null)
-                                            <span class="text-gray-300">-</span>
-                                        @elseif ($savingsBestInCart)
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-1 text-[10px] font-semibold text-[#2a7a94]" title="Already in your PO cart">In cart</span>
-                                        @else
-                                            <form method="POST" action="{{ route('po-cart.add') }}">
-                                                @csrf
-                                                <input type="hidden" name="quotation_item_id" value="{{ $savingsBestLineId }}">
-                                                <button type="submit"
-                                                        title="Add best price quote to cart"
-                                                        aria-label="Add best price quote to cart for {{ $item['name'] }}"
-                                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#2a7a94]/10 hover:text-[#2a7a94]">
-                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
-                                                    </svg>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
                         <tfoot>
                             <tr class="border-t border-gray-200 bg-gray-50">
-                                <td colspan="5" class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Total potential savings</td>
+                                <td colspan="4" class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Total potential savings</td>
                                 <td class="break-words px-6 py-4 text-right text-base font-bold text-green-700">{{ $peso($totalSavings) }}</td>
                             </tr>
                         </tfoot>
@@ -715,8 +623,6 @@
             const compareBody = document.getElementById('compareBody');
             const compareSubtitle = document.getElementById('compareSubtitle');
             const compareBadge = document.getElementById('compareBadge');
-            const compareCartForm = document.getElementById('compareCartForm');
-            const compareCartItemId = document.getElementById('compareCartItemId');
             const trendSubtitle = document.getElementById('trendSubtitle');
             const trendLegend = document.getElementById('trendLegend');
             const trendEmpty = document.getElementById('trendEmpty');
@@ -739,9 +645,6 @@
 
                 compareSubtitle.textContent = 'Select an item from the board to compare its quotes.';
                 compareBadge.classList.add('hidden');
-                if (compareCartForm) {
-                    compareCartForm.classList.add('hidden');
-                }
                 compareBody.innerHTML = comparePlaceholder;
 
                 if (chart) {
@@ -786,9 +689,6 @@
                 compareSubtitle.textContent = subtitleParts.join(' · ');
                 if (!item.count) {
                     compareBadge.classList.add('hidden');
-                    if (compareCartForm) {
-                        compareCartForm.classList.add('hidden');
-                    }
                     compareBody.innerHTML =
                         '<div class="py-10 text-center">'
                         + '<p class="text-sm font-medium text-gray-600">No submitted quotes for this item yet.</p>'
@@ -799,10 +699,6 @@
 
                 const sorted = item.quotes.slice().sort(function (a, b) { return a.price - b.price; });
                 const bestQuote = sorted[0];
-                if (compareCartForm && compareCartItemId) {
-                    compareCartItemId.value = bestQuote ? String(bestQuote.quotation_item_id) : '';
-                    compareCartForm.classList.toggle('hidden', !bestQuote);
-                }
                 const isComparable = item.count > 1;
                 const delta = isComparable && item.avg > 0 ? ((1 - (item.best / item.avg)) * 100) : null;
 
@@ -932,7 +828,6 @@
                     + '<th class="px-4 py-3 text-center">Quoted</th>'
                     + '<th class="px-4 py-3 text-center">Source</th>'
                     + '</tr></thead><tbody class="divide-y divide-gray-100">';
-
                 sorted.forEach(function (quote) {
                     const isBest = isComparable && Math.abs(quote.price - item.best) < 0.0001;
                     const premium = item.best > 0 ? ((quote.price - item.best) / item.best) * 100 : 0;
@@ -1193,11 +1088,13 @@
             const searchInput = document.getElementById('priceSearch');
             const categoryInput = document.getElementById('priceCategory');
             const projectInput = document.getElementById('priceProject');
+            const preplistInput = document.getElementById('pricePreplist');
 
             function matchesFilters(dataset) {
                 const term = searchInput.value.trim().toLowerCase();
                 const category = categoryInput.value;
                 const project = projectInput.value;
+                const preplist = preplistInput.value;
 
                 if (term && dataset.name.indexOf(term) === -1) {
                     return false;
@@ -1206,6 +1103,9 @@
                     return false;
                 }
                 if (project && dataset.projectIds.split(',').indexOf(project) === -1) {
+                    return false;
+                }
+                if (preplist && dataset.preplistIds.split(',').indexOf(preplist) === -1) {
                     return false;
                 }
 
@@ -1262,6 +1162,7 @@
             searchInput.addEventListener('input', applyFilters);
             categoryInput.addEventListener('change', applyFilters);
             projectInput.addEventListener('change', applyFilters);
+            preplistInput.addEventListener('change', applyFilters);
 
             // --- Row selection ---
             document.querySelectorAll('.price-row').forEach(function (row) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Preplist;
 use App\Models\PreplistItem;
 use App\Models\PurchaseOrder;
 use App\Models\Quotation;
@@ -162,6 +163,117 @@ class QuotationController extends Controller
             'developers' => $developers,
             'activeFilters' => $activeFilters,
             'filtersActive' => $filtersActive,
+        ]);
+    }
+
+    /**
+     * Full preplist comparison page: every supplier's quote for every item
+     * side by side, plus the suggested supplier per item. Reached by clicking
+     * a prep list title in the tracker.
+     */
+    public function showPreplist(Request $request, Preplist $preplist)
+    {
+        $preplist->load(['items.item', 'items.sources.projectItem.project']);
+
+        $quotations = Quotation::query()
+            ->with(['supplier', 'items.preplistItem'])
+            ->where('preplist_id', $preplist->id)
+            ->orderBy('id')
+            ->get();
+
+        $preplistItems = $preplist->items->values();
+
+        // Per-supplier column data, keyed by preplist item id so missing lines
+        // can render as "-".
+        $sections = $quotations
+            ->map(function (Quotation $quotation) use ($preplistItems) {
+                $line = $quotation->items->keyBy('preplist_item_id');
+
+                return [
+                    'quotation' => $quotation,
+                    'supplier' => $quotation->supplier?->name ?? 'Supplier removed',
+                    'rfq_number' => $quotation->rfq_number,
+                    'status' => ($quotation->items->contains(fn ($qi) => $qi->unit_price !== null)) ? 'Quoted' : 'Awaiting quote',
+                    'lines' => $preplistItems->mapWithKeys(function (PreplistItem $preplistItem) use ($line) {
+                        $lineItem = $line->get($preplistItem->id);
+
+                        return [
+                            $preplistItem->id => $lineItem === null
+                                ? null
+                                : [
+                                    'id' => $lineItem->id,
+                                    'preplist_item_id' => $preplistItem->id,
+                                    'unit_price' => $lineItem->unit_price !== null ? (float) $lineItem->unit_price : null,
+                                    'brand' => $lineItem->brand,
+                                    'expiry' => $lineItem->expiry?->toDateString(),
+                                    'expiry_label' => $lineItem->expiry?->format('M j, Y'),
+                                    'min_remaining_months' => (int) $lineItem->min_remaining_months,
+                                ],
+                        ];
+                    })->all(),
+                ];
+            })
+            ->values();
+
+        // Suggestion: cheapest unit price for each item across all priced
+        // lines for this preplist. User overrides by picking in the columns.
+        $suggestions = $preplistItems->map(function (PreplistItem $preplistItem) use ($sections) {
+            $candidates = collect();
+
+            foreach ($sections as $section) {
+                $line = $section['lines'][$preplistItem->id] ?? null;
+
+                if ($line !== null && $line['unit_price'] !== null) {
+                    $candidates->push([
+                        'supplier' => $section['supplier'],
+                        'rfq_number' => $section['rfq_number'],
+                        'quotation_id' => $section['quotation']->id,
+                        'quote' => $line,
+                    ]);
+                }
+            }
+
+            $candidates = $candidates->sortBy('quote.unit_price')->values();
+
+            return [
+                'preplist_item' => $preplistItem,
+                'name' => $preplistItem->item?->name ?? 'Item',
+                'unit' => $preplistItem->item?->unit ?? '',
+                'requested' => $preplistItem->remainingQuantity(),
+                'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,
+                'winner' => $candidates->first(),
+            ];
+        })->values();
+
+        $cartItems = $request->user()?->poCartItems()
+            ->with(['quotationItem.quotation.supplier'])
+            ->get();
+
+        $cartQuoteItemIds = [];
+        $cartPreplistIds = [];
+        $cartPreplistSupplier = [];
+        $cartLineIdByQuoteItem = [];
+
+        foreach ($cartItems as $cartItem) {
+            $cartQuoteItemIds[] = $cartItem->quotation_item_id;
+            $cartLineIdByQuoteItem[$cartItem->quotation_item_id] = $cartItem->id;
+
+            $preplistItemId = $cartItem->quotationItem?->preplist_item_id;
+            if ($preplistItemId !== null) {
+                $cartPreplistIds[] = (int) $preplistItemId;
+                $cartPreplistSupplier[$preplistItemId] = $cartItem->quotationItem?->quotation?->supplier?->name ?? null;
+            }
+        }
+
+        return view('Quotation.preplist', [
+            'preplist' => $preplist,
+            'items' => $preplistItems,
+            'sections' => $sections,
+            'suggestions' => $suggestions,
+            'cartQuoteItemIds' => $cartQuoteItemIds,
+            'cartPreplistIds' => $cartPreplistIds,
+            'cartPreplistSupplier' => $cartPreplistSupplier,
+            'cartLineIdByQuoteItem' => $cartLineIdByQuoteItem,
         ]);
     }
 

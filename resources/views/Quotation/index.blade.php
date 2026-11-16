@@ -132,7 +132,7 @@
                                 <td colspan="1" class="bg-gray-50 px-6 py-3">
                                     <div class="flex items-center justify-between gap-3">
                                         <div class="min-w-0">
-                                            <p class="text-sm font-bold text-gray-900">{{ $preplistGroup['name'] }}</p>
+                                            <a href="{{ route('quotation.show-preplist', ['preplist' => $preplistGroup['preplist_id']]) }}" class="text-sm font-bold text-gray-900 hover:text-[#2a7a94] hover:underline">{{ $preplistGroup['name'] }}</a>
                                             <p class="mt-0.5 text-xs text-gray-500">{{ $preplistGroup['ref'] }}</p>
                                         </div>
                                         <svg class="preplist-group-chevron h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -465,6 +465,9 @@
                     var groupId = toggle.getAttribute('data-group-id');
                     toggle.addEventListener('click', function (event) {
                         event.stopPropagation();
+                        if (event.target.closest('a')) {
+                            return; // the title link navigates instead of toggling.
+                        }
                         setQuotationGroupOpen(groupId, !quotationGroups[groupId]);
                     });
                 });

@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
-use App\Models\PoCartItem;
 use App\Models\ProjectItem;
 use App\Models\QuotationItem;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class PriceIndexController extends Controller
@@ -27,7 +25,7 @@ class PriceIndexController extends Controller
     /**
      * Show the price index built from submitted quotation lines.
      */
-    public function index(Request $request)
+    public function index()
     {
         // Requested quantities and the projects that requested each item.
         $projectRows = ProjectItem::query()
@@ -63,6 +61,8 @@ class PriceIndexController extends Controller
             ->join('quotations', 'quotations.id', '=', 'quotation_items.quotation_id')
             ->join('suppliers', 'suppliers.id', '=', 'quotations.supplier_id')
             ->join('preplist_items', 'preplist_items.id', '=', 'quotation_items.preplist_item_id')
+            ->join('preplists', 'preplists.id', '=', 'preplist_items.preplist_id')
+            ->whereNull('preplists.deleted_at')
             ->where('quotation_items.unit_price', '>', 0)
             ->select([
                 'quotation_items.id',
@@ -75,6 +75,8 @@ class PriceIndexController extends Controller
                 'suppliers.id as supplier_id',
                 'suppliers.name as supplier_name',
                 'preplist_items.item_id',
+                'preplists.id as preplist_id',
+                'preplists.reference_no as preplist_reference_no',
             ])
             ->get()
             ->sortBy(fn ($row) => ($row->quoted_at ?? $row->generated_at ?? '')
@@ -82,6 +84,20 @@ class PriceIndexController extends Controller
             ->values();
 
         $quotesByItem = $quoteRows->groupBy('item_id');
+
+        // Preplist(s) that contributed quotes for each item, for the filter.
+        $preplistIdsByItem = [];
+        $preplistOptions = [];
+
+        foreach ($quoteRows as $row) {
+            if ($row->preplist_id === null) {
+                continue;
+            }
+            $preplistIdsByItem[$row->item_id][(int) $row->preplist_id] = true;
+            $preplistOptions[(int) $row->preplist_id] = $row->preplist_reference_no ?: ('PL-'.$row->preplist_id);
+        }
+
+        asort($preplistOptions, SORT_NATURAL | SORT_FLAG_CASE);
 
         // Suppliers that have quoted at least once, in a stable order.
         $supplierNames = $quoteRows->pluck('supplier_name', 'supplier_id')->unique()->sort();
@@ -230,6 +246,8 @@ class PriceIndexController extends Controller
             sort($projects);
             $projectIds = array_map('intval', array_keys($projectIdsByItem[$catalogItem->id] ?? []));
             sort($projectIds);
+            $preplistIds = array_map('intval', array_keys($preplistIdsByItem[$catalogItem->id] ?? []));
+            sort($preplistIds);
 
             $items[] = [
                 'id' => $catalogItem->id,
@@ -239,6 +257,7 @@ class PriceIndexController extends Controller
                 'requested' => $requested,
                 'projects' => $projects,
                 'project_ids' => $projectIds,
+                'preplist_ids' => $preplistIds,
                 'quotes' => $quotes->all(),
                 'history' => $history->all(),
                 'sparkline' => $this->sparkline($monthlyBest),
@@ -275,12 +294,6 @@ class PriceIndexController extends Controller
         $avgSpread = $spreadCount ? $spreadSum / $spreadCount : 0;
         $activeSuppliers = count(array_filter($scorecard, fn ($row) => $row['quotes'] > 0));
 
-        // Which quotation lines are already in this user's PO cart.
-        $cartQuoteItemIds = PoCartItem::query()
-            ->where('user_id', $request->user()?->id)
-            ->pluck('quotation_item_id')
-            ->flip();
-
         return view('Priceindex.index', compact(
             'items',
             'suppliers',
@@ -293,7 +306,7 @@ class PriceIndexController extends Controller
             'spreadCount',
             'activeSuppliers',
             'projectOptions',
-            'cartQuoteItemIds',
+            'preplistOptions',
         ));
     }
 

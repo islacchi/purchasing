@@ -286,37 +286,47 @@ class CartTest extends TestCase
         $entity = $this->entity();
 
         $project = $this->project($user, $entity, ['title' => 'Purchase of pharma supplies', 'reference_no' => 'RF-2026-0044']);
-        $item = $this->item(['name' => 'Mefenamic Capsule - 500mg']);
-        $projectItem = $this->projectItem($project, $item);
+        $itemA = $this->item(['name' => 'Mefenamic Capsule - 500mg']);
+        $itemB = $this->item(['name' => 'Cetirizine 10mg tablet']);
+        $piA = $this->projectItem($project, $itemA);
+        $piB = $this->projectItem($project, $itemB);
 
         $preplist = $this->compile($user, [
             'name' => 'July Region VII batch',
-            'sources' => [$projectItem->id],
-            'shelf_life' => [$projectItem->id => 0],
+            'sources' => [$piA->id, $piB->id],
+            'shelf_life' => [$piA->id => 0, $piB->id => 0],
         ]);
 
         $smartPharma = Supplier::create(['name' => 'Smart Pharma']);
         $abcMedicals = Supplier::create(['name' => 'ABC Medicals']);
         $quotationSmart = $this->createQuotation($user, $preplist, $smartPharma);
         $quotationAbc = $this->createQuotation($user, $preplist, $abcMedicals);
-        $preplistItem = PreplistItem::where('preplist_id', $preplist->id)->firstOrFail();
+        $lines = PreplistItem::where('preplist_id', $preplist->id)->get()->keyBy('item_id');
 
         QuotationItem::create([
             'quotation_id' => $quotationSmart->id,
-            'preplist_item_id' => $preplistItem->id,
+            'preplist_item_id' => $lines[$itemA->id]->id,
             'min_remaining_months' => 0,
             'unit_price' => 250.00,
             'quoted_at' => now(),
         ]);
         QuotationItem::create([
+            'quotation_id' => $quotationSmart->id,
+            'preplist_item_id' => $lines[$itemB->id]->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 150.00,
+            'quoted_at' => now(),
+        ]);
+        QuotationItem::create([
             'quotation_id' => $quotationAbc->id,
-            'preplist_item_id' => $preplistItem->id,
+            'preplist_item_id' => $lines[$itemA->id]->id,
             'min_remaining_months' => 0,
             'unit_price' => 240.00,
             'quoted_at' => now(),
         ]);
 
         $this->actingAs($user)->post(route('po-cart.add'), ['quotation_id' => $quotationSmart->id]);
+        // Adding ABC Medicals replaces Smart's line for itemA (one line per item).
         $this->actingAs($user)->post(route('po-cart.add'), ['quotation_id' => $quotationAbc->id]);
 
         $response = $this->actingAs($user)->post(route('po-cart.checkout'));
@@ -401,6 +411,24 @@ class CartTest extends TestCase
         $prices = $cart->pluck('quotationItem.unit_price')->map(fn ($price) => (float) $price)->all();
         $this->assertContainsEquals(250.0, $prices);
         $this->assertContainsEquals(150.0, $prices);
+    }
+
+    public function test_cart_items_remove_endpoint_accepts_post_with_delete_method(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $item = $this->seedPricedLine($user, $entity, $supplier, 'Mefenamic Capsule - 500mg', 305.00);
+        $this->actingAs($user)->post(route('po-cart.add'), ['quotation_id' => $item->quotation_id]);
+
+        $cartItem = PoCartItem::firstOrFail();
+
+        $this->actingAs($user)
+            ->post(route('po-cart.remove', ['cartItem' => $cartItem->id]), ['_method' => 'DELETE'])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('po_cart_items', 0);
     }
 
     public function test_checkout_revalidates_quantities(): void

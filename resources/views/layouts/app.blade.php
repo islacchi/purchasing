@@ -60,6 +60,24 @@
 
 <body class="bg-gray-100 font-sans antialiased">
 
+    @php
+        // Cart lines shared with the header quick-view. Lines are only looked-up
+        // at most once per page render and only for signed-in users.
+        $headerCartItems = collect();
+        if (auth()->check()) {
+            $headerCartItems = auth()->user()->poCartItems()
+                ->with([
+                    'quotationItem.preplistItem.item',
+                    'quotationItem.quotation.supplier',
+                ])
+                ->latest('created_at')
+                ->get();
+        }
+        $headerCartTotal = $headerCartItems->sum(fn ($line) => (float) ($line->quotationItem?->unit_price ?? 0) * (int) $line->qty);
+        $headerCartCount = $headerCartItems->count();
+        $canManagePurchaseOrder = auth()->user()?->canModule('purchase-order', 'manage') ?? false;
+    @endphp
+
     <div class="flex h-screen overflow-hidden">
 
         {{-- Sidebar --}}
@@ -167,25 +185,6 @@
                 </a>
                 @endif
 
-                {{-- Purchase Order --}}
-                @if (auth()->user()->canModule('purchase-order'))
-                <a href="{{ route('purchase-order') }}"
-                class="relative flex items-center w-full h-[65px] transition-colors
-                        {{ request()->is('purchase-order') || request()->is('purchase-order/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
-
-                    @if(request()->is('purchase-order') || request()->is('purchase-order/*'))
-                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
-                    @endif
-
-                    <div class="sidebar-icon flex items-center gap-3">
-                        <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0 1 18 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3 1.5 1.5 3-3.75"/>
-                        </svg>
-                        <span class="label whitespace-nowrap">Purchase Order</span>
-                    </div>
-                </a>
-                @endif
-
                 {{-- PO Cart --}}
                 @php
                     $cartCount = auth()->user()?->poCartItems()->count() ?? 0;
@@ -205,6 +204,25 @@
                         @if ($cartCount > 0)
                             <span class="ml-auto inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-teal-300 px-1.5 text-[11px] font-bold leading-none text-[#0e3a4c]">{{ $cartCount }}</span>
                         @endif
+                    </div>
+                </a>
+                @endif
+
+                {{-- Purchase Order --}}
+                @if (auth()->user()->canModule('purchase-order'))
+                <a href="{{ route('purchase-order') }}"
+                class="relative flex items-center w-full h-[65px] transition-colors
+                        {{ request()->is('purchase-order') || request()->is('purchase-order/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+
+                    @if(request()->is('purchase-order') || request()->is('purchase-order/*'))
+                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
+                    @endif
+
+                    <div class="sidebar-icon flex items-center gap-3">
+                        <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0 1 18 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3 1.5 1.5 3-3.75"/>
+                        </svg>
+                        <span class="label whitespace-nowrap">Purchase Order</span>
                     </div>
                 </a>
                 @endif
@@ -280,6 +298,18 @@
                             </svg>
                         </button>
 
+                        {{-- Cart quick view (opens a modal with the lines) --}}
+                        <div class="relative flex h-6 w-6 items-center justify-center">
+                            <button id="cartButton" type="button" aria-label="Purchase order cart" class="flex h-6 w-6 items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                                </svg>
+                            </button>
+                            @if ($headerCartCount > 0)
+                                <span class="pointer-events-none absolute -top-1 -right-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-teal-300 text-[10px] font-bold text-[#0e3a4c] leading-none">{{ $headerCartCount }}</span>
+                            @endif
+                        </div>
+
                         {{-- Notification bell --}}
                         <div class="relative flex h-6 w-6 items-center justify-center">
                             <button id="notifBell" type="button" aria-label="Delivery deadlines" class="flex h-6 w-6 items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer">
@@ -330,6 +360,91 @@
             </main>
         </div>
 
+    </div>
+
+    {{-- Cart quick view modal --}}
+    <div id="cartModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="cartModalTitle">
+        <div id="cartModalOverlay" class="absolute inset-0 bg-gray-900/60" data-close-cart></div>
+
+        <div class="relative flex max-h-[82vh] w-full max-w-lg flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+            <div class="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-5 py-3.5">
+                <div class="min-w-0">
+                    <h3 id="cartModalTitle" class="text-base font-bold text-gray-900">Purchase order cart</h3>
+                    <p class="mt-0.5 text-xs text-gray-500">{{ $headerCartCount }} line{{ $headerCartCount === 1 ? '' : 's' }}</p>
+                </div>
+                <div class="flex shrink-0 items-center gap-1.5">
+                    @if ($headerCartCount > 0 && $canManagePurchaseOrder)
+                        <form method="POST" action="{{ route('po-cart.clear') }}"
+                              onsubmit="return confirm('Clear your cart? Nothing will be ordered.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600">
+                                Clear all
+                            </button>
+                        </form>
+                    @endif
+                    <button type="button" data-close-cart aria-label="Close cart"
+                            class="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            @if ($headerCartCount === 0)
+                <div class="flex-1 px-5 py-12 text-center">
+                    <p class="text-sm font-medium text-gray-600">Your cart is empty.</p>
+                    <p class="mt-1 text-xs text-gray-500">Add lines from a quotation, or add the best prices from the Price Index.</p>
+                </div>
+            @else
+                <ul class="flex-1 divide-y divide-gray-100 overflow-y-auto">
+                    @foreach ($headerCartItems as $headerLine)
+                        @php
+                            $hItem = $headerLine->quotationItem?->preplistItem?->item;
+                            $hSupplier = $headerLine->quotationItem?->quotation?->supplier;
+                            $hUnit = $hItem?->unit ?? '';
+                        @endphp
+                        <li class="flex items-center gap-3 px-5 py-3">
+                            @if ($canManagePurchaseOrder)
+                                <form method="POST" action="{{ route('po-cart.remove', ['cartItem' => $headerLine->id]) }}" class="shrink-0">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" aria-label="Remove {{ $hItem?->name ?? 'item' }} from cart"
+                                            class="inline-flex rounded-md p-1.5 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-500">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                            @endif
+                            <div class="min-w-0 flex-1">
+                                <p class="break-words text-sm font-medium text-gray-900">{{ $hItem?->name ?? 'Item removed' }}</p>
+                                <p class="mt-0.5 truncate text-[11px] text-gray-400">
+                                    {{ $hSupplier?->name ?? 'Unknown supplier' }}
+                                    @if ($hUnit !== '') · {{ $hUnit }} @endif
+                                    · qty {{ $headerLine->qty }}
+                                </p>
+                            </div>
+                            <p class="shrink-0 text-sm font-semibold text-gray-800">₱ {{ number_format((float) ($headerLine->quotationItem?->unit_price ?? 0) * (int) $headerLine->qty, 2) }}</p>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="shrink-0 border-t border-gray-100 px-5 py-4">
+                    <div class="flex items-baseline justify-between">
+                        <span class="text-xs uppercase tracking-wide text-gray-500">Grand total</span>
+                        <span class="text-lg font-bold text-[#0e5266]">₱ {{ number_format($headerCartTotal, 2) }}</span>
+                    </div>
+                    <a href="{{ route('po-cart') }}"
+                       class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2a7a94] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#236b80]">
+                        Review &amp; checkout
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            @endif
+        </div>
     </div>
 
     {{-- Access restricted dialog (shared by data-access-restricted-modal-toggle) --}}
@@ -408,6 +523,52 @@
     const userMenuBtn = document.getElementById('userMenuBtn');
     const userMenu = document.getElementById('userMenu');
 
+    // Quick cart modal
+    const cartButton = document.getElementById('cartButton');
+    const cartModal = document.getElementById('cartModal');
+    const cartModalOverlay = document.getElementById('cartModalOverlay');
+    const cartCloseButtons = cartModal ? cartModal.querySelectorAll('[data-close-cart]') : [];
+
+    function openCartModal() {
+        if (!cartModal) {
+            return;
+        }
+        cartModal.classList.remove('hidden');
+        cartModal.classList.add('flex');
+        cartButton?.focus();
+    }
+
+    function closeCartModal() {
+        if (!cartModal || cartModal.classList.contains('hidden')) {
+            return;
+        }
+        cartModal.classList.add('hidden');
+        cartModal.classList.remove('flex');
+        cartButton?.focus();
+    }
+
+    cartButton?.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (cartModal?.classList.contains('hidden')) {
+            openCartModal();
+        } else {
+            closeCartModal();
+        }
+    });
+
+    cartCloseButtons.forEach(function (btn) {
+        btn.addEventListener('click', closeCartModal);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!cartModal || cartModal.classList.contains('hidden')) {
+            return;
+        }
+        if (!cartModal.contains(e.target) && !cartButton?.contains(e.target)) {
+            closeCartModal();
+        }
+    });
+
     function closeUserMenu() {
         userMenu.classList.add('hidden');
         userMenuBtn.setAttribute('aria-expanded', 'false');
@@ -429,6 +590,7 @@
         if (e.key === 'Escape') {
             closeUserMenu();
             closeSignoutModal();
+            closeCartModal();
         }
     });
 

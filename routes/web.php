@@ -93,6 +93,12 @@ Route::middleware(['auth', 'session.active'])->group(function () {
     Route::middleware('module:quotation')->group(function () {
         Route::get('/quotation', [QuotationController::class, 'index'])->name('quotation');
 
+        // Full preplist comparison page (rendered when a prep list title in
+        // the tracker is clicked) — one column per supplier + per-item suggestion.
+        Route::get('/quotation/preplist/{preplist}', [QuotationController::class, 'showPreplist'])
+            ->whereNumber('preplist')
+            ->name('quotation.show-preplist');
+
         Route::get('/quotation/{quotation}', [QuotationController::class, 'show'])
             ->whereNumber('quotation')
             ->name('quotation.show');
