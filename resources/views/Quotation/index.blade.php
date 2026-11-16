@@ -126,14 +126,30 @@
                         @forelse ($preplistGroups as $preplistGroup)
                             {{-- Group header: the row that contains the prep list. Clicking it
                                  expands/collapses the quotation rows underneath. --}}
+                            {{-- Group header (the bundle / "mother"): teal-tinted row with a #2a7a94
+                                 accent and a #0e5266 "Bundled" pill, matching the system theme.
+                                 Children stay white. --}}
                             <tr class="cursor-pointer select-none" data-group-toggle data-group-id="{{ $preplistGroup['preplist_id'] }}">
-                                <td colspan="1" class="bg-gray-50 px-6 py-3">
+                                <td colspan="1" class="bg-[#edf3f4] px-6 py-3 transition-colors hover:bg-[#dfe9eb]">
                                     <div class="flex items-center justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <a href="{{ route('quotation.show-preplist', ['preplist' => $preplistGroup['preplist_id']]) }}" class="text-sm font-bold text-gray-900 hover:text-[#2a7a94] hover:underline">{{ $preplistGroup['name'] }}</a>
-                                            <p class="mt-0.5 text-xs text-gray-500">{{ $preplistGroup['ref'] }}</p>
+                                        <div class="flex min-w-0 items-center gap-3 border-l-[3px] border-[#2a7a94] pl-3">
+                                            <div class="min-w-0">
+                                                <div class="flex items-center gap-2">
+                                                    <a href="{{ route('quotation.show-preplist', ['preplist' => $preplistGroup['preplist_id']]) }}" class="text-sm font-bold text-gray-900 hover:text-[#2a7a94] hover:underline">{{ $preplistGroup['name'] }}</a>
+                                                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#0e5266] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+                                                          title="Bundled — contains {{ count($preplistGroup['quotations']) }} child quotation{{ count($preplistGroup['quotations']) === 1 ? '' : 's' }}">
+                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3l9 5-9 5-9-5 9-5z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13l9 5 9-5"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 17.5l9 5 9-5"/>
+                                                        </svg>
+                                                        Bundled · {{ count($preplistGroup['quotations']) }}
+                                                    </span>
+                                                </div>
+                                                <p class="mt-0.5 text-xs text-gray-500">{{ $preplistGroup['ref'] }}</p>
+                                            </div>
                                         </div>
-                                        <svg class="preplist-group-chevron h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <svg class="preplist-group-chevron h-4 w-4 flex-shrink-0 text-[#2a7a94] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 18l6-6-6-6"/>
                                         </svg>
                                     </div>
@@ -149,7 +165,7 @@
                                     ? 'text-green-600'
                                     : ($isPartiallyQuoted ? 'text-amber-500' : 'text-gray-400');
                             @endphp
-                            <tr class="group cursor-pointer transition-colors odd:bg-white even:bg-[#f2f7f8] hover:bg-[#e4edf0]"
+                            <tr class="group cursor-pointer transition-colors bg-white hover:bg-[#e4edf0]"
                                 data-href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
                                 data-quotation-group="{{ $quotation['preplist_id'] }}">
                                 <td class="whitespace-nowrap px-6 py-4">
