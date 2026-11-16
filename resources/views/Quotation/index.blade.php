@@ -7,9 +7,9 @@
 @endsection
 
 @section('content')
-    <div class="pb-24">
+    <div class="flex h-full min-h-0 flex-col">
         {{-- Search and filter bar --}}
-        <div class="mb-6 flex items-center justify-between gap-4">
+        <div class="mb-6 flex shrink-0 items-center justify-between gap-4">
             <div class="flex items-center gap-4 flex-1">
                 <form method="GET" action="{{ route('quotation') }}" class="flex max-w-xl w-full items-center gap-2">
                     <div class="relative min-w-0 flex-1">
@@ -96,28 +96,26 @@
                     </div>
                 </div>
             </div>
-
-            <p class="text-xs text-gray-500">Supplier responses to sent RFQs</p>
         </div>
 
         {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
 
         @if ($errors->any())
-            <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {{ $errors->first() }}
             </div>
         @endif
 
         {{-- Quotation tracker --}}
-        <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div class="overflow-x-auto">
+        <div class="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="min-h-0 min-w-0 flex-1 overflow-auto">
                 <table class="w-full min-w-[720px] text-sm">
-                    <thead>
-                        <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    <thead class="sticky top-0 z-20 bg-[#0e5266]">
+                        <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
                             <th scope="col" class="whitespace-nowrap px-6 py-3">RFQ</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 expandable-col">Items quoted</th>
                             <th scope="col" class="whitespace-nowrap px-6 py-3 expandable-col">Status</th>
-                            <th scope="col" class="sticky right-0 z-20 bg-gray-50 px-6 py-3 text-center expandable-col">
+                            <th scope="col" class="sticky right-0 z-20 bg-[#0e5266] px-6 py-3 text-center expandable-col">
                                 Action
                             </th>
                         </tr>
@@ -151,7 +149,7 @@
                                     ? 'text-green-600'
                                     : ($isPartiallyQuoted ? 'text-amber-500' : 'text-gray-400');
                             @endphp
-                            <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
+                            <tr class="group cursor-pointer transition-colors odd:bg-white even:bg-[#f2f7f8] hover:bg-[#e4edf0]"
                                 data-href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}"
                                 data-quotation-group="{{ $quotation['preplist_id'] }}">
                                 <td class="whitespace-nowrap px-6 py-4">
@@ -174,7 +172,7 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="sticky right-0 z-10 bg-white px-6 py-4 text-center group-hover:bg-gray-50 expandable-col">
+                                <td class="sticky right-0 z-10 bg-inherit px-6 py-4 text-center expandable-col">
                                     <div class="relative inline-block text-left">
                                         <button type="button"
                                                 data-quotation-menu-toggle
@@ -242,11 +240,12 @@
             </div>
 
             @if ($groups->hasPages())
-                <div class="border-t border-gray-200 px-6 py-3">
+                <div class="shrink-0 border-t border-gray-200 px-6 py-3">
                     {{ $groups->links() }}
                 </div>
             @endif
         </div>
+    </div>
 
         @push('scripts')
         <script>
@@ -572,5 +571,4 @@
             })();
         </script>
         @endpush
-    </div>
 @endsection
