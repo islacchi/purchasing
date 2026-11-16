@@ -1128,22 +1128,53 @@
                 }
             }
 
+            // A completely blank row (every field empty, ignoring the delete
+            // tick) can be reused for pasted rows instead of being left
+            // stranded on top while new rows are appended below it.
+            function isRowEmpty(row) {
+                var fields = row.querySelectorAll('input, select');
+                for (var i = 0; i < fields.length; i++) {
+                    var field = fields[i];
+                    if (field.classList.contains('item-select')) continue;
+                    if (String(field.value).trim() !== '') return false;
+                }
+                return true;
+            }
+
             function insertRows() {
                 var mapping = parsed.mapping;
 
+                // Reuse blank rows already on the page — starting with the very
+                // first one (the seeded row) — and create new rows only for the
+                // remainder of the paste.
+                var emptyRows = [];
+                rowsContainer.querySelectorAll('.item-row').forEach(function (row) {
+                    if (isRowEmpty(row)) {
+                        emptyRows.push(row);
+                    }
+                });
+
                 parsed.rows.forEach(function (cells) {
                     var status = rowStatus(cells, mapping);
-                    var template = seedRowTemplate();
-                    var newIndex = rowsContainer.querySelectorAll('.item-row').length;
+                    var reusedRow = emptyRows.length > 0 ? emptyRows.shift() : null;
+                    var template = reusedRow || seedRowTemplate();
 
-                    template.querySelectorAll('input, select').forEach(function (field) {
-                        if (field.name) {
-                            field.name = field.name.replace(/items\[\d+\]/, 'items[' + newIndex + ']');
-                        }
-                        if (field.classList.contains('item-select')) {
+                    if (reusedRow) {
+                        template.querySelectorAll('.item-select').forEach(function (field) {
                             field.checked = false;
-                        }
-                    });
+                        });
+                    } else {
+                        var newIndex = rowsContainer.querySelectorAll('.item-row').length;
+
+                        template.querySelectorAll('input, select').forEach(function (field) {
+                            if (field.name) {
+                                field.name = field.name.replace(/items\[\d+\]/, 'items[' + newIndex + ']');
+                            }
+                            if (field.classList.contains('item-select')) {
+                                field.checked = false;
+                            }
+                        });
+                    }
 
                     var descriptionField = template.querySelector('[name$="[description]"]');
                     descriptionField.value = status.values.description;
@@ -1180,7 +1211,20 @@
                     if (tick) {
                         tick.checked = false;
                     }
-                    rowsContainer.appendChild(template);
+                    // Reused rows are already in the DOM; only new rows need appending.
+                    if (!reusedRow) {
+                        rowsContainer.appendChild(template);
+                    }
+                });
+
+                // Renumber every row sequentially so keys stay unique even if
+                // rows were deleted since the page loaded.
+                rowsContainer.querySelectorAll('.item-row').forEach(function (row, index) {
+                    row.querySelectorAll('input, select').forEach(function (field) {
+                        if (field.name) {
+                            field.name = field.name.replace(/items\[\d+\]/, 'items[' + index + ']');
+                        }
+                    });
                 });
 
                 if (itemsApi) {
