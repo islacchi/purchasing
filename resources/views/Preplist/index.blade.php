@@ -131,7 +131,7 @@
     <div class="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         <div class="min-h-0 min-w-0 flex-1 overflow-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="sticky top-0 z-20 bg-gray-50">
+                <thead class="sticky top-0 z-20 bg-[#0e5266]">
                     @php
                         $currentSort = $sort ?? 'date_desc';
                         $sortToggle = function (string $column) use ($search, $currentSort) {
@@ -143,25 +143,25 @@
                                 'aria' => $active ? ($currentSort === $asc ? 'ascending' : 'descending') : 'none',
                             ];
                         };
-                        $toggleClass = 'inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 transition-colors hover:text-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-teal-300 rounded-sm';
+                        $toggleClass = 'inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:text-teal-200 focus:outline-none focus:ring-2 focus:ring-teal-300 rounded-sm';
                     @endphp
                     <tr>
-                        <th class="px-6 py-3 text-left">
+                        <th class="px-6 py-2 text-left">
                             <a href="{{ $sortToggle('name')['url'] }}" aria-sort="{{ $sortToggle('name')['aria'] }}" class="{{ $toggleClass }}">Name</a>
                         </th>
-                        <th class="px-6 py-3 text-left">
+                        <th class="px-6 py-2 text-left">
                             <a href="{{ $sortToggle('created_by')['url'] }}" aria-sort="{{ $sortToggle('created_by')['aria'] }}" class="{{ $toggleClass }}">Created by</a>
                         </th>
-                        <th class="px-6 py-3 text-left">
+                        <th class="px-6 py-2 text-left">
                             <a href="{{ $sortToggle('date')['url'] }}" aria-sort="{{ $sortToggle('date')['aria'] }}" class="{{ $toggleClass }}">Date Created</a>
                         </th>
-                        <th class="px-6 py-3 text-left">
+                        <th class="px-6 py-2 text-left">
                             <a href="{{ $sortToggle('projects')['url'] }}" aria-sort="{{ $sortToggle('projects')['aria'] }}" class="{{ $toggleClass }}">Projects</a>
                         </th>
-                        <th class="px-6 py-3 text-center">
+                        <th class="px-6 py-2 text-center">
                             <a href="{{ $sortToggle('items')['url'] }}" aria-sort="{{ $sortToggle('items')['aria'] }}" class="{{ $toggleClass }}">Total Items</a>
                         </th>
-                        <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                        <th class="px-6 py-2 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
@@ -170,7 +170,7 @@
                             $sourceProjects = $preplist->sourceProjects();
                             $quotationCount = $quotationCounts[$preplist->id] ?? 0;
                         @endphp
-                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                        <tr class="odd:bg-white even:bg-[#f2f7f8] transition-colors cursor-pointer hover:bg-[#e4edf0]"
                             data-href="{{ route('preplist.show', ['preplist' => $preplist->id]) }}">
                             <td class="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                                 {{ $preplist->name }}
