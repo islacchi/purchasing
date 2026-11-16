@@ -12,8 +12,11 @@
         </div>
     @endif
 
+    {{-- Flex column: the toolbar stays fixed while the table stretches and scrolls internally --}}
+    <div class="flex h-full min-h-0 flex-col">
+
     {{-- Search and actions bar --}}
-    <div class="mb-6 flex items-center justify-between gap-4">
+    <div class="mb-6 flex shrink-0 items-center justify-between gap-4">
         <div class="flex items-center gap-4 flex-1">
             <form method="GET" action="{{ route('preplist') }}" class="flex max-w-xl w-full items-center gap-2">
                 {{-- Preserve the current date-sort across explicit searches. --}}
@@ -125,10 +128,10 @@
         @endif
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div class="overflow-x-auto">
+    <div class="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div class="min-h-0 min-w-0 flex-1 overflow-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+                <thead class="sticky top-0 z-20 bg-gray-50">
                     @php
                         $currentSort = $sort ?? 'date_desc';
                         $sortToggle = function (string $column) use ($search, $currentSort) {
@@ -252,10 +255,11 @@
         </div>
 
         @if ($preplists->hasPages())
-            <div class="border-t border-gray-200 px-6 py-3">
+            <div class="shrink-0 border-t border-gray-200 px-6 py-3">
                 {{ $preplists->links() }}
             </div>
         @endif
+    </div>
     </div>
 
     <script>
