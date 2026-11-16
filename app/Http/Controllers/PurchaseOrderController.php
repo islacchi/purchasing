@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\NumberSequence;
 use App\Models\PreplistItem;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
-use App\Models\PurchaseOrderItemAllocation;
 use App\Models\PurchaseOrderReceipt;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\ActivityLogger;
 use App\Support\Pagination;
+use App\Support\PurchaseOrderCreator;
 use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -241,71 +240,12 @@ class PurchaseOrderController extends Controller
         }
 
         try {
-            $purchaseOrder = DB::transaction(function () use ($request, $validated, $quotation, $lines) {
-                $purchaseOrder = PurchaseOrder::create([
-                    'quotation_id' => $quotation->id,
-                    'supplier_id' => $quotation->supplier_id,
-                    'created_by' => $request->user()->id,
-                    'po_number' => $this->nextPoNumber(),
-                    'status' => PurchaseOrder::STATUS_DRAFT,
-                    'expected_delivery_on' => $validated['expected_delivery'] ?? null,
-                    'payment_terms' => $validated['payment_terms'] ?? null,
-                    'deliver_to' => $validated['deliver_to'] ?? null,
-                    'delivery_fee' => 0,
-                    'notes' => $validated['notes'] ?? null,
-                ]);
-
-                foreach ($lines as $line) {
-                    /** @var PreplistItem $preplistItem */
-                    $preplistItem = $line['preplist_item'];
-
-                    $purchaseOrderItem = PurchaseOrderItem::create([
-                        'purchase_order_id' => $purchaseOrder->id,
-                        'quotation_item_id' => $line['quotation_item']->id,
-                        'item_id' => $preplistItem->item_id,
-                        'qty' => $line['qty'],
-                        'unit_price' => $line['unit_price'],
-                        'min_remaining_months' => $line['min_remaining_months'],
-                    ]);
-
-                    // Allocate the ordered quantity across the prep list's project
-                    // sources in proportion to what each source still needs
-                    // (awarded quantity minus on-hand stock).
-                    $sources = $preplistItem->sources->values();
-                    $shares = $sources->map(fn ($source) => $source->projectItem?->remainingQuantity() ?? 0);
-                    $totalRequested = (int) $shares->sum();
-                    $remaining = $line['qty'];
-                    $lastPositiveIndex = $shares->filter(fn ($share) => $share > 0)->keys()->last();
-
-                    foreach ($sources as $index => $source) {
-                        $weight = $shares[$index];
-
-                        if ($totalRequested > 0) {
-                            $share = $lastPositiveIndex !== null && $index === $lastPositiveIndex
-                                ? $remaining
-                                : (int) floor($line['qty'] * $weight / $totalRequested);
-                        } else {
-                            $share = $index === 0 ? $line['qty'] : 0;
-                        }
-
-                        $remaining -= $share;
-
-                        if ($share <= 0) {
-                            continue;
-                        }
-
-                        PurchaseOrderItemAllocation::create([
-                            'purchase_order_item_id' => $purchaseOrderItem->id,
-                            'project_item_id' => $source->project_item_id,
-                            'qty' => $share,
-                        ]);
-                    }
-                }
-
-                ActivityLogger::log('Created', 'Purchase Order', $purchaseOrder->po_number, $purchaseOrder);
-
-                return $purchaseOrder;
-            });
+            $purchaseOrder = PurchaseOrderCreator::createFor($request->user()->id, $lines, [
+                'expected_delivery' => $validated['expected_delivery'] ?? null,
+                'payment_terms' => $validated['payment_terms'] ?? null,
+                'deliver_to' => $validated['deliver_to'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+            ]);
         } catch (QueryException $exception) {
             $this->throwIfUniqueViolation($exception);
         }
@@ -487,32 +427,5 @@ class PurchaseOrderController extends Controller
                 default => PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
             },
         ]);
-    }
-
-    /**
-     * Generate the next purchase order number for the current year.
-     */
-    private function nextPoNumber(): string
-    {
-        $year = (int) now()->year;
-
-        $sequence = NumberSequence::query()
-            ->where('key', 'po')
-            ->where('year', $year)
-            ->lockForUpdate()
-            ->first();
-
-        if ($sequence === null) {
-            $sequence = NumberSequence::query()->create([
-                'key' => 'po',
-                'year' => $year,
-                'last_number' => 0,
-            ]);
-        }
-
-        $sequence->last_number++;
-        $sequence->save();
-
-        return sprintf('PO-%d-%04d', $year, $sequence->last_number);
     }
 }

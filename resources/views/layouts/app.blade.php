@@ -186,6 +186,29 @@
                 </a>
                 @endif
 
+                {{-- PO Cart --}}
+                @php
+                    $cartCount = auth()->user()?->poCartItems()->count() ?? 0;
+                @endphp
+                @if (auth()->user()->canModule('purchase-order'))
+                <a href="{{ route('po-cart') }}"
+                   class="relative flex items-center w-full h-[65px] transition-colors
+                          {{ request()->is('cart') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                    @if(request()->is('cart'))
+                        <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
+                    @endif
+                    <div class="sidebar-icon flex items-center gap-3">
+                        <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                        </svg>
+                        <span class="label whitespace-nowrap">PO Cart</span>
+                        @if ($cartCount > 0)
+                            <span class="ml-auto inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-teal-300 px-1.5 text-[11px] font-bold leading-none text-[#0e3a4c]">{{ $cartCount }}</span>
+                        @endif
+                    </div>
+                </a>
+                @endif
+
                 {{-- Entities --}}
                 @if (auth()->user()->canModule('entities'))
                 <a href="{{ route('entities') }}"

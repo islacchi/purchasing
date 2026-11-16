@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\PoCartItem;
 use App\Models\ProjectItem;
 use App\Models\QuotationItem;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 class PriceIndexController extends Controller
@@ -25,7 +27,7 @@ class PriceIndexController extends Controller
     /**
      * Show the price index built from submitted quotation lines.
      */
-    public function index()
+    public function index(Request $request)
     {
         // Requested quantities and the projects that requested each item.
         $projectRows = ProjectItem::query()
@@ -145,6 +147,7 @@ class PriceIndexController extends Controller
                         'expiry_state' => $expiryState,
                         'quoted_at' => $quotedAt ? Carbon::parse($quotedAt)->format('M j, Y') : '—',
                         'quotation_id' => (int) $row->quotation_id,
+                        'quotation_item_id' => (int) $row->id,
                     ];
                 })
                 ->sortBy('price')
@@ -272,6 +275,12 @@ class PriceIndexController extends Controller
         $avgSpread = $spreadCount ? $spreadSum / $spreadCount : 0;
         $activeSuppliers = count(array_filter($scorecard, fn ($row) => $row['quotes'] > 0));
 
+        // Which quotation lines are already in this user's PO cart.
+        $cartQuoteItemIds = PoCartItem::query()
+            ->where('user_id', $request->user()?->id)
+            ->pluck('quotation_item_id')
+            ->flip();
+
         return view('Priceindex.index', compact(
             'items',
             'suppliers',
@@ -284,6 +293,7 @@ class PriceIndexController extends Controller
             'spreadCount',
             'activeSuppliers',
             'projectOptions',
+            'cartQuoteItemIds',
         ));
     }
 

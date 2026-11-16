@@ -51,6 +51,14 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class);
     }
 
+    /**
+     * Lines the user has staged in their purchase order cart.
+     */
+    public function poCartItems()
+    {
+        return $this->hasMany(PoCartItem::class);
+    }
+
     public function isAdministrator(): bool
     {
         return $this->role?->name === 'Administrator';

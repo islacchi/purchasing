@@ -22,6 +22,17 @@
             </p>
 
             <div class="flex items-center gap-2">
+                <form method="POST" action="{{ route('po-cart.bulk-add') }}">
+                    @csrf
+                    <button type="submit"
+                            class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#236b80]"
+                            title="Add the cheapest quoted line for every item to your PO cart">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                        </svg>
+                        Add all best prices to cart
+                    </button>
+                </form>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
                     <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
                     Live quotation data
@@ -157,6 +168,7 @@
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Average</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Variance</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3">Trend</th>
+                                <th scope="col" class="w-14 px-6 py-3 text-center">Cart</th>
                                 <th scope="col" class="w-14 px-6 py-3 text-center">Action</th>
                             </tr>
                         </thead>
@@ -168,6 +180,8 @@
                                     $isComparable = $stats['count'] > 1;
                                     $bestSupplier = $stats['best_supplier'] ? $suppliers[$stats['best_supplier']] : null;
                                     $variance = $isComparable && $stats['avg'] > 0 ? ((1 - ($stats['best'] / $stats['avg'])) * 100) : null;
+                                    $bestLineId = $hasQuotes ? (collect($item['quotes'])->sortBy('price')->first()['quotation_item_id'] ?? null) : null;
+                                    $bestLineInCart = $bestLineId !== null && $cartQuoteItemIds->has($bestLineId);
                                 @endphp
                                 <tr class="group price-row transition-colors {{ $hasQuotes ? 'cursor-pointer hover:bg-gray-50' : 'bg-gray-50/40' }}"
                                     data-item-id="{{ $item['id'] }}"
@@ -241,6 +255,31 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 text-center">
+                                        @if (! $hasQuotes || $bestLineId === null)
+                                            <span class="text-gray-300">-</span>
+                                        @elseif ($bestLineInCart)
+                                            <span class="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-[#2a7a94]" title="Already in your PO cart">
+                                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                                In cart
+                                            </span>
+                                        @else
+                                            <form method="POST" action="{{ route('po-cart.add') }}">
+                                                @csrf
+                                                <input type="hidden" name="quotation_item_id" value="{{ $bestLineId }}">
+                                                <button type="submit"
+                                                        title="Add best price quote to cart ({{ $bestSupplier['short'] ?? $bestSupplier['name'] ?? '' }})"
+                                                        aria-label="Add best price quote to cart for {{ $item['name'] }}"
+                                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#2a7a94]/10 hover:text-[#2a7a94]">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
                                         @if ($hasQuotes)
                                             <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors group-hover:bg-[#2a7a94]/10 group-hover:text-[#2a7a94]" title="Compare quotes">
                                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -248,13 +287,13 @@
                                                 </svg>
                                             </span>
                                         @else
-                                            <span class="text-gray-300">—</span>
+                                            <span class="text-gray-300">-</span>
                                         @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="px-6 py-12 text-center">
+                                    <td colspan="10" class="px-6 py-12 text-center">
                                         <p class="text-sm font-medium text-gray-600">No items with quotation activity yet.</p>
                                         <p class="mt-1 text-xs text-gray-500">Items appear here once a project requests them or a supplier quotes them.</p>
                                     </td>
@@ -278,6 +317,7 @@
                         <thead>
                             <tr class="border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
                                 <th scope="col" class="sticky left-0 z-10 whitespace-nowrap border-r border-gray-200 bg-gray-50 px-6 py-3 text-left">Item</th>
+                                <th scope="col" class="w-16 px-3 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Cart</th>
                                 @foreach ($suppliers as $supplier)
                                     <th scope="col" class="whitespace-nowrap px-5 py-3 text-center">
                                         <span class="inline-flex max-w-[12rem] items-center gap-2" title="{{ $supplier['name'] }}">
@@ -298,6 +338,34 @@
                                     <td class="sticky left-0 z-10 border-r border-gray-200 bg-white px-6 py-4 break-words">
                                         <p class="font-semibold text-gray-900 break-words">{{ $item['name'] }}</p>
                                         <p class="mt-0.5 text-xs text-gray-500">{{ $item['unit'] }}</p>
+                                    </td>
+                                    @php
+                                        $matrixHasQuotes = $item['stats']['count'] > 0;
+                                        $matrixBestLineId = $matrixHasQuotes
+                                            ? (collect($item['quotes'])->sortBy('price')->first()['quotation_item_id'] ?? null)
+                                            : null;
+                                        $matrixBestInCart = $matrixBestLineId !== null
+                                            && $cartQuoteItemIds->has($matrixBestLineId);
+                                    @endphp
+                                    <td class="border-r border-gray-200 px-3 py-4 text-center">
+                                        @if (! $matrixHasQuotes || $matrixBestLineId === null)
+                                            <span class="text-gray-300">-</span>
+                                        @elseif ($matrixBestInCart)
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-1 text-[10px] font-semibold text-[#2a7a94]" title="Already in your PO cart">In cart</span>
+                                        @else
+                                            <form method="POST" action="{{ route('po-cart.add') }}">
+                                                @csrf
+                                                <input type="hidden" name="quotation_item_id" value="{{ $matrixBestLineId }}">
+                                                <button type="submit"
+                                                        title="Add best price quote to cart"
+                                                        aria-label="Add best price quote to cart for {{ $item['name'] }}"
+                                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#2a7a94]/10 hover:text-[#2a7a94]">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </td>
                                     @foreach ($suppliers as $key => $supplier)
                                         @php
@@ -324,7 +392,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ count($suppliers) + 1 }}" class="px-6 py-12 text-center">
+                                    <td colspan="{{ count($suppliers) + 2 }}" class="px-6 py-12 text-center">
                                         <p class="text-sm font-medium text-gray-600">No items with quotation activity yet.</p>
                                     </td>
                                 </tr>
@@ -355,10 +423,24 @@
                         <h2 class="text-sm font-bold uppercase tracking-wider text-gray-700">Item comparison</h2>
                         <p id="compareSubtitle" class="mt-0.5 text-xs text-gray-500">Select an item from the board to compare its quotes.</p>
                     </div>
-                    <span id="compareBadge" class="hidden inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
-                        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                        Lowest price
-                    </span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span id="compareBadge" class="hidden inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                            Lowest price
+                        </span>
+                        <form id="compareCartForm" method="POST" action="{{ route('po-cart.add') }}" class="hidden">
+                            @csrf
+                            <input type="hidden" name="quotation_item_id" id="compareCartItemId" value="">
+                            <button type="submit" id="compareCartBtn"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-[#2a7a94] bg-white px-3 py-1.5 text-xs font-semibold text-[#2a7a94] transition-colors hover:bg-[#2a7a94]/10"
+                                    title="Add the lowest-priced quote for this item to your PO cart">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                                </svg>
+                                Add best price to cart
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
                 <div id="compareBody" class="px-6 py-5">
@@ -497,6 +579,7 @@
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Average</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Qty</th>
                                 <th scope="col" class="whitespace-nowrap px-6 py-3 text-right">Potential savings</th>
+                                <th scope="col" class="w-14 px-6 py-3 text-center">Cart</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -506,6 +589,8 @@
                                     $bestSupplier = $stats['best_supplier'] !== null
                                         ? ($suppliers[$stats['best_supplier']] ?? null)
                                         : null;
+                                    $savingsBestLineId = collect($item['quotes'])->sortBy('price')->first()['quotation_item_id'] ?? null;
+                                    $savingsBestInCart = $savingsBestLineId !== null && $cartQuoteItemIds->has($savingsBestLineId);
                                 @endphp
                                 <tr class="savings-row transition-colors hover:bg-gray-50"
                                     data-name="{{ strtolower($item['name'] . ' ' . $item['unit']) }}"
@@ -528,12 +613,32 @@
                                     <td class="break-words px-6 py-4 text-right text-gray-500">{{ $peso($stats['avg']) }}</td>
                                     <td class="whitespace-nowrap px-6 py-4 text-right text-gray-700">{{ $item['requested'] }}</td>
                                     <td class="break-words px-6 py-4 text-right font-bold text-gray-900">{{ $peso($stats['savings']) }}</td>
+                                    <td class="px-6 py-4 text-center">
+                                        @if ($savingsBestLineId === null)
+                                            <span class="text-gray-300">-</span>
+                                        @elseif ($savingsBestInCart)
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-1 text-[10px] font-semibold text-[#2a7a94]" title="Already in your PO cart">In cart</span>
+                                        @else
+                                            <form method="POST" action="{{ route('po-cart.add') }}">
+                                                @csrf
+                                                <input type="hidden" name="quotation_item_id" value="{{ $savingsBestLineId }}">
+                                                <button type="submit"
+                                                        title="Add best price quote to cart"
+                                                        aria-label="Add best price quote to cart for {{ $item['name'] }}"
+                                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-[#2a7a94]/10 hover:text-[#2a7a94]">
+                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
                         <tfoot>
                             <tr class="border-t border-gray-200 bg-gray-50">
-                                <td colspan="4" class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Total potential savings</td>
+                                <td colspan="5" class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Total potential savings</td>
                                 <td class="break-words px-6 py-4 text-right text-base font-bold text-green-700">{{ $peso($totalSavings) }}</td>
                             </tr>
                         </tfoot>
@@ -610,6 +715,8 @@
             const compareBody = document.getElementById('compareBody');
             const compareSubtitle = document.getElementById('compareSubtitle');
             const compareBadge = document.getElementById('compareBadge');
+            const compareCartForm = document.getElementById('compareCartForm');
+            const compareCartItemId = document.getElementById('compareCartItemId');
             const trendSubtitle = document.getElementById('trendSubtitle');
             const trendLegend = document.getElementById('trendLegend');
             const trendEmpty = document.getElementById('trendEmpty');
@@ -632,6 +739,9 @@
 
                 compareSubtitle.textContent = 'Select an item from the board to compare its quotes.';
                 compareBadge.classList.add('hidden');
+                if (compareCartForm) {
+                    compareCartForm.classList.add('hidden');
+                }
                 compareBody.innerHTML = comparePlaceholder;
 
                 if (chart) {
@@ -676,6 +786,9 @@
                 compareSubtitle.textContent = subtitleParts.join(' · ');
                 if (!item.count) {
                     compareBadge.classList.add('hidden');
+                    if (compareCartForm) {
+                        compareCartForm.classList.add('hidden');
+                    }
                     compareBody.innerHTML =
                         '<div class="py-10 text-center">'
                         + '<p class="text-sm font-medium text-gray-600">No submitted quotes for this item yet.</p>'
@@ -686,6 +799,10 @@
 
                 const sorted = item.quotes.slice().sort(function (a, b) { return a.price - b.price; });
                 const bestQuote = sorted[0];
+                if (compareCartForm && compareCartItemId) {
+                    compareCartItemId.value = bestQuote ? String(bestQuote.quotation_item_id) : '';
+                    compareCartForm.classList.toggle('hidden', !bestQuote);
+                }
                 const isComparable = item.count > 1;
                 const delta = isComparable && item.avg > 0 ? ((1 - (item.best / item.avg)) * 100) : null;
 

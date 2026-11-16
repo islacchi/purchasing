@@ -560,12 +560,13 @@ class QuotationTest extends TestCase
             ->get(route('quotation.show', ['quotation' => $quotation->id]))
             ->assertOk()
             ->assertSee('<button type="button" data-access-restricted-modal-toggle', false)
-            ->assertDontSee(route('purchase-order.create', ['rfq' => $quotation->id]), false);
+            ->assertDontSee(route('po-cart.add'), false);
 
+        // Manage users see the live Add to cart form (no link to the old create screen).
         $this->actingAs($user)
             ->get(route('quotation.show', ['quotation' => $quotation->id]))
             ->assertOk()
-            ->assertSee(route('purchase-order.create', ['rfq' => $quotation->id]), false)
+            ->assertSee(route('po-cart.add'), false)
             ->assertDontSee('<button type="button" data-access-restricted-modal-toggle', false);
     }
 
@@ -612,7 +613,7 @@ class QuotationTest extends TestCase
             ->assertDontSee('data-expiry-status="close"', false)
             ->assertSee('Remove quotation')
             ->assertSee(route('quotation.destroy-document', ['quotation' => $quotation->id]), false)
-            ->assertSee(route('purchase-order.create', ['rfq' => $quotation->id]), false);
+            ->assertSee(route('po-cart.add'), false);
     }
 
     public function test_quotation_show_flags_an_expiry_that_does_not_cover_the_delivery(): void

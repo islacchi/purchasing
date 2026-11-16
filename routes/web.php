@@ -16,6 +16,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\PreplistController;
 use App\Http\Controllers\PriceIndexController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\PoCartController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\SettingsController;
@@ -161,6 +162,17 @@ Route::middleware(['auth', 'session.active'])->group(function () {
     Route::middleware('module:purchase-order')->group(function () {
         // Purchase orders generated from awarded quotations.
         Route::get('/purchase-order', [PurchaseOrderController::class, 'index'])->name('purchase-order');
+
+        // PO cart: per-user staging of awarded quotation lines, grouped by
+        // supplier, reviewed before checkout drafts the purchase orders.
+        Route::get('/cart', [PoCartController::class, 'index'])->name('po-cart');
+        Route::post('/cart/items', [PoCartController::class, 'store'])->name('po-cart.add');
+        Route::post('/cart/bulk-add-best', [PoCartController::class, 'bulkAddBestPrices'])->name('po-cart.bulk-add');
+        Route::patch('/cart/items/{cartItem}', [PoCartController::class, 'update'])->whereNumber('cartItem')->name('po-cart.update');
+        Route::delete('/cart/items/{cartItem}', [PoCartController::class, 'destroy'])->whereNumber('cartItem')->name('po-cart.remove');
+        Route::delete('/cart', [PoCartController::class, 'clear'])->name('po-cart.clear');
+        Route::post('/cart/checkout', [PoCartController::class, 'checkout'])->name('po-cart.checkout');
+
 
         // Purchase order preparation screen, opened by the quotation page's
         // "Proceed to PO" button: pick the quoted items to order and set the

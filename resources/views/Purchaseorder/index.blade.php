@@ -236,7 +236,7 @@
                                     @if ($search !== '' || $supplier !== '' || $status !== '')
                                         No purchase orders match the current filters. Try clearing the search or choosing another status.
                                     @else
-                                        No purchase orders yet. Purchase orders are created from a supplier quotation using “Proceed to PO”.
+                                        No purchase orders yet. Purchase orders are created from a supplier quotation — click "Add to cart" on the quotation, then "Checkout" on the PO Cart.
                                     @endif
                                 </td>
                             </tr>
