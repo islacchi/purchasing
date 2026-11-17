@@ -60,13 +60,34 @@
         </div>
     @endif
 
-    @if ($quotationCount > 0)
+    @php
+        $hasLinked = isset($linkedQuotations) && $linkedQuotations->isNotEmpty();
+        $hasBlocked = isset($blockedQuotations) && $blockedQuotations->isNotEmpty();
+    @endphp
+
+    @if ($hasBlocked)
         {{-- Fixed overlay — floats above the view; does not affect layout --}}
         <div id="quotationWarningBanner" class="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-lg" role="alert">
-            <p class="font-semibold">This prep list cannot be deleted.</p>
-            <p class="mt-0.5 text-xs text-amber-700">
-                It is already referenced by {{ $quotationCount }} quotation{{ $quotationCount === 1 ? '' : 's' }}. Remove the quotation{{ $quotationCount === 1 ? '' : 's' }} first.
-            </p>
+            <div>
+                <p class="font-semibold">This prep list cannot be deleted yet.</p>
+                <p class="mt-0.5 text-xs text-amber-700">
+                    It is linked to progressed quotation{{ $blockedQuotations->count() === 1 ? '' : 's' }}. Remove the supplier data first:
+                </p>
+                <ul class="mt-2 space-y-0.5 text-xs text-amber-700">
+                    @foreach ($blockedQuotations as $quotation)
+                        <li>&bull; {{ $quotation->rfq_number ?: 'Quotation #'.$quotation->id }} ({{ $quotation->supplier?->name ?? 'Supplier removed' }}) —
+                            @php
+                                $reasons = array_values(array_filter([
+                                    ($quotation->priced_items_count ?? 0) > 0 ? 'has priced items' : null,
+                                    $quotation->document_path ? 'a file was uploaded' : null,
+                                    \App\Models\PurchaseOrder::query()->where('quotation_id', $quotation->id)->exists() ? 'a purchase order references it' : null,
+                                ]));
+                                echo implode(', ', $reasons);
+                            @endphp
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
         </div>
     @endif
 
@@ -169,10 +190,10 @@
             Back to list
         </a>
         <div class="flex items-center gap-3">
-        @if ($quotationCount > 0)
+        @if ($hasBlocked ?? false)
             <button type="button" disabled
                     class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-200 text-sm font-medium text-gray-400 cursor-not-allowed"
-                    title="Already referenced by a quotation and cannot be deleted">
+                    title="Linked quotations with supplier data (prices/documents/POs) must be cleared first">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -250,6 +271,16 @@
                         <span class="font-medium text-gray-700">{{ $preplist->name }}</span>
                         and all of its items will be permanently deleted. This action cannot be undone.
                     </p>
+                    @if (isset($linkedQuotations) && $linkedQuotations->isNotEmpty())
+                        <div class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                            <p class="font-semibold">These quotations will also be deleted (no supplier data yet):</p>
+                            <ul class="mt-1 space-y-0.5">
+                                @foreach ($linkedQuotations as $quotation)
+                                    <li>&bull; {{ $quotation->rfq_number ?: 'Quotation #'.$quotation->id }} ({{ $quotation->supplier?->name ?? 'Supplier removed' }})</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                 </div>
             </div>
 

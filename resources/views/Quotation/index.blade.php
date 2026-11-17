@@ -212,7 +212,7 @@
                                         <div data-quotation-menu
                                              role="menu"
                                              class="fixed z-50 hidden w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                                            @if ($quotation['status'] === 'Awaiting quote')
+                                            @if ($quotation['status'] === 'Awaiting quote' || $quotation['orphaned'])
                                             <form method="POST" action="{{ route('quotation.destroy', ['quotation' => $quotation['id']]) }}">
                                                 @csrf
                                                 @method('DELETE')

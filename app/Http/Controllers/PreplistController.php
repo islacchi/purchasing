@@ -8,6 +8,7 @@ use App\Models\PreplistItem;
 use App\Models\PreplistItemSource;
 use App\Models\Project;
 use App\Models\ProjectItem;
+use App\Models\PurchaseOrder;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Models\User;
@@ -16,7 +17,9 @@ use App\Support\Pagination;
 use App\Support\RfqQuotationWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use ZipArchive;
@@ -123,11 +126,34 @@ class PreplistController extends Controller
 
         $preplists = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
 
-        $quotationCounts = Quotation::query()
-            ->select('preplist_id', DB::raw('COUNT(*) as aggregate'))
-            ->whereIn('preplist_id', $preplists->pluck('id'))
-            ->groupBy('preplist_id')
-            ->pluck('aggregate', 'preplist_id');
+        // Compute which prep lists are blocked from deletion, using the same
+        // progressed-quotation rule as the detail page: a quotation is progressed
+        // once it has priced lines, an uploaded document, or a PO reference.
+        $pageIds = $preplists->pluck('id');
+        $linked = Quotation::query()
+            ->whereIn('preplist_id', $pageIds)
+            ->withCount(['items as priced_items_count' => fn ($q) => $q->whereNotNull('unit_price')])
+            ->get(['id', 'preplist_id', 'document_path']);
+
+        $poRefIds = $linked->isEmpty()
+            ? collect()
+            : PurchaseOrder::query()
+                ->whereIn('quotation_id', $linked->pluck('id'))
+                ->distinct()
+                ->pluck('quotation_id');
+
+        $poRefLookup = array_flip($poRefIds->all());
+        $blockedByPreplistId = [];
+
+        foreach ($linked as $quotation) {
+            $blocked = ($quotation->priced_items_count ?? 0) > 0
+                || $quotation->document_path !== null
+                || isset($poRefLookup[$quotation->id]);
+
+            if ($blocked) {
+                $blockedByPreplistId[$quotation->preplist_id] = true;
+            }
+        }
 
         $developers = User::query()
             ->whereIn('id', Preplist::query()->select('created_by'))
@@ -139,7 +165,7 @@ class PreplistController extends Controller
         $activeFilters = collect([$createdBy !== '' ? $createdBy : null, $categoryAllowed, $quote !== '' ? $quote : null])->filter()->count();
         $filtersActive = $activeFilters > 0;
 
-        return view('Preplist.index', compact('preplists', 'search', 'sort', 'quotationCounts', 'perPage', 'createdBy', 'categoryAllowed', 'quote', 'developers', 'quoteOptions', 'filtersActive', 'activeFilters'));
+        return view('Preplist.index', compact('preplists', 'search', 'sort', 'perPage', 'createdBy', 'categoryAllowed', 'quote', 'developers', 'quoteOptions', 'filtersActive', 'activeFilters', 'blockedByPreplistId'));
     }
 
     /**
@@ -194,9 +220,25 @@ class PreplistController extends Controller
     {
         $preplist->load(['creator', 'items.item', 'items.sources.projectItem.project']);
 
-        $quotationCount = Quotation::query()->where('preplist_id', $preplist->id)->count();
+        // Linked quotations with enough information to render the deletion UI.
+        // a quotation is "progressed" once it carries anything supplier-side:
+        // an uploaded document, priced lines, or a PO reference.
+        $linkedQuotations = Quotation::query()
+            ->with('supplier')
+            ->withCount(['items as priced_items_count' => fn ($query) => $query->whereNotNull('unit_price')])
+            ->where('preplist_id', $preplist->id)
+            ->get();
 
-        return view('Preplist.show', compact('preplist', 'quotationCount'));
+        foreach ($linkedQuotations as $quotation) {
+            $quotation->blocked = ($quotation->priced_items_count ?? 0) > 0
+                || $quotation->document_path !== null
+                || PurchaseOrder::query()->where('quotation_id', $quotation->id)->exists();
+        }
+
+        $blockedQuotations = $linkedQuotations->where('blocked', true)->values();
+        $quotationCount = $linkedQuotations->count();
+
+        return view('Preplist.show', compact('preplist', 'quotationCount', 'linkedQuotations', 'blockedQuotations'));
     }
 
     /**
@@ -271,19 +313,66 @@ class PreplistController extends Controller
     }
 
     /**
-     * Soft-delete a prep list. A prep list that is already referenced by at
-     * least one quotation cannot be deleted.
+     * Soft-delete a prep list. Hard-deletes every linked quotation that is
+     * still unprogressed (no prices, no document, no PO reference). A prep
+     * list with at least one progressed quotation cannot be deleted.
      */
     public function destroy(Preplist $preplist)
     {
-        $quotationCount = Quotation::query()->where('preplist_id', $preplist->id)->count();
+        $linkedQuotations = Quotation::query()
+            ->with('supplier:id,name')
+            ->where('preplist_id', $preplist->id)
+            ->get();
 
-        if ($quotationCount > 0) {
-            return back()
-                ->withErrors(['preplist' => 'This prep list cannot be deleted because it is already referenced by '.$quotationCount.' quotation'.($quotationCount === 1 ? '' : 's').'. Remove it from the quotation(s) first.']);
+        $blocking = [];
+
+        foreach ($linkedQuotations as $quotation) {
+            $poCount = PurchaseOrder::query()
+                ->where('quotation_id', $quotation->id)
+                ->count();
+
+            $reasons = array_values(array_filter([
+                $quotation->quotedItems()->exists() ? 'has priced items' : null,
+                $quotation->document_path ? 'a file was uploaded' : null,
+                $poCount > 0 ? "referenced by {$poCount} purchase order".($poCount === 1 ? '' : 's') : null,
+            ]));
+
+            if ($reasons !== []) {
+                $blocking[] = [
+                    'rfq_number' => $quotation->rfq_number ?: 'Quotation #'.$quotation->id,
+                    'supplier' => $quotation->supplier?->name ?? 'Supplier removed',
+                    'reasons' => implode(', ', $reasons),
+                ];
+            }
         }
 
-        DB::transaction(function () use ($preplist) {
+        if ($blocking !== []) {
+            $summary = collect($blocking)
+                ->map(fn ($block) => $block['rfq_number'].' ('.$block['supplier'].') — '.$block['reasons'])
+                ->implode('; ');
+
+            return back()
+                ->withErrors(['preplist' => 'This prep list cannot be deleted because it is linked to progressed quotation(s): '.$summary.'.']);
+        }
+
+        DB::transaction(function () use ($linkedQuotations, $preplist) {
+            foreach ($linkedQuotations as $quotation) {
+                if ($quotation->document_path) {
+                    Storage::disk('local')->delete($quotation->document_path);
+                }
+
+                $quotation->items()->delete();
+
+                ActivityLogger::log(
+                    'Deleted',
+                    'Quotation',
+                    $quotation->rfq_number ?: 'Quotation #'.$quotation->id,
+                    $quotation,
+                );
+
+                $quotation->delete();
+            }
+
             $preplist->delete();
 
             ActivityLogger::log('Deleted', 'Preplist', $preplist->name, $preplist);
@@ -539,7 +628,7 @@ class PreplistController extends Controller
      * being edited (null edits = new prep list, everything is "elsewhere"),
      * keyed by source id.
      */
-    private function sourcedElsewhereByItem(?Preplist $prepList): \Illuminate\Support\Collection
+    private function sourcedElsewhereByItem(?Preplist $prepList): Collection
     {
         return PreplistItemSource::query()
             ->with('preplistItem.preplist')

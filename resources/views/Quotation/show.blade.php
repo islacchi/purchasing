@@ -79,7 +79,8 @@
                 <div class="min-w-0">
                     <p class="text-sm font-semibold text-red-800">This quotation’s prep list has been deleted</p>
                     <p class="mt-0.5 text-xs text-red-700">
-                        Quoted prices are preserved, but this quotation can no longer be compared against the requested items or re-uploaded.
+                        Quoted prices are preserved for reference but this quotation can no longer be compared against the requested items, re-uploaded, or sent to a PO.
+                        You can delete the quotation to remove it from the tracker.
                     </p>
                 </div>
             </div>

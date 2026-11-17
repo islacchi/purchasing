@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Preplist;
 use App\Models\PreplistItem;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\Supplier;
@@ -112,6 +113,7 @@ class QuotationController extends Controller
                         'quoted' => $quoted,
                         'total' => $total,
                         'status' => $quoted > 0 ? 'Quoted' : 'Awaiting quote',
+                        'orphaned' => $quotation->preplist === null,
                     ];
                 })->values();
 
@@ -208,7 +210,7 @@ class QuotationController extends Controller
                                     'expiry' => $lineItem->expiry?->toDateString(),
                                     'expiry_label' => $lineItem->expiry?->format('M j, Y'),
                                     'min_remaining_months' => (int) $lineItem->min_remaining_months,
-                                    'on_po' => \App\Models\PurchaseOrderItem::query()->where('quotation_item_id', $lineItem->id)->exists(),
+                                    'on_po' => PurchaseOrderItem::query()->where('quotation_item_id', $lineItem->id)->exists(),
                                 ],
                         ];
                     })->all(),
@@ -616,13 +618,30 @@ class QuotationController extends Controller
     }
 
     /**
-     * Delete a quotation record. Only quotations that are still awaiting a
-     * quote can be deleted; quoted entries must have their uploaded file
-     * removed first.
+     * Delete a quotation record.
+     *
+     * A quotation may be deleted when it carries no supplier data AND no PO
+     * references it — OR its prep list is gone (orphaned): an orphan can never
+     * produce a PO, so deleting it is the only legitimate escape and is allowed
+     * even when it already has quoted prices.
      */
     public function destroy(Quotation $quotation)
     {
-        if ($quotation->quotedItems()->exists()) {
+        $quoted = $quotation->quotedItems()->exists();
+        $poCount = PurchaseOrder::query()
+            ->where('quotation_id', $quotation->id)
+            ->count();
+        $preplistExists = Preplist::query()->whereKey($quotation->preplist_id)->exists();
+
+        if ($poCount > 0) {
+            return redirect()
+                ->route('quotation')
+                ->withErrors([
+                    'quotation' => 'This quotation is already used by purchase order'.($poCount === 1 ? '' : 's').' and can no longer be deleted.',
+                ]);
+        }
+
+        if ($quoted && $preplistExists) {
             return redirect()
                 ->route('quotation')
                 ->withErrors([

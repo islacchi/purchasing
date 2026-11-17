@@ -75,6 +75,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - View modes: **Content** (card list), **Details** (metadata columns), **List** (dense table) — all paged from the same paginated slice (`?page=`).
 - A hidden, folio-sized print sheet renders in print preview (8.5 × 13 in officio, landscape) via a modal; clicking Print calls `window.print()` with the correct `@page` size. The same content streams from `/projects/{project}/download` (`projects.download`) as an `.xlsx` workbook built by `ProjectSummaryWorkbook`.
 - Item lines already compiled into a prep list are **locked** in the form (read-only, greyed, lock icon, tooltip naming the prep list). Saving around locked lines works as usual; a locked line cannot be changed or removed here — do it in the prep list first. Removing a sourced line from the form is refused with a friendly message; nothing is saved until the prep list stops referencing the line.
+- A prep list with **only unprogressed linked quotations** (no priced lines, no uploaded file, no PO) deletes cascade-style along with them: the confirmation modal lists the supplier RFQs that will also be removed. If any linked quotation is progressed, the delete is refused with per-supplier reasons — the same all-or-nothing pattern as the project edit lock.
 - Soft-deleted (`deleted_at`) rather than hard-deleted, so links from prep lists survive; cascade rules prevent deleting a sourced project.
 - The line-level field `project_items.fulfillment_status` is what progress counts; there is no project-level status enum.
 
@@ -82,8 +83,8 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 - Compile one or more project items across projects into a single prep list.
 - Each line carries a per-project **minimum remaining shelf life** (months), set at compile time and clamped against the item's `default_min_shelf_life_months`.
+- A submitted prep list can only be deleted along with **all** linked quotations; it refuses (with per-supplier reasons) when any linked quotation is progressed — has priced lines, an uploaded file, or a PO reference. All-or-nothing, like the project edit lock.
 - Sources are recorded in `preplist_item_sources` (quantity sourced per project line) — the provenance chain from project → prep list is intact.
-- A submitted prep list cannot be deleted while a quotation references it (foreign-key restricted “project is in use” errors surface as friendly validation messages).
 - Generating the RFQ from a prep list (`/preplist/{preplist}/generate-rfq`) validates that supplier candidates are chosen and that every item is either quoted or unquoted — nothing partial.
 - A display-filter dropdown (next to the search bar) narrows by **created by** (users who have compiled preplists), **item category** (drugs and medicines / supplies and equipments), and **quotation status** (Quoted / Awaiting quote); selection auto-submits and shows a badge count of active filters; empty filtered results say “No prep lists match the current filters”.
 
@@ -661,7 +662,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **221 passed / 1328 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **224 passed / 1338 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -682,10 +683,10 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 221 passing (1328 assertions)
+- [x] **Tests** — 224 passing (1338 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
-- [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while referenced by a quotation; a quotation cannot be deleted once quoted (upload removal is separate)
+- [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
 - [x] **Unique junction indexes** — composite unique constraints on `preplist_items` / `quotation_items` / `purchase_order_items`; duplicate key violations surface as validation errors
 - [x] **Expiry normalization** — supplier `.xlsx` expiry cells (`MM/YYYY`, month names, ISO dates) parsed crash-proof by `App\Support\ExpiryParser`; expiry columns are real `DATE` columns
 - [x] **Role-based access control** — `role_module_access` matrix (None / View / Manage) configured from Settings → Privileges; enforced by the `module:{module}` middleware
@@ -703,12 +704,11 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [ ] **Notifications** are computed on every page view; there's no persisted notification log or read state
 - [ ] **Activity log retention** — the activity trail is unbounded; no pruning/archival policy yet
 - [ ] **PhpSpreadsheet migration** — if `ext-gd` is enabled later, the manual workbook generator can be replaced
-- [ ] **A quotation whose prep list is missing renders a fixed error banner and cannot be re-uploaded or sent to PO.** Only reachable via DB-level preplist deletion or legacy rows predating the delete guard. Recovery is `Preplist::withTrashed()->find($id)->restore()`.
 - [ ] **The activity log is unbounded**; it will grow indefinitely unless pruned.
 
 ### Known fragility worth addressing
 
-- **A quotation whose prep list is missing renders a fixed error banner and cannot be re-uploaded or sent to PO.** This state is only reachable via DB-level preplist deletion; `PreplistController::destroy` now blocks deletion of sourced prep lists. Recovery is `Preplist::withTrashed()->find($id)->restore()`.
+- **A quotation whose prep list is missing can be locked out of normal editing but NOT of deletion.** This state is only reachable via DB-level preplist deletion; the UI cascade-deletes linked quotations along with the prep list so it cannot arise through the app. The banner offers "Delete quotation" as the permanent escape hatch, and restoration happens via `Preplist::withTrashed()->find($id)->restore()`.
 - **Viewers can't Manage their own profile.** Password change/update is admin-only in the current build; viewers cannot reset their own passwords.
 
 ---

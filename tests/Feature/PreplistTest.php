@@ -11,6 +11,7 @@ use App\Models\PreplistItemSource;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
+use App\Models\PurchaseOrder;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\Supplier;
@@ -506,7 +507,7 @@ class PreplistTest extends TestCase
         $this->assertSoftDeleted('preplists', ['id' => $preplist->id]);
     }
 
-    public function test_preplist_cannot_be_deleted_once_added_to_a_quotation(): void
+    public function test_preplist_can_be_deleted_when_its_quotations_are_all_awaiting_quote(): void
     {
         $user = $this->admin();
         $entity = $this->entity();
@@ -516,11 +517,11 @@ class PreplistTest extends TestCase
         $supplier = Supplier::create(['name' => 'Triple Tact']);
 
         $preplist = $this->compile($user, [
-            'name' => 'July Region VII batch',
+            'name' => 'Deletable fixture batch',
             'sources' => [$projectItem->id],
         ]);
 
-        Quotation::create([
+        $quotation = Quotation::create([
             'preplist_id' => $preplist->id,
             'supplier_id' => $supplier->id,
             'created_by' => $user->id,
@@ -530,21 +531,117 @@ class PreplistTest extends TestCase
 
         $this->actingAs($user)
             ->delete(route('preplist.destroy', ['preplist' => $preplist->id]))
+            ->assertRedirect(route('preplist'));
+
+        $this->assertNotNull(Preplist::withTrashed()->find($preplist->id)->deleted_at);
+        $this->assertDatabaseMissing('quotations', ['id' => $quotation->id]);
+        $this->assertDatabaseCount('quotations', 0);
+    }
+
+    public function test_preplist_cannot_be_deleted_when_a_quotation_has_prices(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Priced fixture batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-0002',
+            'generated_at' => now(),
+        ]);
+
+        // One priced line — quotation is now progressed.
+        $preplistItem = PreplistItem::where('preplist_id', $preplist->id)->firstOrFail();
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'unit_price' => 99.00,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('preplist.destroy', ['preplist' => $preplist->id]))
             ->assertSessionHasErrors('preplist');
 
         $this->assertNull(Preplist::withTrashed()->find($preplist->id)->deleted_at);
+        $this->assertDatabaseHas('quotations', ['id' => $quotation->id]);
+    }
 
-        // The delete buttons are disabled on the detail page and in the list.
-        $this->actingAs($user)
-            ->get(route('preplist.show', ['preplist' => $preplist->id]))
-            ->assertOk()
-            ->assertSee('cannot be deleted')
-            ->assertDontSee('id="preplistDeleteBtn"', false);
+    public function test_preplist_cannot_be_deleted_when_a_quotation_has_an_uploaded_document(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Uploaded fixture batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-0003',
+            'generated_at' => now(),
+            'document_path' => 'quotations/test-'.$supplier->id.'.xlsx',
+        ]);
 
         $this->actingAs($user)
-            ->get(route('preplist'))
-            ->assertOk()
-            ->assertSee('Already referenced by 1 quotation');
+            ->delete(route('preplist.destroy', ['preplist' => $preplist->id]))
+            ->assertSessionHasErrors('preplist');
+
+        $this->assertNull(Preplist::withTrashed()->find($preplist->id)->deleted_at);
+    }
+
+    public function test_preplist_cannot_be_deleted_when_a_quotation_has_a_po(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'PO fixture batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-0004',
+            'generated_at' => now(),
+        ]);
+
+        PurchaseOrder::create([
+            'quotation_id' => $quotation->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'po_number' => 'PO-'.now()->year.'-0001',
+            'status' => PurchaseOrder::STATUS_SENT,
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('preplist.destroy', ['preplist' => $preplist->id]))
+            ->assertSessionHasErrors('preplist');
+
+        $this->assertNull(Preplist::withTrashed()->find($preplist->id)->deleted_at);
     }
 
     public function test_preplist_requires_at_least_one_project_item(): void
