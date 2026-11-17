@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\PoCartController;
 use App\Models\Item;
 use App\Models\ItemCategory;
 use App\Models\PoCartItem;
@@ -17,6 +18,7 @@ use App\Models\QuotationItem;
 use App\Models\Supplier;
 use App\Models\User;
 use Database\Seeders\AdminUserSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -429,6 +431,179 @@ class CartTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseCount('po_cart_items', 0);
+    }
+
+    public function test_adding_a_second_quotation_displaces_the_first(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Displacement item']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 50]);
+        $preplist = $this->compile($user, [
+            'name' => 'Displacement batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ]);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $supplierA = Supplier::create(['name' => 'Supplier A']);
+        $supplierB = Supplier::create(['name' => 'Supplier B']);
+
+        $quotationA = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplierA->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-DISP-AA',
+            'generated_at' => now(),
+            'document_path' => 'quotations/a.xlsx',
+            'document_name' => 'quotation-a.xlsx',
+            'document_size' => 8,
+        ]);
+        $quotationB = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplierB->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-DISP-BB',
+            'generated_at' => now(),
+            'document_path' => 'quotations/b.xlsx',
+            'document_name' => 'quotation-b.xlsx',
+            'document_size' => 8,
+        ]);
+
+        $pricedItemA = QuotationItem::create([
+            'quotation_id' => $quotationA->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 40.00,
+            'quoted_at' => now(),
+        ]);
+        QuotationItem::create([
+            'quotation_id' => $quotationB->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 35.00,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)->post(route('po-cart.add'), ['quotation_id' => $quotationA->id]);
+        $this->actingAs($user)->post(route('po-cart.add'), ['quotation_id' => $quotationB->id]);
+
+        $this->assertDatabaseCount('po_cart_items', 1);
+        $this->assertDatabaseHas('po_cart_items', [
+            'user_id' => $user->id,
+            'quotation_item_id' => QuotationItem::where('quotation_id', $quotationB->id)->value('id'),
+        ]);
+        $this->assertDatabaseMissing('po_cart_items', [
+            'user_id' => $user->id,
+            'quotation_item_id' => $pricedItemA->id,
+        ]);
+    }
+
+    public function test_checkout_refuses_duplicate_preplist_lines_in_the_cart(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Duplicated checkout item']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 50]);
+        $preplist = $this->compile($user, [
+            'name' => 'Duplicate-cart batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ]);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $supplierA = Supplier::create(['name' => 'Supplier A']);
+        $supplierB = Supplier::create(['name' => 'Supplier B']);
+
+        $quotationA = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplierA->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-DUP-AA',
+            'generated_at' => now(),
+            'document_path' => 'quotations/a.xlsx',
+            'document_name' => 'quotation-a.xlsx',
+            'document_size' => 8,
+        ]);
+        $quotationB = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplierB->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-DUP-BB',
+            'generated_at' => now(),
+            'document_path' => 'quotations/b.xlsx',
+            'document_name' => 'quotation-b.xlsx',
+            'document_size' => 8,
+        ]);
+
+        QuotationItem::create([
+            'quotation_id' => $quotationA->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 40.00,
+            'quoted_at' => now(),
+        ]);
+        QuotationItem::create([
+            'quotation_id' => $quotationB->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 35.00,
+            'quoted_at' => now(),
+        ]);
+
+        // Bypass the add-path displacement and seed both lines into the cart
+        // directly, simulating drift (a DB hiccup or hand-inserted rows).
+        PoCartItem::create([
+            'user_id' => $user->id,
+            'quotation_item_id' => QuotationItem::where('quotation_id', $quotationA->id)->value('id'),
+            'qty' => 50,
+        ]);
+        PoCartItem::create([
+            'user_id' => $user->id,
+            'quotation_item_id' => QuotationItem::where('quotation_id', $quotationB->id)->value('id'),
+            'qty' => 50,
+        ]);
+
+        // The cart can no longer be forced to hold both lines — add(-1)
+        // displaces existing rows. Our checkout guard is a back-stop for
+        // drifted state; craft it through direct insert above instead.
+        $this->actingAs($user)
+            ->post(route('po-cart.checkout'))
+            ->assertSessionHasErrors('cart');
+
+        $this->assertDatabaseCount('purchase_orders', 0);
+    }
+
+    public function test_duplicate_awarded_line_exception_is_recognized(): void
+    {
+        $controller = new PoCartController;
+        $method = new \ReflectionMethod($controller, 'isDuplicateAwardedLineViolation');
+        $method->setAccessible(true);
+
+        $matching = $this->makeQueryException("SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '7' for key 'purchase_order_items_quotation_item_id_unique'", 23000);
+        $this->assertTrue($method->invoke($controller, $matching));
+
+        // A composite-key duplicate (a different constraint) should NOT be re-mapped — we want it to bubble up.
+        $compositeOnly = $this->makeQueryException("SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '7-9' for key 'purchase_order_items.purchase_order_id_quotation_item_id_unique'", 23000);
+        $this->assertFalse($method->invoke($controller, $compositeOnly));
+
+        // A syntax error is not a duplicate of this kind.
+        $syntax = $this->makeQueryException("SQLSTATE[42000]: Syntax error near 'test'", 42000);
+        $this->assertFalse($method->invoke($controller, $syntax));
+    }
+
+    private function makeQueryException(string $message, string $sqlState): QueryException
+    {
+        return new QueryException(
+            'testing',
+            'select 1',
+            [],
+            new \PDOException($message, (int) $sqlState),
+        );
     }
 
     public function test_checkout_revalidates_quantities(): void

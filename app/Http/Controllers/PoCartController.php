@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\PoCartItem;
-use App\Models\PreplistItem;
 use App\Models\PurchaseOrderItem;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\PurchaseOrderCreator;
 use App\Support\PurchaseOrderWorkbook;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -205,6 +205,7 @@ class PoCartController extends Controller
 
             if (in_array((int) $preplistItemId, $alreadyInCart, true)) {
                 $already++;
+
                 continue;
             }
 
@@ -340,18 +341,43 @@ class PoCartController extends Controller
 
             if ($requested <= 0) {
                 $invalid[] = $name.' (covered by on-hand stock)';
+
                 continue;
             }
             if (! $qi->unit_price) {
                 $invalid[] = $name.' (no unit price on the quotation)';
+
                 continue;
             }
             if ($cartItem->qty < 1 || $cartItem->qty > $requested) {
                 $invalid[] = $name.' (qty '.$cartItem->qty.' exceeds the remaining '.$requested.')';
+
                 continue;
             }
             if (PurchaseOrderItem::query()->where('quotation_item_id', $qi->id)->exists()) {
                 $invalid[] = $name.' (already on a purchase order)';
+            }
+        }
+
+        // Grouped guard: a prep list item may only be ordered once (one
+        // winning supplier). Summing quantities across lines sharing the same
+        // preplist item must not exceed what remains to procure.
+        $remainingByPreplistItem = [];
+
+        foreach ($cartItems as $cartItem) {
+            if ($cartItem->quotationItem) {
+                $remainingByPreplistItem[$cartItem->quotationItem->preplist_item_id] =
+                    $cartItem->quotationItem->preplistItem?->remainingQuantity() ?? 0;
+            }
+        }
+
+        foreach ($remainingByPreplistItem as $preplistItemId => $remaining) {
+            $sum = $cartItems
+                ->filter(fn ($ci) => (int) $ci->quotationItem?->preplist_item_id === (int) $preplistItemId)
+                ->sum('qty');
+
+            if ($sum > $remaining) {
+                $invalid[] = 'Preplist item #'.$preplistItemId.' — lines together '.$sum.', remaining '.$remaining.'. A prep list item may only be ordered once (one winning supplier). Remove one of the duplicated quotation lines from the cart.';
             }
         }
 
@@ -369,18 +395,29 @@ class PoCartController extends Controller
         ];
 
         $created = [];
-        foreach ($cartItems->groupBy(fn ($ci) => $ci->quotationItem->quotation_id) as $quotationId => $group) {
-            $lines = [];
-            foreach ($group as $cartItem) {
-                $lines[] = [
-                    'quotation_item' => $cartItem->quotationItem,
-                    'preplist_item' => $cartItem->quotationItem->preplistItem,
-                    'qty' => $cartItem->qty,
-                    'unit_price' => $cartItem->quotationItem->unit_price,
-                    'min_remaining_months' => $cartItem->quotationItem->min_remaining_months,
-                ];
+
+        try {
+            foreach ($cartItems->groupBy(fn ($ci) => $ci->quotationItem->quotation_id) as $quotationId => $group) {
+                $lines = [];
+                foreach ($group as $cartItem) {
+                    $lines[] = [
+                        'quotation_item' => $cartItem->quotationItem,
+                        'preplist_item' => $cartItem->quotationItem->preplistItem,
+                        'qty' => $cartItem->qty,
+                        'unit_price' => $cartItem->quotationItem->unit_price,
+                        'min_remaining_months' => $cartItem->quotationItem->min_remaining_months,
+                    ];
+                }
+                $created[] = PurchaseOrderCreator::createFor($request->user()->id, $lines, $details);
             }
-            $created[] = PurchaseOrderCreator::createFor($request->user()->id, $lines, $details);
+        } catch (QueryException $exception) {
+            if ($this->isDuplicateAwardedLineViolation($exception)) {
+                throw ValidationException::withMessages([
+                    'cart' => 'Another user already created a purchase order for one of these awarded lines. Refresh the page and check the purchase order list — nothing was created here.',
+                ]);
+            }
+
+            throw $exception;
         }
 
         $request->user()->poCartItems()->delete();
@@ -516,5 +553,18 @@ class PoCartController extends Controller
     private function authorizeLine(Request $request, PoCartItem $cartItem): void
     {
         abort_unless($cartItem->user_id === $request->user()?->id, 403);
+    }
+
+    /**
+     * Detect the unique-index violation for quotation_item_id specifically, so
+     * a legitimate cart around a different constraint is allowed to bubble up.
+     */
+    private function isDuplicateAwardedLineViolation(QueryException $exception): bool
+    {
+        $message = $exception->getMessage();
+
+        return str_contains($message, '23000')
+            && (str_contains($message, 'purchase_order_items_quotation_item_id_unique')
+                || str_contains($message, "'purchase_order_items.quotation_item_id'"));
     }
 }
