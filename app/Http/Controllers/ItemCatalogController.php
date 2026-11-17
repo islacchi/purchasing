@@ -85,8 +85,30 @@ class ItemCatalogController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
+        // Human-readable label of the applied filters, used on the print sheet.
+        $selectedSupplierName = ctype_digit($supplier) ? Supplier::query()->find((int) $supplier)?->name : null;
+
+        $filterBits = [];
+        if ($search !== '') {
+            $filterBits[] = 'Search: "'.$search.'"';
+        }
+        if ($categoryAllowed) {
+            $filterBits[] = ucfirst($categoryAllowed);
+        }
+        if ($selectedSupplierName) {
+            $filterBits[] = 'Supplier: '.$selectedSupplierName;
+        }
+        if ($from !== '') {
+            $filterBits[] = 'From '.$from;
+        }
+        if ($to !== '') {
+            $filterBits[] = 'To '.$to;
+        }
+        $filterLabel = empty($filterBits) ? 'All items' : implode(' · ', $filterBits);
+
         return view('ItemCatalog.index', compact(
             'pager',
+            'items',
             'search',
             'categoryAllowed',
             'supplier',
@@ -100,6 +122,7 @@ class ItemCatalogController extends Controller
             'totalLines',
             'suppliersUsed',
             'lastPurchase',
+            'filterLabel',
         ));
     }
 

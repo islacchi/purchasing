@@ -111,7 +111,18 @@
             </div>
         </div>
 
-        <p class="text-xs text-gray-500">From completed purchase orders · line fully received</p>
+        <div class="flex shrink-0 items-center gap-3">
+            <button type="button" id="printCatalogBtn"
+                    class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    title="Print the filtered catalog (all matching rows)">
+                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 9V4a1 1 0 011-1h10a1 1 0 011 1v5M6 17h12M6 13H4a2 2 0 01-2-2v-3a2 2 0 012-2h16a2 2 0 012 2v3a2 2 0 01-2 2h-2m-12 0v6a1 1 0 001 1h10a1 1 0 001-1v-6"/>
+                </svg>
+                Print
+            </button>
+
+      
+        </div>
     </div>
 
     {{-- Summary strip --}}
@@ -202,6 +213,73 @@
         @endif
     </div>
 
+    {{-- Hidden print-only sheet: the filtered catalog in sheet form. --}}
+    <div id="catalogPrintSheet" class="print-sheet" aria-hidden="true">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16pt; border-bottom:2.5pt solid #0e5266; padding-bottom:6pt; margin-bottom:8pt;">
+            <div>
+                <h1 style="margin:0; font-size:15pt; font-weight:700; color:#0e5266;">Item Catalog — Purchase Summary</h1>
+                <p style="margin:2pt 0 0; font-size:9pt; color:#333;">{{ $filterLabel }}</p>
+                <p style="margin:1pt 0 0; font-size:8pt; color:#666;">Generated {{ now()->format('F j, Y · g:i A') }} by Purchasing · fully-received PO lines only</p>
+            </div>
+            <div style="text-align:right; font-size:8pt; color:#333;">
+                <p style="margin:0 0 1.5pt;"><span style="font-weight:700;">Items tracked:</span> {{ $pager->total() }}</p>
+                <p style="margin:0 0 1.5pt;"><span style="font-weight:700;">Lines bought:</span> {{ $totalLines }}</p>
+                <p style="margin:0;"><span style="font-weight:700;">Suppliers used:</span> {{ $suppliersUsed }}</p>
+            </div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; font-size:7.5pt;">
+            <thead>
+                <tr>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:left;">Item</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:left;">Category</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:right;">Orders</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:right;">Total qty</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:right;">Best price</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:right;">Last price</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:left;">Last supplier</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:right;">Total spend</th>
+                    <th style="border:1px solid #000; padding:4pt; background:#0e5266; color:#fff; text-align:left;">Last purchase</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($items as $printItem)
+                    <tr>
+                        <td style="border:1px solid #000; padding:4pt; font-weight:600;">{{ $printItem['name'] }}<br><span style="font-weight:400; color:#555; font-size:7pt;">{{ $printItem['unit'] }}</span></td>
+                        <td style="border:1px solid #000; padding:4pt;">{{ ucfirst($printItem['category']) }}</td>
+                        <td style="border:1px solid #000; padding:4pt; text-align:right;">{{ number_format($printItem['orders']) }}</td>
+                        <td style="border:1px solid #000; padding:4pt; text-align:right;">{{ number_format($printItem['qty']) }}</td>
+                        <td style="border:1px solid #000; padding:4pt; text-align:right;">{{ $peso($printItem['best_price']) }}</td>
+                        <td style="border:1px solid #000; padding:4pt; text-align:right;">{{ $peso($printItem['last_price']) }}</td>
+                        <td style="border:1px solid #000; padding:4pt;">{{ $printItem['last_supplier'] }}</td>
+                        <td style="border:1px solid #000; padding:4pt; text-align:right;">{{ $peso($printItem['spend']) }}</td>
+                        <td style="border:1px solid #000; padding:4pt;">{{ $printItem['last_issued_on']?->format('M j, Y') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <div style="display:flex; justify-content:flex-end; gap:18pt; margin-top:6pt; border-top:1pt solid #ccc; padding-top:4pt; font-size:8pt;">
+            <span><span style="font-weight:700;">Total qty:</span> {{ number_format($totalUnits) }}</span>
+            <span><span style="font-weight:700;">Total spend:</span> {{ $peso($totalSpend) }}</span>
+        </div>
+    </div>
+
+    <style>
+        .print-sheet { display: none; }
+        @media print {
+            /* Officio (8.5 x 13 in), landscape */
+            @page { size: 13in 8.5in; margin: 10mm; }
+            body * { visibility: hidden; }
+            #catalogPrintSheet, #catalogPrintSheet * { visibility: visible; }
+            #catalogPrintSheet { display: block !important; position: absolute; inset: 0; background: #fff; }
+            #catalogPrintSheet tr { page-break-inside: avoid; }
+            table thead { display: table-header-group; }
+            html, body { overflow: visible !important; height: auto !important; background: #fff !important; }
+        }
+    </style>
+
+    <script> document.getElementById('printCatalogBtn')?.addEventListener('click', function () { window.print(); }); </script>
     <script>
         document.querySelectorAll('tr[data-href]').forEach(function (row) {
             row.addEventListener('click', function () {
