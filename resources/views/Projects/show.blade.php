@@ -126,7 +126,7 @@
     @endif
 
     {{-- Main Content --}}
-    <div class="grid min-h-0 flex-1 auto-rows-[minmax(0,1fr)] grid-cols-1 gap-6 lg:grid-cols-4">
+    <div class="grid min-h-0 flex-1 auto-rows-[minmax(0,1fr)] grid-cols-1 gap-6 lg:grid-cols-6">
         {{-- Project Details (Left Column) — static --}}
         <div class="min-h-0 lg:col-span-1">
             <div class="bg-white rounded-lg border border-gray-200 h-full">
@@ -166,7 +166,7 @@
         </div>
 
         {{-- Items Table (Right Column) — scrolls vertically --}}
-        <div class="min-h-0 lg:col-span-3">
+        <div class="min-h-0 lg:col-span-5">
             <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white">
                 <div class="min-h-[240px] flex-1 overflow-y-auto overflow-x-auto">
                     <table class="w-full">
