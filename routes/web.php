@@ -111,6 +111,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::delete('/quotation/{quotation}/document', [QuotationController::class, 'destroyDocument'])
             ->whereNumber('quotation')
             ->name('quotation.destroy-document');
+        Route::post('/quotation/{quotation}/restore-preplist', [QuotationController::class, 'restorePrepList'])
+            ->whereNumber('quotation')
+            ->name('quotation.restore-preplist');
         Route::delete('/quotation/{quotation}', [QuotationController::class, 'destroy'])
             ->whereNumber('quotation')
             ->name('quotation.destroy');

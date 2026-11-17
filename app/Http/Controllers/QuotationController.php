@@ -625,6 +625,51 @@ class QuotationController extends Controller
      * produce a PO, so deleting it is the only legitimate escape and is allowed
      * even when it already has quoted prices.
      */
+    /**
+     * Restore the soft-deleted prep list this quotation belongs to.
+     * Oracle-style restore: everything linked to the prep list comes back
+     * intact (its items, allocations, and this quotation), because it is
+     * the same row that is un-trashed.
+     */
+    public function restorePrepList(Quotation $quotation)
+    {
+        $canManage = auth()->user()?->canModule('quotation', 'manage') ?? false;
+
+        if (! $canManage) {
+            return redirect()
+                ->route('quotation.show', ['quotation' => $quotation->id])
+                ->withErrors(['quotation' => 'Your role does not have access to that module.']);
+        }
+
+        $preplist = Preplist::withTrashed()->find($quotation->preplist_id);
+
+        if ($preplist === null) {
+            return redirect()
+                ->route('quotation.show', ['quotation' => $quotation->id])
+                ->withErrors(['quotation' => 'The prep list referenced by this quotation no longer exists and cannot be restored.']);
+        }
+
+        if ($preplist->trashed()) {
+            $preplist->restore();
+
+            ActivityLogger::log('Restored', 'Preplist', $preplist->name, $preplist);
+
+            return redirect()
+                ->route('quotation.show', ['quotation' => $quotation->id])
+                ->with('status', 'Prep list restored.');
+        }
+
+        return redirect()
+            ->route('quotation.show', ['quotation' => $quotation->id])
+            ->with('status', 'The prep list was already in place.');
+    }
+
+    /**
+     * Delete a quotation record.
+     *
+     * The preplist-missing case has an explicit delete-or-restore path so
+     * the steward of a quotation never gets stuck in an uneditable view.
+     */
     public function destroy(Quotation $quotation)
     {
         $quoted = $quotation->quotedItems()->exists();

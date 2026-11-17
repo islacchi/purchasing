@@ -72,17 +72,30 @@
 
     <div class="flex h-full min-h-0 flex-col">
         @if (! $preplist)
-            <div class="mb-6 flex shrink-0 items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-4">
-                <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
-                </svg>
-                <div class="min-w-0">
-                    <p class="text-sm font-semibold text-red-800">This quotation’s prep list has been deleted</p>
-                    <p class="mt-0.5 text-xs text-red-700">
-                        Quoted prices are preserved for reference but this quotation can no longer be compared against the requested items, re-uploaded, or sent to a PO.
-                        You can delete the quotation to remove it from the tracker.
-                    </p>
+            <div class="mb-6 flex shrink-0 items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-4">
+                <div class="flex min-w-0 items-start gap-3">
+                    <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
+                    </svg>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-red-800">This quotation’s prep list has been deleted</p>
+                        <p class="mt-0.5 text-xs text-red-700">
+                            Quoted prices are preserved for reference, but this quotation cannot be compared against the requested items, re-uploaded, or sent to a PO until the prep list is restored.
+                        </p>
+                    </div>
                 </div>
+                @if ($canManageQuotation)
+                    <form method="POST" action="{{ route('quotation.restore-preplist', ['quotation' => $quotation->id]) }}" class="shrink-0 self-center">
+                        @csrf
+                        <button type="submit"
+                                class="flex items-center gap-2 rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 14.5v4.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75v-4.25m-18 0 4.5 4.5 4.5-4.5m-4.5 4.5V9a5 5 0 0 1 10 0v10"/>
+                            </svg>
+                            Restore prep list
+                        </button>
+                    </form>
+                @endif
             </div>
         @endif
 

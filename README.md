@@ -662,7 +662,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **224 passed / 1340 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **226 passed / 1351 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -683,7 +683,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 224 passing (1340 assertions)
+- [x] **Tests** — 226 passing (1351 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
@@ -708,7 +708,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 
 ### Known fragility worth addressing
 
-- **A quotation whose prep list is missing can be locked out of normal editing but NOT of deletion.** This state is only reachable via DB-level preplist deletion; the UI cascade-deletes linked quotations along with the prep list so it cannot arise through the app. The banner offers "Delete quotation" as the permanent escape hatch, and restoration happens via `Preplist::withTrashed()->find($id)->restore()`.
+- **A quotation whose prep list is missing can be locked out of normal editing but NOT of restoration.** The UI now offers a one-click **Restore prep list** button on the banner for Manage-level roles; the row (and its items, allocations, and this quotation) is un-trashed intact, and the quotation becomes fully editable again. If restoration fails or the role is View-only, the banner still offers "Delete quotation" as the permanent escape hatch, and `Preplist::withTrashed()->find($id)->restore()` remains the DB-level path as a last resort.
 - **Viewers can't Manage their own profile.** Password change/update is admin-only in the current build; viewers cannot reset their own passwords.
 
 ---

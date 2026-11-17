@@ -1393,6 +1393,86 @@ class QuotationTest extends TestCase
             ->assertSee('Prep list removed');
     }
 
+    public function test_quotation_missing_prep_list_can_be_restored_via_the_ui(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-0001',
+            'generated_at' => now(),
+        ]);
+
+        $preplist->delete();
+
+        // Banner offers the escape hatch for manage roles.
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('Restore prep list');
+
+        $this->actingAs($user)
+            ->post(route('quotation.restore-preplist', ['quotation' => $quotation->id]))
+            ->assertRedirect(route('quotation.show', ['quotation' => $quotation->id]));
+
+        $this->assertTrue(Preplist::whereKey($preplist->id)->exists());
+
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('July Region VII batch');
+    }
+
+    public function test_viewer_cannot_restore_a_missing_prep_list(): void
+    {
+        $this->seed(AdminUserSeeder::class);
+        $admin = User::where('name', 'admin')->firstOrFail();
+        $viewer = User::where('name', 'user2')->firstOrFail();
+        $entity = $this->entity();
+        $project = $this->project($admin, $entity);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $preplist = $this->compile($admin, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+        ]);
+
+        $quotation = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $admin->id,
+            'rfq_number' => 'RFQ-'.now()->year.'-0001',
+            'generated_at' => now(),
+        ]);
+
+        $preplist->delete();
+
+        // Banner hides the restore button for view-only roles.
+        $this->actingAs($viewer)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            ->assertDontSee('Restore prep list');
+
+        $this->actingAs($viewer)
+            ->post(route('quotation.restore-preplist', ['quotation' => $quotation->id]));
+
+        $this->assertFalse(Preplist::whereKey($preplist->id)->exists());
+    }
+
     public function test_quotation_upload_is_rejected_when_the_prep_list_is_gone(): void
     {
         Storage::fake('local');
