@@ -440,6 +440,16 @@ class QuotationController extends Controller
             ]);
         }
 
+        // A PO was created from these quoted prices — the file and its lines
+        // are in use and must not be replaced or re-uploaded.
+        $blocked = $this->blockedRemoveReason($quotation);
+
+        if ($blocked !== null) {
+            throw ValidationException::withMessages([
+                'document' => $blocked,
+            ]);
+        }
+
         $request->validate([
             'document' => ['required', 'file', 'extensions:xlsx', 'max:10240'],
         ], [

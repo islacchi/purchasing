@@ -166,15 +166,17 @@
                             </div>
 
                             <div class="flex shrink-0 items-center gap-3">
-                                @if ($preplist && $canManageQuotation)
+                                @if ($preplist && $canManageQuotation && ! ($removeBlockedReason ?? null))
                                     <label for="supplierQuotationFile"
                                            class="cursor-pointer text-sm font-medium text-gray-500 transition-colors hover:text-[#2a7a94] hover:underline">
                                         Replace
                                     </label>
-                                @elseif ($preplist)
+                                @elseif ($preplist && ! ($removeBlockedReason ?? null))
                                     <span class="cursor-not-allowed text-sm font-medium text-gray-300" title="Your role does not have access to upload files.">Replace</span>
-                                @else
+                                @elseif (! ($removeBlockedReason ?? null))
                                     <span class="cursor-not-allowed text-sm font-medium text-gray-300">Replace</span>
+                                @else
+                                    <span class="cursor-not-allowed text-sm font-medium text-gray-300" title="{{ $removeBlockedReason }}">Replace</span>
                                 @endif
                                 <a href="{{ route('quotation.download', ['quotation' => $quotation->id]) }}"
                                    class="flex items-center gap-1.5 text-sm font-medium text-[#2a7a94] hover:underline"
@@ -411,7 +413,7 @@
                         </span>
                     @endif
                 @else
-                    @if ($preplist && $canManageQuotation)
+                    @if ($preplist && $canManageQuotation && ! ($removeBlockedReason ?? null))
                         <label for="supplierQuotationFile"
                                class="flex cursor-pointer items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -421,7 +423,7 @@
                         </label>
                     @else
                         <span class="flex cursor-not-allowed items-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
-                              title="{{ $preplist ? 'Your role does not have access to upload files.' : 'This quotation’s prep list has been deleted' }}">
+                              title="{{ $removeBlockedReason ?? ($preplist ? 'Your role does not have access to upload files.' : 'This quotation’s prep list has been deleted') }}">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                             </svg>

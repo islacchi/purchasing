@@ -519,7 +519,7 @@ class QuotationTest extends TestCase
         $this->actingAs($viewer)
             ->get(route('quotation.show', ['quotation' => $quotation->id]))
             ->assertOk()
-            ->assertSee('Your role does not have access to upload files.')
+            ->assertSee('Your role does not have access to that module.')
             ->assertDontSee('for="supplierQuotationFile"', false)
             ->assertDontSee('supplierQuotationForm', false);
 
@@ -1012,6 +1012,112 @@ class QuotationTest extends TestCase
             ->assertSee('Your role does not have access to that module.')
             ->assertDontSee('id="quotationRemoveConfirm"', false)
             ->assertDontSee('supplierQuotationForm', false);
+    }
+
+    public function test_submitting_a_document_after_a_po_was_created_is_rejected(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Guarded Item Alpha']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 30]);
+        $supplier = Supplier::create(['name' => 'Guard Supplies']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Guarded upload fixture',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->fillUnitPrices($binary, [18 => '305.50']);
+        $binary = $this->fillItemDetails($binary, 18, 'MediCore', 'December 2027');
+
+        // Generate the RFQ to create the quotation, then upload a priced file.
+        $quotation = Quotation::query()->firstOrFail();
+
+        $this->upload($user, $quotation, $binary)
+            ->assertRedirect(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertSessionHas('status');
+
+        // A PO is created referencing that quotation line.
+        $po = PurchaseOrder::create([
+            'quotation_id' => $quotation->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'po_number' => 'PO-'.now()->year.'-0001',
+            'status' => PurchaseOrder::STATUS_DRAFT,
+        ]);
+
+        PurchaseOrderItem::create([
+            'purchase_order_id' => $po->id,
+            'quotation_item_id' => $quotation->items()->firstOrFail()->id,
+            'item_id' => $item->id,
+            'qty' => 30,
+            'unit_price' => 305.50,
+        ]);
+
+        // Trying to change the file now must be refused.
+        $this->upload($user, $quotation, $binary)
+            ->assertSessionHasErrors('document');
+
+        // The document outside the form must not change.
+        $this->assertSame('quotations/'.$quotation->rfq_number.'.xlsx', $quotation->fresh()->document_path);
+    }
+
+    public function test_replace_and_submit_labels_are_disabled_when_a_po_exists(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Greyed Item Alpha']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 30]);
+        $supplier = Supplier::create(['name' => 'Greyed Guard Supplies']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Greyed fixture',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+
+        $preplistItem = PreplistItem::firstOrFail();
+
+        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->fillUnitPrices($binary, [18 => '305.50']);
+
+        $quotation = Quotation::query()->firstOrFail();
+
+        $this->upload($user, $quotation, $binary);
+
+        $po = PurchaseOrder::create([
+            'quotation_id' => $quotation->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'po_number' => 'PO-'.now()->year.'-0001',
+            'status' => PurchaseOrder::STATUS_DRAFT,
+        ]);
+
+        PurchaseOrderItem::create([
+            'purchase_order_id' => $po->id,
+            'quotation_item_id' => $quotation->items()->firstOrFail()->id,
+            'item_id' => $item->id,
+            'qty' => 30,
+            'unit_price' => 305.50,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk();
+
+        // The controls must be inert spans carrying the reason as title.
+        $content = $response->getContent();
+        $this->assertStringContainsString('cursor-not-allowed text-sm font-medium text-gray-300', $content);
     }
 
     public function test_quotation_upload_parses_unit_prices_and_marks_items_quoted(): void

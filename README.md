@@ -111,7 +111,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Per-quotation status is computed from priced lines:
   - `Quoted` when at least one priced line exists; `Awaiting quote` otherwise.
   - Short-dated lines (expired or expiring within 30 days) are highlighted in the item breakdown; per-project colour coding compares supplier expiry vs the project's delivery date + minimum shelf life.
-- The document can be replaced (`POST /quotation/{quotation}/document`, `quotation.store-document`) — a second file **replaces** the first.
+- The document can be replaced (`POST /quotation/{quotation}/document`, `quotation.store-document`) — a second file **replaces** the first. **Refusing when a PO already references these quoted lines** (same guard as the remove-document path): the file and its prices become immutable once a PO exists.
 - Delete the document only (`DELETE /quotation/{quotation}/document`, `quotation.destroy-document`) — keeps the quotation row but removes the priced lines; blocked once a PO is generated from it.
 - **View-only roles see a disabled "Submit quotation" affordance** (inert button, access-restricted modal on click).
 - Re-uploading a document is guarded by a state fingerprint — re-submitting the page against a file another user already replaced is rejected (see [Concurrency](#concurrency-multiple-users-on-one-box)).
@@ -662,7 +662,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **226 passed / 1351 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **228 passed / 1363 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -678,12 +678,12 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Projects** — list/search/create/edit/delete, delivery due-date tracking, per-item fulfillment status, progress bar, soft-delete, Excel export & print-ready folio sheet
 - [x] **Prep Lists** — list/search/create/edit/delete, item compilation with source quantities, per-project expiry/shelf-life rules, grouped by source project
 - [x] **RFQ Excel generation** — letterhead template, dynamic item rows, `.xlsx` download, ZIP for multiple suppliers, expiry/brand/unit price/shelf-life fields pre-labelled
-- [x] **Quotation** — database-backed tracker (grouped by prep list), supplier-file upload with strict template validation, per-item price/brand/expiry extraction, per-project expiry-vs-delivery colour coding, short-dated warning, delete/replace the uploaded file (doesn't delete the entry), optimistic fingerprint guard on re-uploads
+- [x] **Quotation** — database-backed tracker (grouped by prep list), supplier-file upload with strict template validation, per-item price/brand/expiry extraction, per-project expiry-vs-delivery colour coding, short-dated warning, delete/replace the uploaded file (doesn't delete the entry) — **blocked end-to-end once a PO references those quoted lines**, optimistic fingerprint guard on re-uploads
 - [x] **Purchase Order** — create from awarded quotation (proportional allocation across project sources), draft → Sent → Partially received → Completed, cancel with reason, admin-only delete of draft/cancelled POs, Excel download on generation
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 226 passing (1351 assertions)
+- [x] **Tests** — 228 passing (1363 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
