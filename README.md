@@ -601,7 +601,7 @@ This is a single-box, multi-user deployment (a LAN box accessed by several staff
   - **Receiving a PO line** — opening a line's confirmation modal and posting `expected_received` against a receipt that already changed on the server is refused with a refresh-page prompt, and an already-received line stays marked.
   - **Editing a project** — the form posts `expected_project_fingerprint` (md5 over all editable fields and line rows); a stale submit is refused with a clear message.
   - **Uploading a replacement quotation file** — posts `expected_document_fingerprint` (md5 of path/name/size); if another user already replaced the file, the upload is refused.
-- **A Refresh button** in the header forces a reload so any user can see others' changes at will.
+- **Every page reads fresh from MySQL on load.** Reloading (browser refresh) always shows the latest state; the stale-fingerprint guards refuse edits against out-of-date data instead of overwriting silently.
 - **Receiving + tracking are transactional** behind the scenes (`DB::transaction()`), so a half-saved toggle cannot corrupt the PO state.
 - **Number sequences** (`number_sequences`) use `lockForUpdate()` when allocating `RFQ-`, `PL-`, `PO-` numbers — two concurrent allocations cannot collide.
 - **Unique constraints** on junction tables enforce no-duplicate-rows at the database level.

@@ -168,9 +168,6 @@
                 @endif
 
                 {{-- PO Cart --}}
-                @php
-                    $cartCount = auth()->user()?->poCartItems()->count() ?? 0;
-                @endphp
                 @if (auth()->user()->canModule('purchase-order'))
                 <a href="{{ route('po-cart') }}"
                    class="relative flex items-center w-full h-[65px] transition-colors
@@ -183,9 +180,6 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
                         </svg>
                         <span class="label whitespace-nowrap">PO Cart</span>
-                        @if ($cartCount > 0)
-                            <span class="ml-auto inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-teal-300 px-1.5 text-[11px] font-bold leading-none text-[#0e3a4c]">{{ $cartCount }}</span>
-                        @endif
                     </div>
                 </a>
                 @endif
@@ -290,14 +284,6 @@
                     @yield('header-actions')
 
                     <div class="flex items-center gap-4">
-                        {{-- Reload control; the app is not live, so this is how you see other users' changes --}}
-                        <button type="button" onclick="window.location.reload()" aria-label="Refresh page" title="Refresh to see changes other people made (reloads this page)"
-                                class="flex h-6 w-6 items-center justify-center text-white/80 transition-colors hover:text-white cursor-pointer">
-                            <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/>
-                            </svg>
-                        </button>
-
                         {{-- Cart quick view (opens a modal with the lines) --}}
                         <div class="relative flex h-6 w-6 items-center justify-center">
                             <button id="cartButton" type="button" aria-label="Purchase order cart" class="flex h-6 w-6 items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer">

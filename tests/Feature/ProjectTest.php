@@ -77,7 +77,6 @@ class ProjectTest extends TestCase
             ->assertSee($project->title)
             ->assertSee($project->reference_no)
             ->assertSee($entity->name)
-            ->assertSee('aria-label="Refresh page"', false)
             ->assertDontSee('bg-gray-200/50')
             ->assertSee('id="view-list"', false)
             ->assertSee('class="min-w-full divide-y divide-gray-200"', false);
