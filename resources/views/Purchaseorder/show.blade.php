@@ -285,7 +285,7 @@
                                                    : 'Your role does not have access to that module.' }}"
                                                {{ $isReceived ? 'checked' : '' }}
                                                {{ ($canManagePurchaseOrder && ! $canReceive) ? 'disabled' : '' }}
-                                               {{ $canManagePurchaseOrder ? ($canReceive ? 'onchange="this.form.submit()"' : '') : 'data-access-restricted-modal-toggle' }}
+                                               {{ $canManagePurchaseOrder ? ($canReceive ? 'data-po-receive' : '') : 'data-access-restricted-modal-toggle' }}
                                                aria-label="Mark {{ $item->item?->name ?? 'line' }} as received">
                                     </form>
                                 </td>
@@ -412,6 +412,15 @@
     </div>
 
     <script>
+        // Receive tick: submit the line's form (bound here, not inline, so it
+        // survives strict parsing and restored pages alike).
+        document.addEventListener('change', function (event) {
+            if (event.target.matches('input.po-receipt[data-po-receive]')) {
+                const form = event.target.closest('form');
+                if (form) form.submit();
+            }
+        });
+
         // Cancel and delete purchase order confirmation modals.
         (function () {
             const cancelBtn = document.getElementById('poCancelBtn');
