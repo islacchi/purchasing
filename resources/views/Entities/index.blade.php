@@ -58,19 +58,19 @@
         {{-- Table --}}
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact person</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact no.</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 w-14 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                <thead class="bg-[#0e5266]">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
+                        <th class="px-6 py-3">Name</th>
+                        <th class="px-6 py-3">Type</th>
+                        <th class="px-6 py-3">Contact person</th>
+                        <th class="px-6 py-3">Contact no.</th>
+                        <th class="px-6 py-3">Email</th>
+                        <th class="px-6 py-3 w-14 text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
                     @forelse ($entities as $entity)
-                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                        <tr class="odd:bg-white even:bg-[#f2f7f8] transition-colors cursor-pointer hover:bg-[#e4edf0]"
                              data-href="{{ route('entities.show', ['type' => 'procuring_entity', 'id' => $entity['id']]) }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <p class="text-sm font-bold text-gray-900">{{ $entity['name'] }}</p>
@@ -168,18 +168,18 @@
         {{-- Table --}}
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact person</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact no.</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 w-14 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                <thead class="bg-[#0e5266]">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
+                        <th class="px-6 py-3">Name</th>
+                        <th class="px-6 py-3">Contact person</th>
+                        <th class="px-6 py-3">Contact no.</th>
+                        <th class="px-6 py-3">Email</th>
+                        <th class="px-6 py-3 w-14 text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
                     @forelse ($suppliers as $supplier)
-                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+                        <tr class="odd:bg-white even:bg-[#f2f7f8] transition-colors cursor-pointer hover:bg-[#e4edf0]"
                              data-href="{{ route('entities.show', ['type' => 'supplier', 'id' => $supplier['id']]) }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <p class="text-sm font-bold text-gray-900">{{ $supplier['name'] }}</p>
