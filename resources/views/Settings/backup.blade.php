@@ -119,7 +119,7 @@
                                 <ol class="mt-1 list-decimal space-y-1 pl-5">
                                     <li>Log in as admin.</li>
                                     <li>Open <span class="font-semibold text-gray-800">Projects</span> — your old projects must be listed again (everything for this seed database, such as “Drugs for me”, must be there).</li>
-                                    <li>Open <span class="font-semibold text-gray-800">Prep Lists</span>, <span class="font-semibold text-gray-800">Quotation</span>, <span class="font-semibold text-gray-800">Purchase Order</span>, and <span class="font-semibold text-gray-800">Price Index</span> — the old content must be back.</li>
+                                    <li>Open <span class="font-semibold text-gray-800">Prep Lists</span>, <span class="font-semibold text-gray-800">Quotation</span>, <span class="font-semibold text-gray-800">Purchase Order</span>, and <span class="font-semibold text-gray-800">Item Catalog</span> — the old content must be back.</li>
                                     <li>If something is still missing, the very first backup you took in Step 1 is your safety net. Don’t delete anything; call your IT support with the error and the file names involved.</li>
                                 </ol>
                             </div>

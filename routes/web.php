@@ -12,11 +12,11 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EntityController;
+use App\Http\Controllers\ItemCatalogController;
 use App\Http\Controllers\PageController;
-use App\Http\Controllers\PreplistController;
-use App\Http\Controllers\PriceIndexController;
-use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PoCartController;
+use App\Http\Controllers\PreplistController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\SettingsController;
@@ -116,8 +116,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
             ->name('quotation.destroy');
     });
 
-    Route::middleware('module:priceindex')->group(function () {
-        Route::get('/priceindex', [PriceIndexController::class, 'index'])->name('priceindex');
+    Route::middleware('module:item-catalog')->group(function () {
+        Route::get('/item-catalog', [ItemCatalogController::class, 'index'])->name('item-catalog');
+        Route::get('/item-catalog/{item}', [ItemCatalogController::class, 'show'])->whereNumber('item')->name('item-catalog.show');
     });
 
     Route::middleware('module:entities')->group(function () {
@@ -178,7 +179,6 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::delete('/cart/items/{cartItem}', [PoCartController::class, 'destroy'])->whereNumber('cartItem')->name('po-cart.remove');
         Route::delete('/cart', [PoCartController::class, 'clear'])->name('po-cart.clear');
         Route::post('/cart/checkout', [PoCartController::class, 'checkout'])->name('po-cart.checkout');
-
 
         // Purchase order preparation screen, opened by the quotation page's
         // "Proceed to PO" button: pick the quoted items to order and set the

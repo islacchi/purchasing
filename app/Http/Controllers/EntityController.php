@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProcuringEntity;
+use App\Models\PurchaseOrderItem;
+use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\ActivityLogger;
 use Illuminate\Http\Request;
@@ -42,6 +44,72 @@ class EntityController extends Controller
     }
 
     /**
+     * RFQs sent to a supplier, newest first, with live quotation status.
+     *
+     * @return array<int, array{name: string, reference: string|null, rfq_number: string, id: int, status: string}>
+     */
+    private function supplierQuotationHistory(Supplier $supplier): array
+    {
+        return Quotation::query()
+            ->where('supplier_id', $supplier->id)
+            ->with('preplist:id,name,reference_no')
+            ->withCount(['items as priced_items' => fn ($query) => $query->whereNotNull('unit_price')])
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get()
+            ->map(fn ($quotation) => [
+                'id' => $quotation->id,
+                'name' => $quotation->preplist?->name ?? 'Prep list removed',
+                'reference' => $quotation->preplist?->reference_no ?? $quotation->rfq_number,
+                'rfq_number' => $quotation->rfq_number,
+                'status' => $quotation->priced_items > 0 ? 'Quoted' : 'Awaiting quote',
+            ])
+            ->all();
+    }
+
+    /**
+     * Completed purchase order lines from this supplier, aggregated per item.
+     *
+     * @return array<int, array>
+     */
+    private function supplierPurchaseHistory(Supplier $supplier): array
+    {
+        $lines = PurchaseOrderItem::query()
+            ->with(['item.category', 'receipts', 'purchaseOrder.quotation'])
+            ->whereHas('purchaseOrder', fn ($query) => $query->where('supplier_id', $supplier->id))
+            ->get()
+            ->filter(fn ($line) => (int) $line->receipts->sum('received_qty') >= (int) $line->qty)
+            ->values();
+
+        return $lines
+            ->groupBy('item_id')
+            ->map(function ($group) {
+                $item = $group->first()->item;
+                $qty = (int) $group->sum('qty');
+                $spend = (float) $group->sum(fn ($line) => $line->qty * (float) $line->unit_price);
+                $best = (float) $group->min('unit_price');
+                $last = $group->sortByDesc('id')->first();
+
+                return [
+                    'item_id' => $item?->id,
+                    'name' => $item?->name ?? 'Item',
+                    'unit' => $item?->unit ?? '',
+                    'category' => $item?->category?->name ?? '',
+                    'orders' => $group->count(),
+                    'qty' => $qty,
+                    'spend' => $spend,
+                    'avg_price' => $qty > 0 ? round($spend / $qty, 2) : 0.0,
+                    'best_price' => $best,
+                    'latest_price' => (float) ($last?->unit_price ?? 0),
+                    'last_po' => $last?->purchaseOrder?->po_number,
+                ];
+            })
+            ->sortByDesc('spend')
+            ->values()
+            ->all();
+    }
+
+    /**
      * Show a procuring entity or supplier.
      */
     public function show(string $type, $id)
@@ -63,6 +131,8 @@ class EntityController extends Controller
             'type' => $type,
             'id' => (int) $id,
             'supplier' => $record->toArray(),
+            'quotationHistory' => $this->supplierQuotationHistory($record),
+            'purchaseHistory' => $this->supplierPurchaseHistory($record),
         ]);
     }
 

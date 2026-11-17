@@ -16,7 +16,7 @@ Every purchase in the office follows the same road. Think of it like ordering fo
 1. PROJECTS   →  "What do we need to buy, and for which office?"
 2. PREPLIST   →  "Put everything we need on one shopping list."
 3. QUOTATION  →  "Ask suppliers: how much? Then collect their answers."
-4. PRICE INDEX→  "Compare the answers. Who is cheapest? Who has the freshest stock?"
+4. Item Catalog→  "Compare the answers. Who is cheapest? Who has the freshest stock?"
 5. PURCHASE   →  "Give the winning supplier the official order."
    ORDER
 6. RECEIVING  →  "Items arrive. Check them off. Done."
@@ -105,7 +105,7 @@ This is the busiest screen. Three stages happen here:
 
 **Stage C — Compare and award**
 
-- Look at **Price Index** (next section) to decide who wins per item.
+- Look at **Item Catalog** (next section) to decide who wins per item.
 - Once awarded, click **Proceed to PO** — that starts the Purchase Order.
 
 **Buttons you will see on the Quotation page:**
@@ -120,7 +120,7 @@ This is the busiest screen. Three stages happen here:
 
 > "Stage A is us asking. Stage B is them answering. Stage C is us saying yes. If you are at Stage B without a file uploaded, do not proceed anywhere else."
 
-### 4.4 PRICE INDEX — "Who is the best deal?"
+### 4.4 Item Catalog — "Who is the best deal?"
 
 **What this is in real life:** the comparison table.
 
@@ -138,7 +138,7 @@ For every item on the prep list, you see:
 
 **What to say to your colleagues:**
 
-> "Price Index is not a ranking of who's friendly. It's the scoreboard. Because we all have to answer to our auditor: which suppliers won, and why."
+> "Item Catalog is not a ranking of who's friendly. It's the scoreboard. Because we all have to answer to our auditor: which suppliers won, and why."
 
 ### 4.5 PURCHASE ORDER — "The official yes"
 
@@ -192,7 +192,7 @@ Run this exactly as written the first time. Keep it hands-on — every learner s
 > "We're going to walk through one real purchase: medicines for Dao. In 40 minutes you'll see every step the system handles, from the order to the delivery receipt."
 
 **0:05–0:10 — Sign in and look around**
-> "Type your username and password. See the dark panel on the left? That's our menu. Count the buttons: Projects, Preplist, Quotation, Price Index, Purchase Order, Entities, Settings. Everything lives in one of those seven."
+> "Type your username and password. See the dark panel on the left? That's our menu. Count the buttons: Projects, Preplist, Quotation, Item Catalog, Purchase Order, Entities, Settings. Everything lives in one of those seven."
 
 **0:10–0:18 — Projects (the big picture)**
 1. Click **Projects**.
@@ -214,8 +214,8 @@ Run this exactly as written the first time. Keep it hands-on — every learner s
 4. Upload a sample supplier file (keep two dummy files ready).
 5. Show **Submit quotation** and **Replace**.
 
-**0:34–0:40 — Price Index (the decision)**
-1. Click **Price Index**.
+**0:34–0:40 — Item Catalog (the decision)**
+1. Click **Item Catalog**.
 2. Walk through the **Best price board** and the columns: Best price, Best expiry, premium vs best.
 3. Say: *"Green cells are the cheapest. These percentages are how much more expensive the other offers are. If the cheapest file has no prices yet — they haven't answered."*
 
@@ -271,7 +271,7 @@ Your system administrator. Take a screenshot with your phone if possible — it 
 | **Preplist** | The shopping list we buy *this* time. |
 | **RFQ** | The request we send suppliers: "how much per item?" |
 | **Quotation** | The supplier's answer to that request. |
-| **Price Index** | The comparison table of all the answers. |
+| **Item Catalog** | The comparison table of all the answers. |
 | **Best price** | The cheapest unit price a supplier offered. |
 | **Best expiry** | The supplier offering the freshest stock. |
 | **Purchase Order (PO)** | The official order given to the winning supplier. |
@@ -285,4 +285,4 @@ Your system administrator. Take a screenshot with your phone if possible — it 
 
 ## Part 9 — One-Minute Summary (for the closing of the session)
 
-> "Look at the purchase like a single story. A project in Projects is a job we were given. The Preplist is the list we chose to buy. The Quotation is how we asked the suppliers and what they answered. The Price Index is how we decided. The Purchase Order is the yes we gave. Receiving is when the goods arrived. Every screen in this system is just one chapter of that one story — if you remember the story, you can find everything."
+> "Look at the purchase like a single story. A project in Projects is a job we were given. The Preplist is the list we chose to buy. The Quotation is how we asked the suppliers and what they answered. The Item Catalog is how we decided. The Purchase Order is the yes we gave. Receiving is when the goods arrived. Every screen in this system is just one chapter of that one story — if you remember the story, you can find everything."

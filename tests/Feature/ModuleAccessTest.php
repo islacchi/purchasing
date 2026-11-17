@@ -72,7 +72,7 @@ class ModuleAccessTest extends TestCase
         $this->actingAs($user)->get(route('projects'))->assertOk();
         $this->actingAs($user)->get(route('preplist'))->assertOk();
         $this->actingAs($user)->get(route('quotation'))->assertOk();
-        $this->actingAs($user)->get(route('priceindex'))->assertOk();
+        $this->actingAs($user)->get(route('item-catalog'))->assertOk();
         $this->actingAs($user)->get(route('purchase-order'))->assertOk();
         $this->actingAs($user)->get(route('entities'))->assertOk();
 

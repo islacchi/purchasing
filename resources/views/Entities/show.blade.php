@@ -114,14 +114,13 @@
             // Fetched by EntityController::show() from the real database row.
             $supplier = $supplier ?? [];
             $contactRows = [
-                ['CONTACT PERSON', $supplier['contact_person']],
-                ['CONTACT NO.', $supplier['contact_no']],
-                ['EMAIL', $supplier['email']],
+                ['CONTACT PERSON', $supplier['contact_person'] ?? null],
+                ['CONTACT NO.', $supplier['contact_no'] ?? null],
+                ['EMAIL', $supplier['email'] ?? null],
             ];
-            $quotationHistory = [
-                ['name' => 'July Region VII batch', 'reference' => '#2026-0090', 'status' => 'Quoted'],
-                ['name' => 'Lab reagents – PGH', 'reference' => '#2026-0089', 'status' => 'Awaiting quote'],
-            ];
+            $quotationHistory = $quotationHistory ?? [];
+            $purchaseHistory = $purchaseHistory ?? [];
+            $peso = fn ($amount) => '₱ ' . number_format((float) $amount, 2);
         @endphp
 
         {{-- Type label --}}
@@ -148,6 +147,9 @@
     {{-- Quotation history --}}
         <div class="mt-6">
             <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">QUOTATION HISTORY</p>
+            @if (empty($quotationHistory))
+                <p class="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-400">No RFQs sent to this supplier yet.</p>
+            @else
             <div class="space-y-3">
                 @foreach($quotationHistory as $quotation)
                     @php
@@ -157,13 +159,42 @@
                         <div class="flex items-center justify-between gap-4">
                             <div>
                                 <p class="text-sm font-bold text-gray-900">{{ $quotation['name'] }}</p>
-                                <p class="text-xs text-gray-400 mt-0.5">{{ $quotation['reference'] }}</p>
+                                <p class="text-xs text-gray-400 mt-0.5"><a href="{{ route('quotation.show', ['quotation' => $quotation['id']]) }}" class="hover:text-[#2a7a94] hover:underline">{{ $quotation['rfq_number'] }}</a> · {{ $quotation['reference'] }}</p>
                             </div>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $quotationPill }}">{{ $quotation['status'] }}</span>
                         </div>
                     </div>
                 @endforeach
             </div>
+            @endif
+        </div>
+
+        {{-- Purchase history --}}
+        <div class="mt-6">
+            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">PURCHASE HISTORY</p>
+            @if (empty($purchaseHistory))
+                <p class="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-400">No completed orders from this supplier yet.</p>
+            @else
+            <div class="space-y-3">
+                @foreach($purchaseHistory as $row)
+                    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-gray-900">
+                                    <a href="{{ route('item-catalog.show', ['item' => $row['item_id']]) }}" class="hover:text-[#2a7a94] hover:underline">{{ $row['name'] }}</a>
+                                    <span class="ml-2 text-xs font-medium text-gray-400">{{ number_format($row['qty']) }} {{ $row['unit'] }}</span>
+                                </p>
+                                <p class="mt-0.5 text-xs text-gray-500">{{ $row['orders'] }} order{{ $row['orders'] === 1 ? '' : 's' }} · avg {{ $peso($row['avg_price']) }} · best {{ $peso($row['best_price']) }} · latest {{ $peso($row['latest_price']) }}</p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <p class="text-sm font-semibold text-gray-900">{{ $peso($row['spend']) }}</p>
+                                <p class="text-xs text-gray-400">@if ($row['last_po']){{ $row['last_po'] }}@else last order @endif</p>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            @endif
         </div>
 
         {{-- Actions --}}

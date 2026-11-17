@@ -42,7 +42,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 | **Entities** | Directory of procuring entities (DOH offices, PGH, …) and suppliers with contact details | ✅ Database-backed |
 | **Notifications (bell)** | Delivery-deadline alerts derived from due dates + project fulfillment progress | ✅ Real, data-driven |
 | **Role-based access control** | Role × module matrix (None / View / Manage) enforced server-side on every module route; admin bypass; greyed/hidden write affordances for view-only roles; shared access-restricted dialog; friendly 403 page | ✅ Working |
-| **Price Index** | Being repurposed into a consolidated summary of items — the supplier comparison board, competitiveness scorecard, trend and savings features were removed | Placeholder (rebuild pending) |
+| **Item Catalog** | One row per item on a fully-received PO line: order counts, qty, total spend, best/latest price, last supplier; item detail page with per-supplier comparison, price-over-time chart and full purchase history | ✅ Database-backed |
 | **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage); Administrator rows are locked full access | ✅ Working |
 | **Settings → Logs** | Activity/log viewer — real rows from `ActivityLogger` on every module create/edit/delete, plus user/matrix changes; paginated at 50 rows per page | ✅ Working |
 | **Settings → Backup** | Full database backup (schema **and** contents) via `App\Support\DatabaseDumper` (through the app's own DB connection — no external `mysqldump`); download or delete any backup; built-in restore instructions on the page | ✅ Working |
@@ -131,10 +131,13 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - CRUD with search; soft-delete so historical links survive.
 - Only the fields the jurisdiction requires (name, type, address, contact person, contact number, email).
 
-### Price Index (`/priceindex`)
+### Item Catalog (`/item-catalog`)
 
-- **Being repurposed.** The comparison board that used to live here (price board, supplier competitiveness scorecard, item comparison spotlight, price trend, savings opportunities) was removed, along with its computation, client-side filtering and feature tests.
-- A placeholder shell remains at `/priceindex` so the route, sidebar entry and `module:priceindex` grants keep working; the module will be rebuilt as a consolidated summary of items.
+- One row per item that appears on at least one **fully received** purchase order line (receipt qty covers line qty), aggregated from the PO chain server-side: order counts, total qty purchased, total spend, weighted average, best/latest price, last supplier, last purchase date.
+- List page KPIs (items tracked / total spend / suppliers used / lines bought), all filtered by the same criteria.
+- Filters: search item or unit, category, supplier, **from/to date range** (on PO issue date); paging links preserve the filter state.
+- Item detail (`/item-catalog/{item}`): full purchase history (every completed line, linked to the PO), per-supplier comparison (orders/avg/best/latest/spend/share), weighted avg / best-price / last-purchase tiles, and an inline SVG price-over-time chart.
+- Supplier profile page (`/entities/supplier/{id}`) gains a **PURCHASE HISTORY** section listing every item bought from that supplier with the same aggregates.
 
 ### Settings → Privileges (`/settings/privileges`)
 
@@ -658,7 +661,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **217 passed / 1303 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **221 passed / 1328 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -679,7 +682,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 217 passing (1303 assertions)
+- [x] **Tests** — 221 passing (1328 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while referenced by a quotation; a quotation cannot be deleted once quoted (upload removal is separate)
@@ -689,11 +692,11 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
 - [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
 - [x] **Settings → Backup** — administrator-only full-database backup with plain-language restore instructions in-place
+- [x] **Item Catalog** — `/item-catalog`: one row per item on a fully-received PO line, aggregated server-side (order counts, total qty/spend, weighted avg, best/latest price, last supplier); KPIs (items tracked / spend / suppliers used / lines bought); filters (search, category, supplier, from/to date range); item detail page (`/item-catalog/{item}`) with full purchase history, per-supplier comparison table, weighted avg / best-price / last-purchase tiles, and an inline SVG price-over-time chart; nav sidebar, `role_module_access` key, sidebar icon, README docs, and feature tests updated.
 
 
 ### Not yet done
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
-- [ ] **Price Index (repurposed)** — the module is being rebuilt as a consolidated summary of items (the old comparison board was removed). No timeline.
 - [ ] **Partial receipts** — receiving is all-or-nothing per line; `purchase_order_receipts` already has `received_qty`, `lot_no`, `expiry_date`, but the UI doesn't capture them
 - [ ] **PO re-download** — the PO Excel is produced once at creation; there's no way to re-download it from the detail page
 - [ ] **PO tracking reference numbers** — PO only references the quotation; PO→project links via allocations are not yet surfaced on the PO detail page
@@ -730,7 +733,7 @@ Accepted trade-offs in the current build — worth knowing before relying on the
 purchasing/
 ├── app/
 │   ├── Console/Commands/       # db:dump — dev snapshot helper (used for database/purchasing_db.sql)
-│   ├── Http/Controllers/       # Auth, Entity, Entities, Projects, Preplist, PriceIndex, PurchaseOrder, Quotation, Settings
+│   ├── Http/Controllers/       # Auth, Entity, Entities, Projects, Preplist, ItemCatalog, PurchaseOrder, Quotation, Settings
 │   ├── Http/Middleware/        # EnsureSessionIsActive, EnsureModuleAccess (module:{module})
 │   ├── Models/                 # 21 models + casts, scopes, relationships
 │   ├── Support/                # RfqQuotationWorkbook, PurchaseOrderWorkbook, QuotationWorkbookParser,

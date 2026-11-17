@@ -17,7 +17,7 @@ class ModuleAccess
         'projects' => 'Projects',
         'preplist' => 'Preplist',
         'quotation' => 'Quotation',
-        'priceindex' => 'Price Index',
+        'item-catalog' => 'Item Catalog',
         'purchase-order' => 'Purchase Order',
         'entities' => 'Entities',
     ];

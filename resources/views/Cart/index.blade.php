@@ -69,12 +69,12 @@
             </div>
             <h2 class="mt-4 text-base font-semibold text-gray-900">Your cart is empty</h2>
             <p class="mx-auto mt-1 max-w-md text-sm text-gray-500">
-                Add items from a quotation's page, or use <span class="font-medium text-gray-700">Add all best prices to cart</span> on the Price Index.
+                Add items from a quotation's page, or use <span class="font-medium text-gray-700">Add all best prices to cart</span> on the Item Catalog.
             </p>
             <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
-                <a href="{{ route('priceindex') }}"
+                <a href="{{ route('item-catalog') }}"
                    class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#236b80]">
-                    Go to Price Index
+                    Go to Item Catalog
                 </a>
                 <a href="{{ route('quotation') }}"
                    class="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">

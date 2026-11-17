@@ -167,12 +167,12 @@
                 </a>
                 @endif
 
-                {{-- Price Index --}}
-                @if (auth()->user()->canModule('priceindex'))
-                <a href="{{ route('priceindex') }}"
+                {{-- Item Catalog --}}
+                @if (auth()->user()->canModule('item-catalog'))
+                <a href="{{ route('item-catalog') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
-                        {{ request()->is('priceindex') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
-                    @if(request()->is('priceindex'))
+                        {{ request()->is('item-catalog*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                    @if(request()->is('item-catalog*'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
 
@@ -180,7 +180,7 @@
                         <svg class="w-6 h-6 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v7.5m2.25-6.466a9.016 9.016 0 0 0-3.461-.203c-.536.072-.974.478-1.021 1.017a4.559 4.559 0 0 0-.018.402c0 .464.336.844.775.994l2.95 1.012c.44.15.775.53.775.994 0 .136-.006.27-.018.402-.047.539-.485.945-1.021 1.017a9.077 9.077 0 0 1-3.461-.203M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                         </svg>
-                        <span class="label whitespace-nowrap">Price Index</span>
+                        <span class="label whitespace-nowrap">Item Catalog</span>
                     </div>
                 </a>
                 @endif
@@ -395,7 +395,7 @@
             @if ($headerCartCount === 0)
                 <div class="flex-1 px-5 py-12 text-center">
                     <p class="text-sm font-medium text-gray-600">Your cart is empty.</p>
-                    <p class="mt-1 text-xs text-gray-500">Add lines from a quotation, or add the best prices from the Price Index.</p>
+                    <p class="mt-1 text-xs text-gray-500">Add lines from a quotation, or add the best prices from the Item Catalog.</p>
                 </div>
             @else
                 <ul class="flex-1 divide-y divide-gray-100 overflow-y-auto">
