@@ -361,7 +361,10 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Toggle whether a purchase order line has been fully received.
+     * Mark a purchase order line as fully received.
+     *
+     * Receiving is one-way: once a line is recorded as received it can no
+     * longer be unchecked from the UI or directly; it has to stay received.
      */
     public function toggleReceipt(Request $request, PurchaseOrder $purchaseOrder, PurchaseOrderItem $purchaseOrderItem)
     {
@@ -375,6 +378,12 @@ class PurchaseOrderController extends Controller
                 ->withErrors(['purchase_order' => 'Send the purchase order to the supplier before recording receipts.']);
         }
 
+        if ($purchaseOrderItem->isReceived()) {
+            return redirect()
+                ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
+                ->withErrors(['purchase_order' => 'This line is already recorded as received and cannot be unmarked.']);
+        }
+
         $expected = $request->validate(['expected_received' => 'nullable|boolean']);
 
         if (isset($expected['expected_received']) && (bool) $expected['expected_received'] !== $purchaseOrderItem->isReceived()) {
@@ -384,16 +393,12 @@ class PurchaseOrderController extends Controller
         }
 
         DB::transaction(function () use ($request, $purchaseOrder, $purchaseOrderItem) {
-            if ($purchaseOrderItem->receipts()->exists()) {
-                $purchaseOrderItem->receipts()->delete();
-            } else {
-                PurchaseOrderReceipt::create([
-                    'purchase_order_item_id' => $purchaseOrderItem->id,
-                    'received_by' => $request->user()->id,
-                    'received_qty' => $purchaseOrderItem->qty,
-                    'received_on' => today(),
-                ]);
-            }
+            PurchaseOrderReceipt::create([
+                'purchase_order_item_id' => $purchaseOrderItem->id,
+                'received_by' => $request->user()->id,
+                'received_qty' => $purchaseOrderItem->qty,
+                'received_on' => today(),
+            ]);
 
             $this->refreshReceiptStatus($purchaseOrder);
 
@@ -402,7 +407,7 @@ class PurchaseOrderController extends Controller
 
         return redirect()
             ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
-            ->with('status', 'Receipt updated.');
+            ->with('status', 'Line marked as received.');
     }
 
     /**

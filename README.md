@@ -122,7 +122,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Allocation across project sources is **proportional** — the PO splits down to the project lines so you know exactly which project it fulfils — recorded in `purchase_order_item_allocations`.
 - PO numbers come from the shared `number_sequences` table as `PO-YYYY-NNNN`.
 - Status flow: `draft → sent → partially_received → completed` (cancel any time before completion; admin-only delete of draft/cancelled POs).
-- Receiving: the checkbox on each line represents “full quantity received for this line”; toggling fires immediately (`onchange`) with a server-side guard against stale state (records the expected pre-toggle state in the request).
+- Receiving: each line has a **Mark as received** checkbox with a confirmation modal — confirming records the full line qty as received and moves the PO to `partially_received` / `completed`. Once a line is received it is locked in the UI and un-marking is refused server-side; `expected_received` guards against stale pages and races.
 - Single-file Excel download at creation; no re-download in this build (see [Not yet done](#not-yet-done)).
 - People with view-only roles get the receive checkboxes disabled (greyed, access-restricted modal on click). Unauthorized modification attempts are still blocked server-side by the `module:purchase-order` middleware.
 
@@ -478,7 +478,7 @@ Send to supplier → lines received per line item → PO auto-moves Sent → Par
 4. **Upload the supplier's returned file** — the tracker auto-matches each row by item description (case-insensitive, normalized). Unit price ≤ 0 is rejected. Expiry is parsed crash-proof (`09/2026`, `Sep 2026`, ISO…).
 5. **Create the PO** — one click from the Quotation screen (manager-only, viewers get the access-restriction modal). The PO is created in `draft` and split proportionally across the projects' lines.
 6. **Send the PO** — moves it to `sent`.
-7. **Receive lines** — tick the line's checkbox and enter nothing else; the status auto-moves to `partially_received` or `completed`.
+7. **Receive lines** — tick the line's checkbox and confirm the modal; the status auto-moves to `partially_received` or `completed`. Once received, the line is locked and cannot be unmarked.
 8. **Delete / cancel** — delete only in `draft` / `cancelled` (admin-only); cancel allowed anytime.
 
 ---
@@ -598,7 +598,7 @@ This is a single-box, multi-user deployment (a LAN box accessed by several staff
 ### What is handled
 
 - **No silent overwrites on hot shared writes.** Three flows carry an optimistic checkpoint:
-  - **Receiving a PO line** — the form posts `expected_received` (the pre-toggle state); if the receipt already changed on the server, the toggle is refused and the page prompts to refresh.
+  - **Receiving a PO line** — opening a line's confirmation modal and posting `expected_received` against a receipt that already changed on the server is refused with a refresh-page prompt, and an already-received line stays marked.
   - **Editing a project** — the form posts `expected_project_fingerprint` (md5 over all editable fields and line rows); a stale submit is refused with a clear message.
   - **Uploading a replacement quotation file** — posts `expected_document_fingerprint` (md5 of path/name/size); if another user already replaced the file, the upload is refused.
 - **A Refresh button** in the header forces a reload so any user can see others' changes at will.
@@ -662,7 +662,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **224 passed / 1338 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **224 passed / 1340 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -683,7 +683,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 224 passing (1338 assertions)
+- [x] **Tests** — 224 passing (1340 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.

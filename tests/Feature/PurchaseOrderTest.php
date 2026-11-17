@@ -480,7 +480,7 @@ class PurchaseOrderTest extends TestCase
         $this->assertSame(PurchaseOrder::STATUS_COMPLETED, $purchaseOrder->fresh()->status);
     }
 
-    public function test_unreceiving_a_line_reverts_the_status(): void
+    public function test_received_line_cannot_be_unmarked(): void
     {
         $user = $this->admin();
         $quoted = $this->quotedQuotation($user);
@@ -509,11 +509,13 @@ class PurchaseOrderTest extends TestCase
             ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $line->id]));
         $this->assertSame(PurchaseOrder::STATUS_COMPLETED, $purchaseOrder->fresh()->status);
 
+        // Once received, the line is locked — a direct un-marking attempt is refused.
         $this->actingAs($user)
-            ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $line->id]));
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $line->id]))
+            ->assertSessionHasErrors('purchase_order');
 
-        $this->assertSame(PurchaseOrder::STATUS_SENT, $purchaseOrder->fresh()->status);
-        $this->assertDatabaseCount('purchase_order_receipts', 0);
+        $this->assertSame(PurchaseOrder::STATUS_COMPLETED, $purchaseOrder->fresh()->status);
+        $this->assertDatabaseCount('purchase_order_receipts', 1);
     }
 
     public function test_cancelled_order_cannot_be_sent_or_received(): void
@@ -618,7 +620,7 @@ class PurchaseOrderTest extends TestCase
                 'expected_received' => '0',
             ])
             ->assertRedirect(route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id]))
-            ->assertSessionHas('status', 'Receipt updated.');
+            ->assertSessionHas('status', 'Line marked as received.');
 
         $this->actingAs($user)
             ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]), [

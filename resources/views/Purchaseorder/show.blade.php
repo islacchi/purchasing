@@ -275,19 +275,36 @@
                                     @endif
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2 text-center">
-                                    <form method="POST" action="{{ route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]) }}">
-                                        @csrf
-                                        <input type="hidden" name="expected_received" value="{{ $isReceived ? '1' : '0' }}">
-                                        <input type="checkbox"
-                                               class="po-receipt h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:cursor-not-allowed disabled:opacity-40"
-                                               title="{{ $canManagePurchaseOrder
-                                                   ? ($canReceive ? 'Tick when the full quantity for this line has arrived and passed the shelf-life check' : 'Send the PO to the supplier before recording receipts')
-                                                   : 'Your role does not have access to that module.' }}"
-                                               {{ $isReceived ? 'checked' : '' }}
-                                               {{ ($canManagePurchaseOrder && ! $canReceive) ? 'disabled' : '' }}
-                                               {{ $canManagePurchaseOrder ? ($canReceive ? 'data-po-receive' : '') : 'data-access-restricted-modal-toggle' }}
-                                               aria-label="Mark {{ $item->item?->name ?? 'line' }} as received">
-                                    </form>
+                                    @if ($isReceived)
+                                        {{-- Locked: once received, the line cannot be unmarked from this screen --}}
+                                        <input type="checkbox" checked disabled
+                                               class="h-4 w-4 cursor-not-allowed rounded border-gray-200 bg-gray-100 accent-[#0e5266] opacity-70"
+                                               title="Recorded as received — locked"
+                                               aria-label="{{ $item->item?->name ?? 'Line' }} received and locked">
+                                    @elseif ($canManagePurchaseOrder && $canReceive)
+                                        <form method="POST" action="{{ route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]) }}">
+                                            @csrf
+                                            <input type="hidden" name="expected_received" value="0">
+                                            <input type="checkbox"
+                                                   class="po-receipt h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
+                                                   title="Tick when the full quantity for this line has arrived and passed the shelf-life check"
+                                                   data-po-receive
+                                                   data-po-label="{{ $item->item?->name ?? 'This line' }}"
+                                                   aria-label="Mark {{ $item->item?->name ?? 'line' }} as received">
+                                        </form>
+                                    @elseif ($canManagePurchaseOrder)
+                                        @php($title = 'Send the PO to the supplier before recording receipts')
+                                        <input type="checkbox" disabled
+                                               class="po-receipt h-4 w-4 cursor-not-allowed rounded border-gray-200 opacity-40"
+                                               title="{{ $title }}"
+                                               aria-label="{{ $title }}">
+                                    @else
+                                        @php($title = 'Your role does not have access to that module.')
+                                        <input type="checkbox" data-access-restricted-modal-toggle
+                                               class="po-receipt h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:opacity-40"
+                                               title="{{ $title }}"
+                                               aria-label="{{ $title }}">
+                                    @endif
                                 </td>
                                 <td class="break-words px-3 py-2 text-right text-gray-700">{{ $peso($item->unit_price) }}</td>
                                 <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">
@@ -411,15 +428,98 @@
         </div>
     </div>
 
+        {{-- Mark as received confirmation modal --}}
+        <div id="poReceiveModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="poReceiveTitle">
+            <div id="poReceiveOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+            <form id="poReceiveForm" method="POST" class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+                @csrf
+                <div class="flex items-start gap-3 px-5 py-4">
+                    <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-teal-50">
+                        <svg class="h-5 w-5 text-[#2a7a94]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 12.75l6 6 9-13.5"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 id="poReceiveTitle" class="text-base font-bold text-gray-900">Mark as received?</h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            <span id="poReceiveItemName" class="font-medium text-gray-800">This line</span>
+                            will be recorded as fully received for this purchase order — the order will move to
+                            <span class="font-medium text-gray-800">Partially received</span> or
+                            <span class="font-medium text-gray-800">Completed</span>.
+                            This cannot be undone from this screen.
+                        </p>
+                    </div>
+                </div>
+
+                <input type="hidden" name="expected_received" value="0">
+                <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                    <button type="button" id="poReceiveCancel"
+                            class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                        Keep open
+                    </button>
+                    <button type="submit"
+                            class="rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80] transition-colors cursor-pointer">
+                        Mark as received
+                    </button>
+                </div>
+            </form>
+        </div>
+
     <script>
-        // Receive tick: submit the line's form (bound here, not inline, so it
-        // survives strict parsing and restored pages alike).
-        document.addEventListener('change', function (event) {
-            if (event.target.matches('input.po-receipt[data-po-receive]')) {
-                const form = event.target.closest('form');
-                if (form) form.submit();
+        // Mark as received: clicking the checkbox opens a confirmation modal
+        // instead of posting immediately. The line stays unreceived until the
+        // modal is confirmed.
+        (function () {
+            const receiveModal = document.getElementById('poReceiveModal');
+            const receiveForm = document.getElementById('poReceiveForm');
+            const receiveOverlay = document.getElementById('poReceiveOverlay');
+            const receiveCancel = document.getElementById('poReceiveCancel');
+            const receiveItemName = document.getElementById('poReceiveItemName');
+
+            function openReceiveModal() {
+                receiveModal.classList.remove('hidden');
+                receiveModal.classList.add('flex');
+                receiveCancel.focus();
             }
-        });
+
+            function closeReceiveModal(focusBack) {
+                receiveModal.classList.add('hidden');
+                receiveModal.classList.remove('flex');
+                if (focusBack) focusBack.focus();
+            }
+
+            if (receiveModal && receiveForm) {
+                document.addEventListener('change', function (event) {
+                    if (! event.target.matches('input.po-receipt[data-po-receive]')) {
+                        return;
+                    }
+                    const form = event.target.closest('form');
+                    if (! form) {
+                        return;
+                    }
+                    // Swap the checkbox's own form action onto the modal form and
+                    // keep the row unchecked until the modal is confirmed.
+                    receiveForm.setAttribute('action', form.getAttribute('action'));
+                    receiveItemName.textContent = event.target.getAttribute('data-po-label') || 'This line';
+                    event.target.checked = false;
+                    openReceiveModal();
+                });
+
+                if (receiveOverlay) {
+                    receiveOverlay.addEventListener('click', () => closeReceiveModal());
+                }
+                if (receiveCancel) {
+                    receiveCancel.addEventListener('click', () => closeReceiveModal());
+                }
+
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape' && receiveModal && ! receiveModal.classList.contains('hidden')) {
+                        closeReceiveModal();
+                    }
+                });
+            }
+        })();
 
         // Cancel and delete purchase order confirmation modals.
         (function () {
