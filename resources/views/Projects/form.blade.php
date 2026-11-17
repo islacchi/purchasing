@@ -23,31 +23,21 @@
         $modeOfProcurement = old('mode_of_procurement', $project?->mode_of_procurement ?? '');
         $notes = old('notes', $project?->notes ?? '');
 
-        $items = old('items');
-
-        if ($items === null) {
-            if ($isEdit && $project->items->isNotEmpty()) {
-                $items = $project->items
-                    ->map(fn ($projectItem) => [
-                        'description' => $projectItem->item?->name ?? '',
-                        'category' => $projectItem->item?->category?->name ?? '',
-                        'unit' => $projectItem->item?->unit ?? '',
-                        'quantity' => $projectItem->quantity,
-                        'in_stock' => $projectItem->in_stock,
-                        'unit_cost' => $projectItem->unit_cost,
-                        'quoted_price' => $projectItem->awarded_unit_price,
-                    ])
-                    ->values()
-                    ->all();
-            } else {
-                $items = [['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'in_stock' => '', 'unit_cost' => '', 'quoted_price' => '']];
-            }
-        }
-
-        // If every row came back from the failed submission as fully blank,
-        // render one empty row so the user can keep working from here.
-        if (is_array($items) && count($items) === 0) {
-            $items = [['description' => '', 'category' => '', 'unit' => '', 'quantity' => '', 'in_stock' => '', 'unit_cost' => '', 'quoted_price' => '']];
+        // Item rows are prepared by the controllers (create/edit/pass-through), with lock flags for lines already sourced into prep lists.
+    $emptyRow = [
+            'description' => '',
+            'category' => '',
+            'unit' => '',
+            'quantity' => '',
+            'in_stock' => '',
+            'unit_cost' => '',
+            'quoted_price' => '',
+            'locked' => false,
+            'lockedIn' => [],
+        ];
+        $items = $items ?? [$emptyRow];
+        if (count($items) === 0) {
+            $items = [$emptyRow];
         }
     @endphp
 
@@ -196,42 +186,74 @@
                     <div></div>
                 </div>
                 @foreach ($items as $i => $item)
-                    <div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2">
-                        <div>
+                    @php
+                        $locked = (bool) ($item['locked'] ?? false);
+                        $lockTitle = $locked
+                            ? 'Locked — used in ' . implode(', ', $item['lockedIn'] ?? []) . '. Remove it from the prep list first to change it.'
+                            : '';
+                        $fieldClass = 'w-full px-2.5 py-1.5 rounded-md border text-sm '
+                            . ($locked
+                                ? 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-500'
+                                : 'border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300');
+                    @endphp
+                    <div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 px-3 py-2 {{ $locked ? 'is-locked bg-gray-50' : 'bg-white' }}">
+                        <div class="relative min-w-0">
                             <input type="text" name="items[{{ $i }}][description]" value="{{ $item['description'] ?? '' }}"
-                                   class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                   {{ $locked ? 'readonly' : '' }}
+                                   title="{{ $lockTitle }}"
+                                   class="{{ $fieldClass }} {{ $locked ? 'pr-7' : '' }}">
+                            @if ($locked)
+                                <svg class="locked-indicator pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16.5 10.5V7.75a4.5 4.5 0 1 0-9 0v2.75M5.25 10.5h13.5a.75.75 0 0 1 .75.75v8.5a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75v-8.5a.75.75 0 0 1 .75-.75Z"/>
+                                </svg>
+                            @endif
                         </div>
                         <div>
-                            <select name="items[{{ $i }}][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            <select name="items[{{ $i }}][category]" {{ $locked ? 'disabled' : '' }} title="{{ $lockTitle }}"
+                                    class="{{ $fieldClass }}">
                                 <option value="" {{ empty($item['category']) ? 'selected' : '' }}>Select...</option>
                                 <option value="drugs and medicines" {{ ($item['category'] ?? '') === 'drugs and medicines' ? 'selected' : '' }}>Drugs and medicines</option>
                                 <option value="supplies and equipments" {{ ($item['category'] ?? '') === 'supplies and equipments' ? 'selected' : '' }}>Supplies and equipments</option>
                             </select>
+                            @if ($locked)
+                                {{-- Disabled selects do not submit; carry the value through so it can be matched and ignored server-side. --}}
+                                <input type="hidden" name="items[{{ $i }}][category]" value="{{ $item['category'] ?? '' }}" class="locked-category-value">
+                            @endif
                         </div>
                         <div>
                             <input type="text" name="items[{{ $i }}][unit]" value="{{ $item['unit'] ?? '' }}"
-                                   class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                   {{ $locked ? 'readonly' : '' }}
+                                   title="{{ $lockTitle }}"
+                                   class="{{ $fieldClass }}">
                         </div>
                         <div>
                             <input type="number" name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] ?? '' }}"
-                                   class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                   {{ $locked ? 'readonly' : '' }}
+                                   title="{{ $lockTitle }}"
+                                   class="{{ $fieldClass }}">
                         </div>
                         <div>
                             <input type="number" step="0.01" name="items[{{ $i }}][unit_cost]" value="{{ $item['unit_cost'] ?? '' }}"
-                                   class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                   {{ $locked ? 'readonly' : '' }}
+                                   title="{{ $lockTitle }}"
+                                   class="{{ $fieldClass }}">
                         </div>
                         <div>
                             <input type="number" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] ?? '' }}"
-                                   class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                   {{ $locked ? 'readonly' : '' }}
+                                   title="{{ $lockTitle }}"
+                                   class="{{ $fieldClass }}">
                         </div>
                         {{-- On-hand quantity; fully covered lines are fulfilled and are excluded from PO --}}
                         <div>
                             <input type="number" min="0" step="1" name="items[{{ $i }}][in_stock]" value="{{ $item['in_stock'] ?? '' }}"
-                                   class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                                   {{ $locked ? 'readonly' : '' }}
+                                   title="{{ $lockTitle }}"
+                                   class="{{ $fieldClass }}"
                                    placeholder="0">
                         </div>
                         <div class="checkbox-cell pb-2 hidden">
-                            <input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300">
+                            <input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300" {{ $locked ? 'disabled' : '' }} title="{{ $locked ? 'Used in a prep list — remove it there first to delete this line.' : '' }}">
                         </div>
                     </div>
                 @endforeach
@@ -390,6 +412,20 @@
     // the controller filters untouched rows before validating the items array.
     (function () {
         const rowsContainer = document.getElementById('itemRows');
+        // A row cloned from an existing project item may be locked (used in a
+        // prep list) — freshly created rows must never inherit the lock.
+        window.__unlinkRow = function unlinkRow(template) {
+            template.classList.remove('is-locked', 'bg-gray-50');
+            template.querySelectorAll('[readonly], [disabled]').forEach(function (el) {
+                el.removeAttribute('readonly');
+                el.removeAttribute('disabled');
+            });
+            template.querySelectorAll('.locked-indicator, .locked-category-value').forEach(function (el) {
+                el.remove();
+            });
+
+            return template;
+        };
         // Seed row HTML captured at load time so a fresh row can be rebuilt
         // even after every existing row has been deleted.
         const seedRow = rowsContainer.querySelector('.item-row');
@@ -481,6 +517,7 @@
             } else {
                 return;
             }
+            window.__unlinkRow(template);
 
             template.querySelectorAll('input[type="text"], input[type="number"]').forEach(function (input) {
                 input.value = '';
@@ -1101,7 +1138,7 @@
             function seedRowTemplate() {
                 var existing = rowsContainer.querySelector('.item-row');
                 if (existing) {
-                    return existing.cloneNode(true);
+                    return window.__unlinkRow(existing.cloneNode(true));
                 }
                 var wrapper = document.createElement('div');
                 wrapper.innerHTML = '<div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2"><div><input type="text" name="items[0][description]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><select name="items[0][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"><option value="">Select...</option><option value="drugs and medicines">Drugs and medicines</option><option value="supplies and equipments">Supplies and equipments</option></select></div><div><input type="text" name="items[0][unit]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" name="items[0][quantity]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" step="0.01" name="items[0][unit_cost]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" step="0.01" name="items[0][quoted_price]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="1" name="items[0][in_stock]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" placeholder="0"></div><div class="checkbox-cell pb-2 hidden"><input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300"></div></div>';

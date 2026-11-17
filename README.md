@@ -74,6 +74,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Empty with filters returns “No projects match the current filters” with the Add button hidden so it doesn't mislead.
 - View modes: **Content** (card list), **Details** (metadata columns), **List** (dense table) — all paged from the same paginated slice (`?page=`).
 - A hidden, folio-sized print sheet renders in print preview (8.5 × 13 in officio, landscape) via a modal; clicking Print calls `window.print()` with the correct `@page` size. The same content streams from `/projects/{project}/download` (`projects.download`) as an `.xlsx` workbook built by `ProjectSummaryWorkbook`.
+- Item lines already compiled into a prep list are **locked** in the form (read-only, greyed, lock icon, tooltip naming the prep list). Saving around locked lines works as usual; a locked line cannot be changed or removed here — do it in the prep list first. Removing a sourced line from the form is refused with a friendly message; nothing is saved until the prep list stops referencing the line.
 - Soft-deleted (`deleted_at`) rather than hard-deleted, so links from prep lists survive; cascade rules prevent deleting a sourced project.
 - The line-level field `project_items.fulfillment_status` is what progress counts; there is no project-level status enum.
 
@@ -657,7 +658,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **213 passed / 1282 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **217 passed / 1303 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -677,6 +678,8 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Purchase Order** — create from awarded quotation (proportional allocation across project sources), draft → Sent → Partially received → Completed, cancel with reason, admin-only delete of draft/cancelled POs, Excel download on generation
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
+- [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
+- [x] **Tests** — 217 passing (1303 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while referenced by a quotation; a quotation cannot be deleted once quoted (upload removal is separate)
@@ -686,7 +689,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
 - [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
 - [x] **Settings → Backup** — administrator-only full-database backup with plain-language restore instructions in-place
-- [x] **Tests** — 213 passing (1282 assertions)
+
 
 ### Not yet done
 - [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
@@ -697,13 +700,11 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [ ] **Notifications** are computed on every page view; there's no persisted notification log or read state
 - [ ] **Activity log retention** — the activity trail is unbounded; no pruning/archival policy yet
 - [ ] **PhpSpreadsheet migration** — if `ext-gd` is enabled later, the manual workbook generator can be replaced
-- [ ] **Project edit hard-fails (500) once any of its items is compiled into a prep list.** `syncItems()` deletes and re-creates `project_items` on every save; `preplist_item_sources.project_item_id` has a restricted FK, so the delete raises an unhandled FK violation. A merge/update strategy (match by identity, update in place, never drop sourced rows) is required — no test covers this path.
 - [ ] **A quotation whose prep list is missing renders a fixed error banner and cannot be re-uploaded or sent to PO.** Only reachable via DB-level preplist deletion or legacy rows predating the delete guard. Recovery is `Preplist::withTrashed()->find($id)->restore()`.
 - [ ] **The activity log is unbounded**; it will grow indefinitely unless pruned.
 
 ### Known fragility worth addressing
 
-- **Project edit hard-fails (500) once any of its items is compiled into a prep list.** `syncItems()` deletes and re-creates `project_items` on every save; `preplist_item_sources.project_item_id` has a restricted FK, so the delete raises an unhandled FK violation and the `PUT projects.update` request 500s. A merge/update strategy is required — no test covers this path.
 - **A quotation whose prep list is missing renders a fixed error banner and cannot be re-uploaded or sent to PO.** This state is only reachable via DB-level preplist deletion; `PreplistController::destroy` now blocks deletion of sourced prep lists. Recovery is `Preplist::withTrashed()->find($id)->restore()`.
 - **Viewers can't Manage their own profile.** Password change/update is admin-only in the current build; viewers cannot reset their own passwords.
 

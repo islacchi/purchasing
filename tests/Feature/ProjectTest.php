@@ -286,6 +286,150 @@ class ProjectTest extends TestCase
         $this->assertSame('2026-07-25', $project->fresh()->delivery_due_date->toDateString());
     }
 
+    public function test_project_update_keeps_locked_sourced_lines_untouched(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $projectItem = $this->addItem($project);
+
+        $this->actingAs($user)
+            ->post(route('preplist.store'), [
+                'name' => 'Locked fixture prep list',
+                'sources' => [$projectItem->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        // Even when the form submits different values for the locked line,
+        // the database must keep the original ones.
+        $this->actingAs($user)
+            ->put(route('projects.update', ['project' => $project->id]), [
+                'procuring_entity_id' => $entity->id,
+                'title' => 'Project edited around locked lines',
+                'reference_no' => 'RF-2026-EDIT2',
+                'mode_of_procurement' => 'small_value',
+                'items' => [
+                    [
+                        'description' => 'Mefenamic Capsule - 500mg',
+                        'category' => 'drugs and medicines',
+                        'unit' => 'Box',
+                        'quantity' => 9999,
+                        'unit_cost' => 9999.00,
+                        'quoted_price' => 9999.00,
+                        'in_stock' => 9999,
+                    ],
+                ],
+            ])
+            ->assertSessionHas('status');
+
+        $line = $project->fresh()->items()->firstOrFail();
+        $this->assertSame(50, (int) $line->quantity, 'Locked sourced line quantity must not change.');
+        $this->assertSame('Box', $line->item?->unit);
+        $this->assertSame(320.00, (float) $line->unit_cost);
+        $this->assertSame(305.00, (float) $line->awarded_unit_price);
+        $this->assertSame(0, (int) $line->in_stock);
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'title' => 'Project edited around locked lines',
+            'reference_no' => 'RF-2026-EDIT2',
+        ]);
+    }
+
+    public function test_project_update_refuses_to_remove_a_sourced_line(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $projectItem = $this->addItem($project);
+
+        $this->actingAs($user)
+            ->post(route('preplist.store'), [
+                'name' => 'Removal guard prep list',
+                'sources' => [$projectItem->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->put(route('projects.update', ['project' => $project->id]), [
+                'procuring_entity_id' => $entity->id,
+                'title' => 'Attempted removal',
+                'reference_no' => 'RF-2026-EDIT3',
+                'mode_of_procurement' => 'small_value',
+                'items' => [],
+            ])
+            ->assertSessionHasErrors('items');
+
+        $this->assertSame(1, $project->fresh()->items()->count(), 'The sourced line must remain in the project.');
+        $this->assertDatabaseMissing('projects', ['title' => 'Attempted removal']);
+    }
+
+    public function test_project_update_edits_and_removes_unsourced_lines(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $first = $this->addItem($project);
+
+        $secondCategory = ItemCategory::firstOrCreate(['name' => 'supplies and equipments']);
+        $secondItem = Item::create([
+            'category_id' => $secondCategory->id,
+            'name' => 'Surgical Gloves - Large',
+            'unit' => 'Box',
+        ]);
+        $second = ProjectItem::create([
+            'project_id' => $project->id,
+            'item_id' => $secondItem->id,
+            'quantity' => 100,
+            'unit_cost' => 450.00,
+            'awarded_unit_price' => 440.00,
+            'fulfillment_status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('projects.update', ['project' => $project->id]), [
+                'procuring_entity_id' => $entity->id,
+                'title' => $project->title,
+                'reference_no' => $project->reference_no,
+                'mode_of_procurement' => $project->mode_of_procurement,
+                'items' => [
+                    [
+                        'description' => 'Mefenamic Capsule - 500mg',
+                        'category' => 'drugs and medicines',
+                        'unit' => 'Box',
+                        'quantity' => 25,
+                        'unit_cost' => 321.00,
+                    ],
+                ],
+            ])
+            ->assertSessionHas('status');
+
+        $this->assertSame(25, (int) $first->fresh()->quantity);
+        $this->assertDatabaseMissing('project_items', ['id' => $second->id]);
+    }
+
+    public function test_project_edit_form_marks_sourced_lines_as_locked(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $projectItem = $this->addItem($project);
+
+        $this->actingAs($user)
+            ->post(route('preplist.store'), [
+                'name' => 'Locked rendering fixture',
+                'sources' => [$projectItem->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->get(route('projects.edit', ['project' => $project->id]))
+            ->assertOk()
+            ->assertSee('is-locked', false)
+            ->assertSee('readonly', false)
+            ->assertSee('locked-category-value', false);
+    }
+
     public function test_project_update_rejects_a_stale_fingerprint(): void
     {
         $user = $this->admin();

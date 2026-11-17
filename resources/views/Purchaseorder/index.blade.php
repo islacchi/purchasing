@@ -55,46 +55,87 @@
    
         </div>
 
-        {{-- Filters (GET form, debounced) --}}
-        <form method="GET" action="{{ route('purchase-order') }}" id="poFilterForm" class="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
-                <div class="relative md:col-span-1">
+        {{-- Search and filter bar --}}
+        @php $poActiveFilters = collect([$supplier, $status])->filter()->count(); @endphp
+        <div class="mb-6 flex flex-wrap items-center gap-4">
+            <form method="GET" action="{{ route('purchase-order') }}" id="poSearchForm" class="flex max-w-xl w-full items-center gap-2">
+                <input type="hidden" name="supplier" value="{{ $supplier }}">
+                <input type="hidden" name="status" value="{{ $status }}">
+                <input type="hidden" name="per_page" value="{{ $perPage }}">
+                <div class="relative min-w-0 flex-1">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
                         </svg>
                     </span>
                     <input type="text" name="q" id="poSearch" value="{{ $search }}" placeholder="Search PO number, supplier, prep list…"
-                           class="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-700 placeholder-gray-400 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
+                           class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
                 </div>
+            </form>
 
-                <select name="supplier" id="poSupplier"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                    <option value="">All suppliers</option>
-                    @foreach ($supplierOptions as $option)
-                        <option value="{{ $option->id }}" @selected($supplier === (string) $option->id)>{{ $option->name }}</option>
-                    @endforeach
-                </select>
+            {{-- Filter dropdown: supplier · status · page size --}}
+            <div id="poFilterWrap" class="relative">
+                <button type="button" id="poFilterBtn" aria-haspopup="true" aria-expanded="false" aria-controls="poFilterMenu"
+                        class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 4h18M6 9h12M10 14h4"/>
+                    </svg>
+                    <span>Filter</span>
+                    @if ($poActiveFilters > 0)
+                        <span class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#2a7a94] px-1 text-[10px] font-bold text-white">{{ $poActiveFilters }}</span>
+                    @endif
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m19 9-7 7-7-7"/>
+                    </svg>
+                </button>
 
-                <div class="flex items-center gap-2">
-                    <label class="sr-only" for="poPerPage">Purchase orders per page</label>
-                    <select name="per_page" id="poPerPage" aria-label="Purchase orders per page" onchange="this.form.requestSubmit()"
-                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                        @foreach (\App\Support\Pagination::options() as $value => $label)
-                            <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
-                        @endforeach
-                    </select>
+                <div id="poFilterMenu" role="group" aria-labelledby="poFilterBtn" aria-hidden="true"
+                     class="hidden absolute left-0 top-full mt-2 z-30 w-64 rounded-lg border border-gray-200 bg-white py-2 shadow-lg">
+                    <form method="GET" action="{{ route('purchase-order') }}" id="poFilterForm" class="space-y-2 px-2">
+                        <input type="hidden" name="q" value="{{ $search }}">
+
+                        <div>
+                            <label for="poSupplier" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Supplier</label>
+                            <select name="supplier" id="poSupplier" aria-label="Filter by supplier" onchange="this.form.requestSubmit()"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">All suppliers</option>
+                                @foreach ($supplierOptions as $option)
+                                    <option value="{{ $option->id }}" @selected($supplier === (string) $option->id)>{{ $option->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="poStatus" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Status</label>
+                            <select name="status" id="poStatus" aria-label="Filter by status" onchange="this.form.requestSubmit()"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">All statuses</option>
+                                @foreach ($statusOptions as $value => $label)
+                                    <option value="{{ $value }}" @selected($status === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="poPerPage" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Items per page</label>
+                            <select name="per_page" id="poPerPage" aria-label="Purchase orders per page" onchange="this.form.requestSubmit()"
+                                    class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                @foreach (\App\Support\Pagination::options() as $value => $label)
+                                    <option value="{{ $value }}" @selected($perPage === $value)>{{ $value }} / page</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        @if ($poActiveFilters > 0)
+                            <a href="{{ route('purchase-order', array_filter(['q' => $search !== '' ? $search : null, 'per_page' => $perPage])) }}"
+                               class="mt-1 flex items-center justify-center rounded-md border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                Clear filters
+                            </a>
+                        @endif
+                    </form>
                 </div>
-
-                <select name="status" id="poStatus"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20">
-                    <option value="">All statuses</option>
-                    @foreach ($statusOptions as $value => $label)
-                        <option value="{{ $value }}" @selected($status === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
             </div>
-        </form>
+        </div>
 
         {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
 
@@ -118,8 +159,8 @@
 
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    <thead class="bg-[#0e5266]">
+                        <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
                             <th scope="col" class="whitespace-nowrap px-3 py-3">PO number</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-3">Supplier</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-3">Prep list</th>
@@ -127,14 +168,14 @@
                             <th scope="col" class="whitespace-nowrap px-3 py-3 text-right">Total</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-3">Status</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-3">Date issued</th>
-                            <th scope="col" class="sticky right-0 z-20 bg-gray-50 px-3 py-3 text-center">
+                            <th scope="col" class="sticky right-0 z-20 bg-[#0e5266] px-3 py-3 text-center">
                                 Action
                             </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @forelse ($purchaseOrders as $po)
-                            <tr class="group cursor-pointer transition-colors hover:bg-gray-50"
+                            <tr class="group cursor-pointer transition-colors odd:bg-white even:bg-[#f2f7f8] hover:bg-[#e4edf0]"
                                 data-href="{{ route('purchase-order.show', ['purchaseOrder' => $po['id']]) }}">
                                 <td class="whitespace-nowrap px-3 py-4">
                                     <p class="font-semibold text-gray-900">{{ $po['number'] }}</p>
@@ -160,7 +201,7 @@
                                 <td class="whitespace-nowrap px-3 py-4 text-gray-500">
                                     {{ $po['issued'] ?? 'Not issued' }}
                                 </td>
-                                <td class="sticky right-0 z-10 bg-white px-3 py-4 text-center group-hover:bg-gray-50">
+                                <td class="sticky right-0 z-10 bg-inherit px-3 py-4 text-center">
                                     <div class="relative inline-block text-left">
                                         <button type="button"
                                                 data-po-menu-toggle
@@ -420,25 +461,46 @@
                 });
             });
 
-            // --- Filters (GET form; server-side search, debounced) ---
-            const poFilterForm = document.getElementById('poFilterForm');
+            // --- Filters (GET forms; server-side search, debounced) ---
+            const searchForm = document.getElementById('poSearchForm');
             const searchInput = document.getElementById('poSearch');
-            const supplierInput = document.getElementById('poSupplier');
-            const statusInput = document.getElementById('poStatus');
             let poSearchTimer = null;
-
-            function submitPoFilters() {
-                poFilterForm.requestSubmit();
-            }
 
             searchInput.addEventListener('input', function () {
                 if (poSearchTimer) {
                     clearTimeout(poSearchTimer);
                 }
-                poSearchTimer = setTimeout(submitPoFilters, 300);
+                poSearchTimer = setTimeout(function () {
+                    searchForm.requestSubmit();
+                }, 300);
             });
-            supplierInput.addEventListener('change', submitPoFilters);
-            statusInput.addEventListener('change', submitPoFilters);
+
+            // Filter dropdown: same open/close pattern as the other modules.
+            const filterWrap = document.getElementById('poFilterWrap');
+            const filterBtn = document.getElementById('poFilterBtn');
+            const filterMenu = document.getElementById('poFilterMenu');
+
+            function closeFilterMenu() {
+                filterMenu.classList.add('hidden');
+                filterBtn.setAttribute('aria-expanded', 'false');
+                filterMenu.setAttribute('aria-hidden', 'true');
+            }
+
+            if (filterWrap && filterBtn && filterMenu) {
+                filterBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const isHidden = filterMenu.classList.toggle('hidden');
+                    filterBtn.setAttribute('aria-expanded', String(!isHidden));
+                    filterMenu.setAttribute('aria-hidden', String(isHidden));
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!filterWrap.contains(e.target)) closeFilterMenu();
+                });
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') closeFilterMenu();
+                });
+            }
 
             // --- Cancel order modal ---
             const cancelModal = document.getElementById('poCancelModal');

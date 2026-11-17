@@ -243,8 +243,8 @@
 
             <div class="min-h-[120px] flex-1 overflow-auto">
                 <table class="w-full text-xs">
-                    <thead class="sticky top-0 z-10">
-                        <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    <thead class="sticky top-0 z-10 bg-[#0e5266]">
+                        <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
                             <th scope="col" class="w-12 px-3 py-2 text-center">#</th>
                             <th scope="col" class="px-3 py-2">Item</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2 text-center">Qty</th>
@@ -260,7 +260,7 @@
                                 $minShelf = $item->min_remaining_months ?? 0;
                                 $isReceived = $item->isReceived();
                             @endphp
-                            <tr class="hover:bg-gray-50">
+                            <tr class="odd:bg-white even:bg-[#f2f7f8] transition-colors hover:bg-[#e4edf0]">
                                 <td class="px-3 py-2 text-center text-xs text-gray-400">{{ $loop->iteration }}</td>
                                 <td class="px-3 py-2">
                                     <p class="font-medium text-gray-900 break-words">{{ $item->item?->name ?? 'Item removed' }}</p>
