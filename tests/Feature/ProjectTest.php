@@ -109,7 +109,13 @@ class ProjectTest extends TestCase
             ->assertOk()
             ->assertSee('name="procuring_entity_id"', false)
             ->assertSee($entity->name)
-            ->assertSee('value="'.$entity->id.'"', false);
+            ->assertSee('value="'.$entity->id.'"', false)
+            // Revamped two-column layout: rail cards + items card toolbar.
+            ->assertSee('Project details')
+            ->assertSee('Award &amp; delivery', false)
+            ->assertSee('id="itemsMeta"', false)
+            ->assertSee('id="ghostAddRowBtn"', false)
+            ->assertSee('id="addItemBtn"', false);
     }
 
     public function test_project_form_shows_validation_banner_on_failed_validation(): void

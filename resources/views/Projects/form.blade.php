@@ -41,8 +41,33 @@
         }
     @endphp
 
-    <div class="flex h-full min-h-0 flex-col">
-    <h2 class="shrink-0 text-xl font-semibold text-gray-900 mb-6">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
+    <style>
+        /* Zebra for item rows; locked lines always keep a neutral wash. */
+        #itemRows .item-row:nth-child(odd) { background: #f2f7f8; }
+        #itemRows .item-row.is-locked { background: #f9fafb; }
+    </style>
+
+    @php
+        // Server-rendered first paint of the items summary (JS recomputes live).
+        $metaQty = 0.0;
+        $metaEst = 0.0;
+        foreach ($items as $i => $item) {
+            $q = (float) ($item['quantity'] ?? 0);
+            $c = (float) ($item['unit_cost'] ?? 0);
+            $metaQty += $q;
+            $metaEst += $q * $c;
+        }
+        $metaLineCount = count($items);
+        $itemsMeta = $metaLineCount . ' ' . ($metaLineCount === 1 ? 'line' : 'lines')
+            . ' · Total qty ' . number_format($metaQty)
+            . ' · Est. ₱ ' . number_format($metaEst, 2);
+    @endphp
+
+    <div class="flex min-h-full flex-col lg:h-full lg:min-h-0">
+    <div class="mb-4 shrink-0">
+        <h2 class="text-2xl font-bold text-gray-900">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
+        <p class="mt-1 text-xs text-gray-500">Fill in the project details, then add its item lines.</p>
+    </div>
 
     @if ($errors->any())
         {{-- Same floating overlay pattern the system uses elsewhere (@see partials/flash-success). Floats above the page; fades out and removes itself after a few seconds. --}}
@@ -70,121 +95,148 @@
             {{-- Optimistic concurrency checkpoint: rejected if the project changed since this page rendered. --}}
             <input type="hidden" name="expected_project_fingerprint" value="{{ $projectFingerprint ?? '' }}">
         @endif
-        {{-- Content holder: project details stay static; only the items table scrolls --}}
-        <div class="flex flex-1 min-h-0 flex-col space-y-6 overflow-auto rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
-        {{-- Project fields --}}
-        <div class="grid shrink-0 grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Title</label>
-                    <input type="text" name="title" value="{{ $title }}"
-                           class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                    @error('title')
-                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+        {{-- Two-column revamp: left rail of labeled cards + items card. Same fields and names. --}}
+        <div class="flex flex-1 flex-col lg:min-h-0">
+            <div class="grid items-stretch gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Reference no.</label>
-                    <input type="text" name="reference_no" value="{{ $referenceNo }}"
-                           class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                    @error('reference_no')
-                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                {{-- LEFT RAIL --}}
+                <div class="flex flex-col gap-4 lg:h-full lg:min-h-0">
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-800 mb-1.5">Amount awarded</label>
-                        <input type="number" step="0.01" name="amount_awarded" value="{{ $amountAwarded }}"
-                               class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-800 mb-1.5">Delivery period</label>
-                        <select name="delivery_days"
-                                class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                            <option value="" {{ $deliveryDays === '' ? 'selected' : '' }}>Select...</option>
-                            <option value="7" {{ $deliveryDays === '7' ? 'selected' : '' }}>7 days</option>
-                            <option value="15" {{ $deliveryDays === '15' ? 'selected' : '' }}>15 days</option>
-                            <option value="30" {{ $deliveryDays === '30' ? 'selected' : '' }}>30 days</option>
-                            <option value="45" {{ $deliveryDays === '45' ? 'selected' : '' }}>45 days</option>
-                        </select>
-                    </div>
-                </div>
+                    {{-- Project details --}}
+                    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                        <p class="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Project details</p>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Date awarded</label>
-                        <div class="relative">
-                            <input type="date" name="date_awarded" value="{{ $dateAwarded }}"
-                                   class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                            </div>
+                        <div class="mb-3">
+                            <label for="title" class="mb-1 block text-[11px] font-semibold text-gray-600">Title</label>
+                            <input id="title" type="text" name="title" value="{{ $title }}"
+                                   class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            @error('title')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="reference_no" class="mb-1 block text-[11px] font-semibold text-gray-600">Reference no.</label>
+                            <input id="reference_no" type="text" name="reference_no" value="{{ $referenceNo }}"
+                                   class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                            @error('reference_no')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="procuring_entity_id" class="mb-1 block text-[11px] font-semibold text-gray-600">Entity</label>
+                            <select id="procuring_entity_id" name="procuring_entity_id"
+                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="">Select entity...</option>
+                                @foreach ($entities as $entity)
+                                    <option value="{{ $entity->id }}" {{ $selectedEntityId === (string) $entity->id ? 'selected' : '' }}>
+                                        {{ $entity->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('procuring_entity_id')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                            @if ($entities->isEmpty())
+                                <p class="mt-1 text-xs text-gray-500">
+                                    No procuring entities yet.
+                                    <a href="{{ route('entities.create', ['type' => 'procuring_entity']) }}" class="font-medium text-[#2a7a94] hover:underline">Add one first</a>.
+                                </p>
+                            @endif
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Mode of procurement</label>
-                        <select name="mode_of_procurement"
-                                class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                            <option value="" {{ $modeOfProcurement === '' ? 'selected' : '' }}>Select...</option>
-                            <option value="shopping" {{ $modeOfProcurement === 'shopping' ? 'selected' : '' }}>Shopping</option>
-                            <option value="small_value" {{ $modeOfProcurement === 'small_value' ? 'selected' : '' }}>Small value</option>
-                            <option value="competitive_bidding" {{ $modeOfProcurement === 'competitive_bidding' ? 'selected' : '' }}>Competitive bidding</option>
-                            <option value="direct_contracting" {{ $modeOfProcurement === 'direct_contracting' ? 'selected' : '' }}>Direct contracting</option>
-                        </select>
+
+                    {{-- Award & delivery --}}
+                    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                        <p class="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Award &amp; delivery</p>
+
+                        <div class="mb-3">
+                            <label for="amount_awarded" class="mb-1 block text-[11px] font-semibold text-gray-600">Amount awarded</label>
+                            <input id="amount_awarded" type="number" step="0.01" name="amount_awarded" value="{{ $amountAwarded }}"
+                                   class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="delivery_days" class="mb-1 block text-[11px] font-semibold text-gray-600">Delivery period</label>
+                            <select id="delivery_days" name="delivery_days"
+                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="" {{ $deliveryDays === '' ? 'selected' : '' }}>Select...</option>
+                                <option value="7" {{ $deliveryDays === '7' ? 'selected' : '' }}>7 days</option>
+                                <option value="15" {{ $deliveryDays === '15' ? 'selected' : '' }}>15 days</option>
+                                <option value="30" {{ $deliveryDays === '30' ? 'selected' : '' }}>30 days</option>
+                                <option value="45" {{ $deliveryDays === '45' ? 'selected' : '' }}>45 days</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="date_awarded" class="mb-1 block text-[11px] font-semibold text-gray-600">Date awarded</label>
+                            <input id="date_awarded" type="date" name="date_awarded" value="{{ $dateAwarded }}"
+                                   class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                        </div>
+
+                        <div>
+                            <label for="mode_of_procurement" class="mb-1 block text-[11px] font-semibold text-gray-600">Mode of procurement</label>
+                            <select id="mode_of_procurement" name="mode_of_procurement"
+                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                <option value="" {{ $modeOfProcurement === '' ? 'selected' : '' }}>Select...</option>
+                                <option value="shopping" {{ $modeOfProcurement === 'shopping' ? 'selected' : '' }}>Shopping</option>
+                                <option value="small_value" {{ $modeOfProcurement === 'small_value' ? 'selected' : '' }}>Small value</option>
+                                <option value="competitive_bidding" {{ $modeOfProcurement === 'competitive_bidding' ? 'selected' : '' }}>Competitive bidding</option>
+                                <option value="direct_contracting" {{ $modeOfProcurement === 'direct_contracting' ? 'selected' : '' }}>Direct contracting</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {{-- Notes — flex-grows to fill the rail height; shrinks with a floor, textarea scrolls internally --}}
+                    <div class="flex min-h-[110px] flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm lg:min-h-[110px] lg:flex-1">
+                        <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Notes</p>
+                        <textarea name="notes" rows="4"
+                                  class="w-full min-h-[80px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 lg:min-h-0">{{ $notes }}</textarea>
                     </div>
                 </div>
-            </div>
 
-            <div class="space-y-3">
-                <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Entity</label>
-                    <select name="procuring_entity_id"
-                            class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                        <option value="">Select entity...</option>
-                        @foreach ($entities as $entity)
-                            <option value="{{ $entity->id }}" {{ $selectedEntityId === (string) $entity->id ? 'selected' : '' }}>
-                                {{ $entity->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('procuring_entity_id')
-                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                    @enderror
-                    @if ($entities->isEmpty())
-                        <p class="mt-1 text-xs text-gray-500">
-                            No procuring entities yet.
-                            <a href="{{ route('entities.create', ['type' => 'procuring_entity']) }}" class="font-medium text-[#2a7a94] hover:underline">Add one first</a>.
-                        </p>
-                    @endif
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-800 mb-1.5">Notes</label>
-                    <textarea name="notes" rows="7"
-                              class="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ $notes }}</textarea>
-                </div>
-            </div>
-        </div>
-
-        {{-- Items --}}
-        <div class="flex min-h-[220px] flex-1 flex-col">
-            <label class="shrink-0 block text-sm font-medium text-gray-800 mb-2">Items</label>
-
-                <div id="itemRows" class="min-h-0 overflow-y-auto border border-gray-300 rounded-lg">
-                <div class="sticky top-0 z-10 grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 bg-gray-100 px-3 py-2">
-                    <div class="text-xs font-semibold text-gray-700">Description</div>
-                    <div class="text-xs font-semibold text-gray-700">Category</div>
-                    <div class="text-xs font-semibold text-gray-700">Unit</div>
-                    <div class="text-xs font-semibold text-gray-700">Quantity</div>
-                    <div class="text-xs font-semibold text-gray-700">Unit cost</div>
-                    <div class="text-xs font-semibold text-gray-700">Quoted price</div>
-                    <div class="text-xs font-semibold text-gray-700">In Stocks</div>
-                    <div></div>
-                </div>
+                {{-- ITEMS CARD --}}
+                <div class="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:h-full lg:min-h-0">
+                    <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
+                        <div>
+                            <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Items</p>
+                            <p id="itemsMeta" class="mt-0.5 text-xs font-semibold text-gray-700">{{ $itemsMeta }}</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" id="addItemBtn" disabled
+                                    class="flex items-center gap-1.5 rounded-lg bg-[#2a7a94] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#236b80] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                Add item
+                            </button>
+                            <button type="button" id="pasteItemsBtn"
+                                    class="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                                    title="Add many items by pasting rows copied from Excel or Google Sheets">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 13l2 2 4-4"/></svg>
+                                Paste items
+                            </button>
+                            <button type="button" id="deleteItemBtn"
+                                    class="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                Delete<span id="deleteItemCount"></span>
+                            </button>
+                            <button type="button" id="cancelSelectBtn"
+                                    class="hidden flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                    <div id="itemRows" class="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                        <div class="sticky top-0 z-10 grid grid-cols-[2fr_1.1fr_0.8fr_0.8fr_1fr_1fr_0.8fr_44px] gap-2 bg-[#0e5266] px-3 py-2">
+                            <div class="text-[10px] font-semibold uppercase tracking-wider text-white">Description</div>
+                            <div class="text-[10px] font-semibold uppercase tracking-wider text-white">Category</div>
+                            <div class="text-[10px] font-semibold uppercase tracking-wider text-white">Unit</div>
+                            <div class="text-right text-[10px] font-semibold uppercase tracking-wider text-white">Quantity</div>
+                            <div class="text-right text-[10px] font-semibold uppercase tracking-wider text-white">Unit cost</div>
+                            <div class="text-right text-[10px] font-semibold uppercase tracking-wider text-white">Quoted price</div>
+                            <div class="text-right text-[10px] font-semibold uppercase tracking-wider text-white">In stock</div>
+                            <div></div>
+                        </div>
                 @foreach ($items as $i => $item)
                     @php
                         $locked = (bool) ($item['locked'] ?? false);
@@ -194,9 +246,9 @@
                         $fieldClass = 'w-full px-2.5 py-1.5 rounded-md border text-sm '
                             . ($locked
                                 ? 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-500'
-                                : 'border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-300');
+                                : 'border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-300');
                     @endphp
-                    <div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 px-3 py-2 {{ $locked ? 'is-locked bg-gray-50' : 'bg-white' }}">
+                    <div class="item-row grid grid-cols-[2fr_1.1fr_0.8fr_0.8fr_1fr_1fr_0.8fr_44px] gap-2 items-center border-t border-gray-100 px-3 py-1.5 {{ $locked ? 'is-locked' : '' }}">
                         <div class="relative min-w-0">
                             <input type="text" name="items[{{ $i }}][description]" value="{{ $item['description'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
@@ -230,26 +282,26 @@
                             <input type="number" name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
                                    title="{{ $lockTitle }}"
-                                   class="{{ $fieldClass }}">
+                                   class="{{ $fieldClass }} text-right">
                         </div>
                         <div>
                             <input type="number" step="0.01" name="items[{{ $i }}][unit_cost]" value="{{ $item['unit_cost'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
                                    title="{{ $lockTitle }}"
-                                   class="{{ $fieldClass }}">
+                                   class="{{ $fieldClass }} text-right">
                         </div>
                         <div>
                             <input type="number" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
                                    title="{{ $lockTitle }}"
-                                   class="{{ $fieldClass }}">
+                                   class="{{ $fieldClass }} text-right">
                         </div>
                         {{-- On-hand quantity; fully covered lines are fulfilled and are excluded from PO --}}
                         <div>
                             <input type="number" min="0" step="1" name="items[{{ $i }}][in_stock]" value="{{ $item['in_stock'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
                                    title="{{ $lockTitle }}"
-                                   class="{{ $fieldClass }}"
+                                   class="{{ $fieldClass }} text-right"
                                    placeholder="0">
                         </div>
                         <div class="checkbox-cell pb-2 hidden">
@@ -257,9 +309,20 @@
                         </div>
                     </div>
                 @endforeach
-            </div>
 
-        </div>
+                    {{-- Ghost add-row — sits right under the last line; new rows are inserted before it --}}
+                    <div id="ghostAddRow" class="border-t border-gray-100 bg-white p-2">
+                        <button type="button" id="ghostAddRowBtn"
+                                class="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 py-2.5 text-xs font-semibold text-gray-500 transition-colors hover:border-[#2a7a94] hover:text-[#2a7a94]">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Add item
+                        </button>
+                    </div>
+                    </div>{{-- /itemRows --}}
+                </div>
+
+            </div>{{-- /grid --}}
+        </div>{{-- /scroll --}}
 
 
         {{-- Delete items confirmation modal --}}
@@ -355,50 +418,23 @@
             </div>
         </div>
 
-        {{-- Form actions --}}
-        <div class="flex shrink-0 items-center justify-between gap-3 pt-2">
-            <div class="flex items-center gap-3">
-                <button type="button" id="addItemBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Add item
-                </button>
-                <button type="button" id="pasteItemsBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        title="Add many items by pasting rows copied from Excel or Google Sheets">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 13l2 2 4-4"/>
-                    </svg>
-                    Paste items
-                </button>
-                <button type="button" id="deleteItemBtn" class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                    Delete<span id="deleteItemCount"></span>
-                </button>
-                <button type="button" id="cancelSelectBtn" class="hidden flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Cancel
-                </button>
-            </div>
-            <div class="flex items-center gap-3">
+        {{-- Footer — pinned, unboxed (same placement and design as the other detail pages) --}}
+        <div class="no-print mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-3">
             <a href="{{ route('projects') }}"
-               class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+               class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
                 Cancel
             </a>
-            <button type="submit"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#0e5266] text-white text-sm font-medium hover:bg-[#0c4757]">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0V3h6v4m-6 0h6"/>
-                </svg>
-                {{ $isEdit ? 'Update project' : 'Save project' }}
-            </button>
+            <div class="flex items-center gap-3">
+                <button type="submit"
+                        class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0V3h6v4m-6 0h6"/>
+                    </svg>
+                    {{ $isEdit ? 'Update project' : 'Save project' }}
+                </button>
             </div>
         </div>
     </form>
@@ -439,6 +475,19 @@
         const modalCancel = document.getElementById('itemsDeleteCancel');
         const modalConfirm = document.getElementById('itemsDeleteConfirm');
         const modalSummary = document.getElementById('itemsDeleteSummary');
+        const metaEl = document.getElementById('itemsMeta');
+        const ghostAddBtn = document.getElementById('ghostAddRowBtn');
+        // New rows are inserted before the ghost add-row so it always
+        // stays below the last line.
+        const ghostAddRowNode = ghostAddBtn ? ghostAddBtn.parentElement : null;
+
+        function appendRow(template) {
+            if (ghostAddRowNode) {
+                rowsContainer.insertBefore(template, ghostAddRowNode);
+            } else {
+                rowsContainer.appendChild(template);
+            }
+        }
 
         // Selection (delete) mode: the item checkboxes are only shown after the
         // Delete button is pressed; Cancel exits the mode without deleting.
@@ -486,12 +535,48 @@
             return false;
         }
 
+        // Live summary for the items card header: line count, summed quantity,
+        // and Σ quantity × unit_cost. Recomputed on every relevant change.
+        function updateItemsMeta() {
+            if (!metaEl) return;
+            const rows = rowsContainer.querySelectorAll('.item-row');
+            let qty = 0;
+            let est = 0;
+            rows.forEach(function (row) {
+                const quantityField = row.querySelector('[name$="[quantity]"]');
+                const costField = row.querySelector('[name$="[unit_cost]"]');
+                const q = quantityField ? (parseFloat(quantityField.value) || 0) : 0;
+                const c = costField ? (parseFloat(costField.value) || 0) : 0;
+                qty += q;
+                est += q * c;
+            });
+            metaEl.textContent = rows.length + ' ' + (rows.length === 1 ? 'line' : 'lines')
+                + ' · Total qty ' + qty
+                + ' · Est. ₱ ' + est.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
         function syncAddButton() {
             const rows = rowsContainer.querySelectorAll('.item-row');
             const lastRow = rows[rows.length - 1];
             const filled = rows.length === 0 || isRowFilled(lastRow);
             addBtn.disabled = !filled;
             addBtn.title = filled ? 'Add item' : 'Fill in the last row first';
+            updateItemsMeta();
+        }
+
+        if (ghostAddBtn) {
+            ghostAddBtn.addEventListener('click', function () {
+                // The main Add button is disabled while the last row is empty;
+                // in that case guide the user to the unfinished row instead.
+                if (! addBtn.disabled) {
+                    addBtn.click();
+                    return;
+                }
+                const rows = rowsContainer.querySelectorAll('.item-row');
+                const last = rows[rows.length - 1];
+                const firstField = last ? last.querySelector('input:not([type="checkbox"]), select') : null;
+                if (firstField) firstField.focus();
+            });
         }
 
         rowsContainer.addEventListener('input', syncAddButton);
@@ -530,7 +615,7 @@
             }
             template.querySelector('.item-select').checked = false;
 
-            rowsContainer.appendChild(template);
+            appendRow(template);
             setDeleteMode(deleteMode);
             syncAddButton();
             updateItemListHeight();
@@ -612,6 +697,8 @@
             updateDeleteBtn: updateDeleteBtn,
             syncAddButton: syncAddButton,
             updateItemListHeight: updateItemListHeight,
+            updateItemsMeta: updateItemsMeta,
+            appendRow: appendRow,
         };
     })();
 </script>
@@ -1141,7 +1228,7 @@
                     return window.__unlinkRow(existing.cloneNode(true));
                 }
                 var wrapper = document.createElement('div');
-                wrapper.innerHTML = '<div class="item-row grid grid-cols-[2fr_1fr_0.8fr_0.8fr_1fr_1fr_1fr_28px] gap-3 items-center border-t border-gray-300 bg-white px-3 py-2"><div><input type="text" name="items[0][description]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><select name="items[0][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"><option value="">Select...</option><option value="drugs and medicines">Drugs and medicines</option><option value="supplies and equipments">Supplies and equipments</option></select></div><div><input type="text" name="items[0][unit]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" name="items[0][quantity]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" step="0.01" name="items[0][unit_cost]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" step="0.01" name="items[0][quoted_price]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="1" name="items[0][in_stock]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300" placeholder="0"></div><div class="checkbox-cell pb-2 hidden"><input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300"></div></div>';
+                wrapper.innerHTML = '<div class="item-row grid grid-cols-[2fr_1.1fr_0.8fr_0.8fr_1fr_1fr_0.8fr_44px] gap-2 items-center border-t border-gray-100 px-3 py-1.5"><div><input type="text" name="items[0][description]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><select name="items[0][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"><option value="">Select...</option><option value="drugs and medicines">Drugs and medicines</option><option value="supplies and equipments">Supplies and equipments</option></select></div><div><input type="text" name="items[0][unit]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" name="items[0][quantity]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" step="0.01" name="items[0][unit_cost]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" step="0.01" name="items[0][quoted_price]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="1" name="items[0][in_stock]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300" placeholder="0"></div><div class="checkbox-cell pb-2 hidden"><input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300"></div></div>';
                 return wrapper.firstElementChild;
             }
 
@@ -1248,9 +1335,13 @@
                     if (tick) {
                         tick.checked = false;
                     }
-                    // Reused rows are already in the DOM; only new rows need appending.
+                    // Reused rows are already in the DOM; only new rows need inserting.
                     if (!reusedRow) {
-                        rowsContainer.appendChild(template);
+                        if (itemsApi && itemsApi.appendRow) {
+                            itemsApi.appendRow(template);
+                        } else {
+                            rowsContainer.appendChild(template);
+                        }
                     }
                 });
 
@@ -1267,6 +1358,7 @@
                 if (itemsApi) {
                     itemsApi.syncAddButton();
                     itemsApi.updateItemListHeight();
+                    if (itemsApi.updateItemsMeta) itemsApi.updateItemsMeta();
                 }
 
                 closeModal();
