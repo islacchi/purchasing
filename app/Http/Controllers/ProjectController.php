@@ -482,6 +482,15 @@ class ProjectController extends Controller
      */
     private function validateProject(Request $request): array
     {
+        // Normalize delivery period: a custom number (typed into the
+        // free-entry field) wins over the preset dropdown.
+        $custom = $request->input('delivery_days_custom');
+        if (is_numeric($custom)) {
+            $request->merge(['delivery_days' => (int) $custom]);
+        } elseif ($request->input('delivery_days') === '__custom') {
+            $request->merge(['delivery_days' => null]);
+        }
+
         $items = collect($request->input('items', []))
             ->filter(fn ($item) => is_array($item)
                 && collect($item)->contains(fn ($value) => filled($value)))
@@ -500,6 +509,9 @@ class ProjectController extends Controller
             'amount_awarded' => ['nullable', 'numeric', 'min:0'],
             'date_awarded' => ['nullable', 'date'],
             'delivery_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+            // Free-entry number of days (shown when the dropdown is set to
+            // "Other"). A non-empty numeric value wins over the dropdown.
+            'delivery_days_custom' => ['nullable', 'integer', 'min:1', 'max:365'],
             'notes' => ['nullable', 'string'],
             'items' => ['array'],
             'items.*.description' => ['required', 'string', 'max:255'],

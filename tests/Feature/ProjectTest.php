@@ -237,6 +237,30 @@ class ProjectTest extends TestCase
         ]);
     }
 
+    public function test_project_accepts_custom_delivery_days_over_the_dropdown(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $this->actingAs($user)
+            ->post(route('projects.store'), [
+                'procuring_entity_id' => $entity->id,
+                'title' => 'Custom delivery test',
+                'reference_no' => 'RF-2026-9091',
+                'mode_of_procurement' => 'small_value',
+                'amount_awarded' => 100.00,
+                'date_awarded' => '2026-07-03',
+                'delivery_days' => '__custom',
+                'delivery_days_custom' => 42,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('projects', [
+            'reference_no' => 'RF-2026-9091',
+            'delivery_days' => 42,
+        ]);
+    }
+
     public function test_project_rejects_negative_item_quantities_and_prices(): void
     {
         $user = $this->admin();

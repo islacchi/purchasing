@@ -19,6 +19,12 @@
         $referenceNo = old('reference_no', $project?->reference_no ?? '');
         $amountAwarded = old('amount_awarded', $project?->amount_awarded ?? '');
         $deliveryDays = (string) old('delivery_days', $project?->delivery_days ?? '');
+        $deliveryDaysCustom = in_array($deliveryDays, ['', '7', '15', '30', '45'], true)
+            ? null
+            : $deliveryDays;
+        if ($deliveryDaysCustom !== null) {
+            $deliveryDays = '__custom';
+        }
         $dateAwarded = old('date_awarded', $project?->date_awarded?->format('Y-m-d') ?? '');
         $modeOfProcurement = old('mode_of_procurement', $project?->mode_of_procurement ?? '');
         $notes = old('notes', $project?->notes ?? '');
@@ -159,14 +165,22 @@
 
                         <div class="mb-3">
                             <label for="delivery_days" class="mb-1 block text-[11px] font-semibold text-gray-600">Delivery period</label>
-                            <select id="delivery_days" name="delivery_days"
-                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
-                                <option value="" {{ $deliveryDays === '' ? 'selected' : '' }}>Select...</option>
-                                <option value="7" {{ $deliveryDays === '7' ? 'selected' : '' }}>7 days</option>
-                                <option value="15" {{ $deliveryDays === '15' ? 'selected' : '' }}>15 days</option>
-                                <option value="30" {{ $deliveryDays === '30' ? 'selected' : '' }}>30 days</option>
-                                <option value="45" {{ $deliveryDays === '45' ? 'selected' : '' }}>45 days</option>
-                            </select>
+                            <div class="flex gap-2">
+                                <select id="delivery_days" name="delivery_days"
+                                        class="h-9 flex-1 rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                    <option value="" {{ $deliveryDays === '' && $deliveryDaysCustom === null ? 'selected' : '' }}>Select...</option>
+                                    <option value="7" {{ $deliveryDays === '7' && $deliveryDaysCustom === null ? 'selected' : '' }}>7 days</option>
+                                    <option value="15" {{ $deliveryDays === '15' && $deliveryDaysCustom === null ? 'selected' : '' }}>15 days</option>
+                                    <option value="30" {{ $deliveryDays === '30' && $deliveryDaysCustom === null ? 'selected' : '' }}>30 days</option>
+                                    <option value="45" {{ $deliveryDays === '45' && $deliveryDaysCustom === null ? 'selected' : '' }}>45 days</option>
+                                    <option value="__custom" {{ $deliveryDaysCustom !== null ? 'selected' : '' }}>Other…</option>
+                                </select>
+                                <input type="number" id="delivery_days_custom" name="delivery_days_custom" min="1" max="365" step="1"
+                                       inputmode="numeric" placeholder="Days"
+                                       value="{{ $deliveryDaysCustom ?? '' }}"
+                                       aria-label="Custom delivery period in days"
+                                       @class(['h-9 w-28 rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300', 'hidden' => $deliveryDaysCustom === null])>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -1410,6 +1424,27 @@
                     clearFlag(e.target);
                 }
             });
+        })();
+
+        // Delivery period: free-entry number appears only when "Other" is picked.
+        (function () {
+            const preset = document.getElementById('delivery_days');
+            const custom = document.getElementById('delivery_days_custom');
+            if (!preset || !custom) {
+                return;
+            }
+            const toggle = function () {
+                const show = preset.value === '__custom';
+                custom.classList.toggle('hidden', !show);
+                custom.required = show;
+                if (show) {
+                    custom.focus();
+                } else {
+                    custom.value = '';
+                }
+            };
+            preset.addEventListener('change', toggle);
+            toggle();
         })();
 
         // Never let a typed value sit below the field's min — snap back on change/blur.
