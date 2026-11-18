@@ -114,8 +114,7 @@ class ProjectTest extends TestCase
             ->assertSee('Project details')
             ->assertSee('Award &amp; delivery', false)
             ->assertSee('id="itemsMeta"', false)
-            ->assertSee('id="ghostAddRowBtn"', false)
-            ->assertSee('id="addItemBtn"', false);
+            ->assertSee('id="ghostAddRowBtn"', false);
     }
 
     public function test_project_form_shows_validation_banner_on_failed_validation(): void

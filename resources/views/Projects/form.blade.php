@@ -204,11 +204,6 @@
                             <p id="itemsMeta" class="mt-0.5 text-xs font-semibold text-gray-700">{{ $itemsMeta }}</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" id="addItemBtn" disabled
-                                    class="flex items-center gap-1.5 rounded-lg bg-[#2a7a94] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#236b80] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                Add item
-                            </button>
                             <button type="button" id="pasteItemsBtn"
                                     class="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
                                     title="Add many items by pasting rows copied from Excel or Google Sheets">
@@ -313,7 +308,7 @@
                     {{-- Ghost add-row — sits right under the last line; new rows are inserted before it --}}
                     <div id="ghostAddRow" class="border-t border-gray-100 bg-white p-2">
                         <button type="button" id="ghostAddRowBtn"
-                                class="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 py-2.5 text-xs font-semibold text-gray-500 transition-colors hover:border-[#2a7a94] hover:text-[#2a7a94]">
+                                class="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 py-2.5 text-xs font-semibold text-gray-500 transition-colors hover:border-[#2a7a94] hover:text-[#2a7a94] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-gray-300 disabled:hover:text-gray-500">
                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                             Add item
                         </button>
@@ -419,7 +414,7 @@
         </div>
 
         {{-- Footer — pinned, unboxed (same placement and design as the other detail pages) --}}
-        <div class="no-print mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-3">
+        <div class="no-print mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
             <a href="{{ route('projects') }}"
                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -466,7 +461,6 @@
         // even after every existing row has been deleted.
         const seedRow = rowsContainer.querySelector('.item-row');
         const seedRowHTML = seedRow ? seedRow.outerHTML : null;
-        const addBtn = document.getElementById('addItemBtn');
         const deleteBtn = document.getElementById('deleteItemBtn');
         const cancelSelectBtn = document.getElementById('cancelSelectBtn');
         const deleteCount = document.getElementById('deleteItemCount');
@@ -555,40 +549,24 @@
                 + ' · Est. ₱ ' + est.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        function syncAddButton() {
+        // Adding follows one rule: the last row must have some data. The
+        // ghost add-row in the table is the only add control — this mirrors
+        // the old Add button's behavior exactly.
+        function canAddRow() {
             const rows = rowsContainer.querySelectorAll('.item-row');
-            const lastRow = rows[rows.length - 1];
-            const filled = rows.length === 0 || isRowFilled(lastRow);
-            addBtn.disabled = !filled;
-            addBtn.title = filled ? 'Add item' : 'Fill in the last row first';
+            return rows.length === 0 || isRowFilled(rows[rows.length - 1]);
+        }
+
+        function syncAddButton() {
+            const enabled = canAddRow();
+            if (ghostAddBtn) {
+                ghostAddBtn.disabled = !enabled;
+                ghostAddBtn.title = enabled ? 'Add item' : 'Fill in the last row first';
+            }
             updateItemsMeta();
         }
 
-        if (ghostAddBtn) {
-            ghostAddBtn.addEventListener('click', function () {
-                // The main Add button is disabled while the last row is empty;
-                // in that case guide the user to the unfinished row instead.
-                if (! addBtn.disabled) {
-                    addBtn.click();
-                    return;
-                }
-                const rows = rowsContainer.querySelectorAll('.item-row');
-                const last = rows[rows.length - 1];
-                const firstField = last ? last.querySelector('input:not([type="checkbox"]), select') : null;
-                if (firstField) firstField.focus();
-            });
-        }
-
-        rowsContainer.addEventListener('input', syncAddButton);
-        rowsContainer.addEventListener('change', syncAddButton);
-
-        rowsContainer.addEventListener('change', function (e) {
-            if (e.target.classList && e.target.classList.contains('item-select')) {
-                updateDeleteBtn();
-            }
-        });
-
-        addBtn.addEventListener('click', function () {
+        function addRow() {
             const rows = rowsContainer.querySelectorAll('.item-row');
             const newIndex = rows.length;
 
@@ -619,6 +597,29 @@
             setDeleteMode(deleteMode);
             syncAddButton();
             updateItemListHeight();
+        }
+
+        if (ghostAddBtn) {
+            ghostAddBtn.addEventListener('click', function () {
+                if (canAddRow()) {
+                    addRow();
+                    return;
+                }
+                // Last row is empty — guide the user to it instead of adding.
+                const rows = rowsContainer.querySelectorAll('.item-row');
+                const last = rows[rows.length - 1];
+                const firstField = last ? last.querySelector('input:not([type="checkbox"]), select') : null;
+                if (firstField) firstField.focus();
+            });
+        }
+
+        rowsContainer.addEventListener('input', syncAddButton);
+        rowsContainer.addEventListener('change', syncAddButton);
+
+        rowsContainer.addEventListener('change', function (e) {
+            if (e.target.classList && e.target.classList.contains('item-select')) {
+                updateDeleteBtn();
+            }
         });
 
         // Keep the item list height content-driven: only expand when an item
