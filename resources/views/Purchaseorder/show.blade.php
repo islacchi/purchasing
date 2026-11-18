@@ -254,12 +254,12 @@
                     <thead class="sticky top-0 z-10 bg-[#0e5266]">
                         <tr class="text-left text-[10px] font-semibold uppercase tracking-wider text-white">
                             <th scope="col" class="px-3 py-2.5 text-center">#</th>
-                            <th scope="col" class="px-3 py-2">Item</th>
+                            <th scope="col" class="px-3 py-2.5 text-left">Item</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Qty</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Shelf life req.</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Received</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Unit price</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Extended</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Total unit price</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Received</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -281,6 +281,10 @@
                                     @else
                                         <span class="text-xs text-gray-400" title="Non-perishable">&mdash;</span>
                                     @endif
+                                </td>
+                                <td class="break-words px-3 py-2 text-right text-gray-700">{{ $peso($item->unit_price) }}</td>
+                                <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">
+                                    {{ $peso($item->extendedTotal()) }}
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     @if ($isReceived)
@@ -313,10 +317,6 @@
                                                title="{{ $title }}"
                                                aria-label="{{ $title }}">
                                     @endif
-                                </td>
-                                <td class="break-words px-3 py-2 text-right text-gray-700">{{ $peso($item->unit_price) }}</td>
-                                <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">
-                                    {{ $peso($item->extendedTotal()) }}
                                 </td>
                             </tr>
                         @endforeach
