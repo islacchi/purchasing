@@ -26,24 +26,71 @@
     </div>
 
     {{-- Header --}}
-    <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-            <h2 class="text-xl font-bold text-gray-900">{{ $item->name }}
-                <span class="ml-2 inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 align-middle text-[11px] font-semibold text-teal-800">{{ $item->category?->name ?? 'Uncategorised' }}</span>
-            </h2>
-            <p class="mt-1 text-xs text-gray-500">Unit: {{ $item->unit }} · Default min shelf life: {{ $item->default_min_shelf_life_months ?: 0 }} month{{ $item->default_min_shelf_life_months == 1 ? '' : 's' }}</p>
-            @if ($requestedProjects->isNotEmpty())
-                <p class="mt-1 text-xs text-gray-500">Requested by: {{ $requestedProjects->map(fn ($p) => ($p->reference_no ?: $p->title))->join(', ') }}</p>
-            @endif
-        </div>
-        @if ($bestSupplier)
-            <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-right">
-                <p class="text-[10px] font-semibold uppercase tracking-wider text-green-700">Best supplier by spend</p>
-                <p class="mt-0.5 text-sm font-bold text-green-900">{{ $bestSupplier['supplier'] }}</p>
-                <p class="text-[11px] text-green-700">{{ $bestSupplier['orders'] }} order{{ $bestSupplier['orders'] === 1 ? '' : 's' }} · {{ $peso($bestSupplier['spend']) }}</p>
+    <div class="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-3">
+                <h2 class="text-2xl font-bold text-gray-900">{{ $item->name }}</h2>
+                @if ($item->category)
+                    <span class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-teal-800">{{ $item->category->name }}</span>
+                @endif
             </div>
-        @endif
+            <p class="mt-1 text-xs text-gray-500">Unit: {{ $item->unit }} · Default min shelf life: {{ $item->default_min_shelf_life_months ?: 0 }} month{{ $item->default_min_shelf_life_months == 1 ? '' : 's' }}</p>
+        </div>
     </div>
+
+    {{-- Two-column layout: left rail + right content --}}
+    <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
+
+        {{-- LEFT RAIL --}}
+        <div class="flex flex-col gap-4">
+
+            {{-- Item details --}}
+            <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Item details</p>
+                <div class="mt-2 divide-y divide-gray-100">
+                    <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                        <span class="text-gray-500">Unit</span>
+                        <span class="text-right font-semibold text-gray-900">{{ $item->unit }}</span>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                        <span class="text-gray-500">Category</span>
+                        <span class="text-right font-semibold text-gray-900">{{ $item->category?->name ?? 'Uncategorised' }}</span>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                        <span class="text-gray-500">Default min shelf life</span>
+                        <span class="text-right font-semibold text-gray-900">{{ $item->default_min_shelf_life_months ?: 0 }} month{{ $item->default_min_shelf_life_months == 1 ? '' : 's' }}</span>
+                    </div>
+                    @if ($requestedProjects->isNotEmpty())
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Requested by</span>
+                            <span class="text-right font-semibold text-gray-900">{!! $requestedProjects->map(fn ($p) => '<a class="text-[#2a7a94] hover:underline" href="'.route('projects.show', ['project' => $p->id]).'">'.e($p->reference_no ?: $p->title).'</a>')->join(', ') !!}</span>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Best supplier by spend --}}
+            @if ($bestSupplier)
+                <div class="rounded-lg border border-[#d9ecdf] bg-[#edf8f0] p-4 shadow-sm">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-[#166534]">Best supplier by spend</p>
+                    <div class="mt-2 flex items-center gap-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#dcefe3] text-sm font-bold text-[#166534]">{{ strtoupper(substr($bestSupplier['supplier'], 0, 1)) }}</span>
+                        <div class="min-w-0">
+                            <p class="truncate font-bold tracking-wide text-gray-900">{{ $bestSupplier['supplier'] }}</p>
+                            <p class="mt-0.5 text-[10px] text-gray-500">{{ $bestSupplier['orders'] }} order{{ $bestSupplier['orders'] === 1 ? '' : 's' }} · {{ $peso($bestSupplier['spend']) }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-baseline justify-between gap-3 border-t border-[#d9ecdf] pt-3">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-[#166534]">Avg cost</span>
+                        <span class="text-xl font-extrabold text-gray-900">{{ $peso($bestSupplier['avg_price']) }}</span>
+                    </div>
+                </div>
+            @endif
+
+        </div>
+
+        {{-- RIGHT COLUMN --}}
+        <div class="flex min-w-0 flex-col gap-4">
 
     {{-- Stat strip --}}
     @if ($stats)
@@ -81,7 +128,7 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 2xl:grid-cols-2">
         {{-- Supplier comparison --}}
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div class="border-b border-gray-200 px-6 py-4">
@@ -178,7 +225,7 @@
     </div>
 
     {{-- Purchase history --}}
-    <div class="mt-4 rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div class="border-b border-gray-200 px-6 py-4">
             <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Purchase history</h3>
             <p class="mt-0.5 text-xs text-gray-500">Every completed line for this item, newest first.</p>
@@ -216,4 +263,7 @@
             </table>
         </div>
     </div>
+
+        </div>{{-- /right column --}}
+    </div>{{-- /grid --}}
 @endsection
