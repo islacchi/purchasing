@@ -102,80 +102,6 @@
             @endif
         </div>
 
-        {{-- Action bar: the primary action lives up top, destructive on the far right --}}
-        <div class="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm">
-            <a href="{{ route('preplist') }}"
-               class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
-                </svg>
-                Back to list
-            </a>
-
-            <div class="flex flex-wrap items-center gap-2">
-                @if ($hasBlocked)
-                    <button type="button" disabled
-                            class="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-400 cursor-not-allowed"
-                            title="Linked quotations with supplier data (prices/documents/POs) must be cleared first">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Delete
-                    </button>
-                @else
-                    <form id="preplistDeleteForm" method="POST" action="{{ route('preplist.destroy', ['preplist' => $preplist->id]) }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="button" id="preplistDeleteBtn" aria-haspopup="dialog"
-                                class="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                            </svg>
-                            Delete
-                        </button>
-                    </form>
-                @endif
-
-                @if (auth()->user()?->canModule('preplist', 'manage'))
-                    <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
-                       class="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                        Edit prep list
-                    </a>
-                @else
-                    <button type="button" data-access-restricted-modal-toggle
-                            title="Your role does not have access to that module."
-                            class="flex cursor-not-allowed items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-400">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                        Edit prep list
-                    </button>
-                @endif
-
-                @if (auth()->user()?->canModule('preplist', 'manage'))
-                    <a href="{{ route('preplist.generate-rfq', ['preplist' => $preplist->id]) }}"
-                       class="flex items-center gap-2 rounded-md bg-[#2a7a94] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#236b80]">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                        </svg>
-                        Generate RFQ for supplier
-                    </a>
-                @else
-                    <button type="button" data-access-restricted-modal-toggle
-                            title="Your role does not have access to that module."
-                            class="flex cursor-not-allowed items-center gap-2 rounded-md bg-gray-300 px-3 py-1.5 text-sm font-medium text-gray-500">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                        </svg>
-                        Generate RFQ for supplier
-                    </button>
-                @endif
-            </div>
-        </div>
-
         @if ($errors->any())
             <div class="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {{ $errors->first() }}
@@ -348,6 +274,79 @@
                 </div>
             </div>
 
+        </div>
+
+        {{-- Footer actions — same placement and design as the other detail pages --}}
+        <div class="no-print mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
+            <a href="{{ route('preplist') }}"
+               class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+                </svg>
+                Back to list
+            </a>
+            <div class="flex flex-wrap items-center gap-3">
+                @if ($hasBlocked)
+                    <button type="button" disabled
+                            class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-400 cursor-not-allowed"
+                            title="Linked quotations with supplier data (prices/documents/POs) must be cleared first">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Delete
+                    </button>
+                @else
+                    <form id="preplistDeleteForm" method="POST" action="{{ route('preplist.destroy', ['preplist' => $preplist->id]) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" id="preplistDeleteBtn" aria-haspopup="dialog"
+                                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Delete
+                        </button>
+                    </form>
+                @endif
+
+                @if (auth()->user()?->canModule('preplist', 'manage'))
+                    <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
+                       class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit prep list
+                    </a>
+                @else
+                    <button type="button" data-access-restricted-modal-toggle
+                            title="Your role does not have access to that module."
+                            class="flex cursor-not-allowed items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-400">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit prep list
+                    </button>
+                @endif
+
+                @if (auth()->user()?->canModule('preplist', 'manage'))
+                    <a href="{{ route('preplist.generate-rfq', ['preplist' => $preplist->id]) }}"
+                       class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                        Generate RFQ for supplier
+                    </a>
+                @else
+                    <button type="button" data-access-restricted-modal-toggle
+                            title="Your role does not have access to that module."
+                            class="flex cursor-not-allowed items-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                        Generate RFQ for supplier
+                    </button>
+                @endif
+            </div>
         </div>
     </div>{{-- /flex column --}}
 
