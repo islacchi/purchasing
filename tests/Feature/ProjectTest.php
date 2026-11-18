@@ -471,6 +471,20 @@ class ProjectTest extends TestCase
             ->assertSee('Mefenamic Capsule - 500mg');
     }
 
+    public function test_sidebar_highlights_the_module_on_its_detail_page(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+
+        // Exactly one sidebar entry stays highlighted while on a sub-page.
+        $response = $this->actingAs($user)
+            ->get(route('projects.show', ['project' => $project->id]))
+            ->assertOk();
+
+        $this->assertSame(1, substr_count($response->getContent(), 'w-1 bg-teal-300"></span>'));
+    }
+
     public function test_project_can_be_deleted(): void
     {
         $user = $this->admin();

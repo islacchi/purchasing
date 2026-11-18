@@ -116,8 +116,8 @@
                 @if (auth()->user()->canModule('projects'))
                 <a href="{{ route('projects') }}"
                    class="relative flex items-center w-full h-[65px] transition-colors
-                          {{ request()->is('projects') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
-                    @if(request()->is('projects'))
+                          {{ request()->is('projects') || request()->is('projects/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                    @if(request()->is('projects') || request()->is('projects/*'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
                     <div class="sidebar-icon flex items-center gap-3">
@@ -152,8 +152,8 @@
                 @if (auth()->user()->canModule('quotation'))
                 <a href="{{ route('quotation') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
-                        {{ request()->is('quotation') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
-                    @if(request()->is('quotation'))
+                        {{ request()->is('quotation') || request()->is('quotation/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                    @if(request()->is('quotation') || request()->is('quotation/*'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
 
@@ -171,8 +171,8 @@
                 @if (auth()->user()->canModule('purchase-order'))
                 <a href="{{ route('po-cart') }}"
                    class="relative flex items-center w-full h-[65px] transition-colors
-                          {{ request()->is('cart') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
-                    @if(request()->is('cart'))
+                          {{ request()->is('cart') || request()->is('cart/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                    @if(request()->is('cart') || request()->is('cart/*'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
                     <div class="sidebar-icon flex items-center gap-3">
@@ -207,8 +207,8 @@
                 @if (auth()->user()->canModule('item-catalog'))
                 <a href="{{ route('item-catalog') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
-                        {{ request()->is('item-catalog*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
-                    @if(request()->is('item-catalog*'))
+                        {{ request()->is('item-catalog') || request()->is('item-catalog/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                    @if(request()->is('item-catalog') || request()->is('item-catalog/*'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
 
@@ -225,8 +225,8 @@
                 @if (auth()->user()->canModule('entities'))
                 <a href="{{ route('entities') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
-                        {{ request()->is('entities') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
-                    @if(request()->is('entities'))
+                        {{ request()->is('entities') || request()->is('entities/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                    @if(request()->is('entities') || request()->is('entities/*'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
 
@@ -246,8 +246,8 @@
                 @can('access-settings')
                 <a href="{{ route('settings') }}"
                 class="relative flex items-center w-full h-[65px] transition-colors
-                        {{ request()->is('settings') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
-                    @if(request()->is('settings'))
+                        {{ request()->is('settings') || request()->is('settings/*') ? 'bg-[#2a7a94] text-white' : 'text-white/60 hover:text-white hover:bg-[#2a7a94]/50' }}">
+                    @if(request()->is('settings') || request()->is('settings/*'))
                         <span class="absolute left-0 top-0 bottom-0 w-1 bg-teal-300"></span>
                     @endif
 
