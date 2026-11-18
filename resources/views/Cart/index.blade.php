@@ -20,18 +20,17 @@
         </div>
     @endif
 
-    {{-- Header bar --}}
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex min-w-0 flex-wrap items-center gap-3">
-            <div>
-                <h1 class="text-base font-bold text-gray-900">Things to buy</h1>
-                <p class="mt-0.5 text-xs text-gray-500">
-                    {{ $totalLines }} line{{ $totalLines === 1 ? '' : 's' }}
-                    @if (! empty($grouped))
-                        · {{ count($grouped) }} supplier{{ count($grouped) === 1 ? '' : 's' }}
-                    @endif
-                </p>
-            </div>
+    {{-- Page header --}}
+    <div class="mb-4 mt-1 flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0">
+            <h2 class="text-2xl font-bold text-gray-900">Things to buy</h2>
+            <p class="mt-1 text-xs text-gray-500">
+                {{ $totalLines }} line{{ $totalLines === 1 ? '' : 's' }}
+                @if (! empty($grouped))
+                    &middot; {{ count($grouped) }} supplier{{ count($grouped) === 1 ? '' : 's' }}
+                @endif
+                &middot; quantities re-checked at checkout
+            </p>
         </div>
 
         @if (! empty($grouped))
@@ -41,7 +40,7 @@
                     @csrf
                     @method('DELETE')
                     <button type="submit"
-                            class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:border-red-200 hover:text-red-600">
+                            class="flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                         </svg>
@@ -93,28 +92,28 @@
                         $subtotal = $group['subtotal'];
                     @endphp
                     <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-5 py-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-[#fbfdfe] px-4 py-3">
                             <div class="min-w-0">
-                                <h2 class="text-sm font-bold uppercase tracking-wider text-gray-700">{{ $supplier->name }}</h2>
-                                <p class="mt-0.5 text-[11px] text-gray-400">{{ count($items) }} line{{ count($items) === 1 ? '' : 's' }}</p>
+                                <h2 class="text-sm font-extrabold uppercase tracking-wider text-gray-900">{{ $supplier->name }}</h2>
+                                <p class="mt-0.5 text-[10px] text-gray-500">{{ count($items) }} line{{ count($items) === 1 ? '' : 's' }}</p>
                             </div>
-                            <p class="text-sm font-semibold text-gray-900">{{ $peso($subtotal) }}</p>
+                            <p class="text-sm font-extrabold text-gray-900">{{ $peso($subtotal) }}</p>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="min-w-full">
-                                <thead class="bg-gray-50">
+                                <thead class="sticky top-0 z-10 bg-[#0e5266]">
                                     <tr>
-                                        <th class="px-5 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-gray-500">Item</th>
-                                        <th class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-gray-500">Qty</th>
-                                        <th class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-gray-500">Unit price</th>
-                                        <th class="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-gray-500">Total</th>
-                                        <th class="w-12 px-2 py-2"><span class="sr-only">Remove</span></th>
+                                        <th scope="col" class="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Item</th>
+                                        <th scope="col" class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-white">Qty</th>
+                                        <th scope="col" class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-white">Unit price</th>
+                                        <th scope="col" class="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-white">Total</th>
+                                        <th scope="col" class="w-12 px-2 py-2.5"><span class="sr-only">Remove</span></th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
-                                    @foreach ($items as $line)
-                                        <tr class="align-top hover:bg-gray-50/60">
-                                            <td class="px-5 py-2.5">
+                                    @foreach ($items as $lineIndex => $line)
+                                        <tr class="align-top transition-colors hover:bg-[#e4edf0] {{ $lineIndex % 2 === 1 ? 'bg-[#f2f7f8]' : 'bg-white' }}">
+                                            <td class="px-4 py-2.5">
                                                 <p class="break-words text-sm font-medium text-gray-900">{{ $line['name'] }}</p>
                                                 <p class="mt-0.5 text-[11px] text-gray-400">
                                                     {{ $line['unit'] }}
@@ -132,7 +131,7 @@
                                                     <input id="qty-{{ $line['cartItem']->id }}"
                                                            type="number" name="qty" min="1" max="{{ min($line['requested'], 1000000) }}"
                                                            value="{{ $line['qty'] }}"
-                                                           class="w-20 rounded-md border border-gray-300 px-2 py-1 text-right text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                                           class="h-[30px] w-14 rounded-md border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300">
                                                 </form>
                                             </td>
                                             <td class="px-3 py-2.5 text-right">
@@ -169,27 +168,41 @@
 
             {{-- Right: summary --}}
             <div class="xl:col-span-1">
-                <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm xl:sticky xl:top-6">
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-gray-500">Order summary</h2>
-                    <dl class="mt-4 space-y-3 text-sm">
-                        <div class="flex items-baseline justify-between gap-4 border-b border-gray-100 pb-3">
-                            <dt class="text-gray-500">Lines</dt>
-                            <dd class="font-semibold text-gray-900">{{ $totalLines }}</dd>
+                <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm xl:sticky xl:top-6">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Order summary</p>
+                    <div class="mt-2 divide-y divide-gray-100">
+                        <div class="flex items-baseline justify-between gap-4 py-2.5 text-xs">
+                            <span class="text-gray-500">Lines</span>
+                            <span class="font-semibold text-gray-900">{{ $totalLines }}</span>
                         </div>
-                        <div class="flex items-baseline justify-between gap-4 border-b border-gray-100 pb-3">
-                            <dt class="text-gray-500">Draft POs to create</dt>
-                            <dd class="font-semibold text-gray-900">{{ $poCount }}<span class="ml-1 font-normal text-gray-400">(one per awarded quotation)</span></dd>
+                        <div class="flex items-baseline justify-between gap-4 py-2.5 text-xs">
+                            <span class="text-gray-500">Draft POs to create</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $poCount }}<span class="ml-1 font-normal text-gray-400">(one per awarded quotation)</span></span>
                         </div>
-                        <div class="flex items-baseline justify-between gap-4 border-b border-gray-100 pb-3">
-                            <dt class="text-gray-500">Grand total</dt>
-                            <dd class="text-lg font-bold text-[#0e5266]">{{ $peso($grandTotal) }}</dd>
-                        </div>
-                    </dl>
-                    <p class="mt-4 text-xs text-gray-500">
+                    </div>
+
+                    <div class="mt-2 border-t border-gray-100 pt-2">
+                        @foreach ($grouped as $group)
+                            <div class="flex items-baseline justify-between gap-3 py-1.5 text-[11px]">
+                                <span class="min-w-0 truncate font-semibold uppercase text-gray-700">{{ $group['supplier']->name }}</span>
+                                <span class="whitespace-nowrap text-gray-500">{{ $peso($group['subtotal']) }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-2 flex items-baseline justify-between gap-4 border-t border-gray-200 pt-3">
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Grand total</span>
+                        <span class="text-2xl font-extrabold text-[#0e5266]">{{ $peso($grandTotal) }}</span>
+                    </div>
+
+                    <p class="mt-2 text-[10px] leading-snug text-gray-500">
                         Checkout re-checks quantities, prices, and on-hand stock. If anything is no longer orderable, the whole checkout stops and tells you which lines. No order is sent to suppliers yet — the draft POs wait on the Purchase Orders list.
                     </p>
                     <button type="button" id="checkoutOpenBtnSummary"
-                            class="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#236b80]">
+                            class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#236b80]">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
                         Checkout{{ $totalLines > 0 ? ' ('.$totalLines.' line'.($totalLines === 1 ? '' : 's').')' : '' }}
                     </button>
                 </div>
@@ -253,7 +266,7 @@
                         Cancel
                     </button>
                     <button type="submit"
-                            class="rounded-md bg-[#0e5266] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0c4757]">
+                            class="rounded-md bg-[#2a7a94] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#236b80]">
                         Create draft POs
                     </button>
                 </div>
