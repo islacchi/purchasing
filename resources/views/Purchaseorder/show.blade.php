@@ -57,7 +57,7 @@
         };
     @endphp
 
-    <div class="flex h-full min-h-0 flex-col">
+    <div class="flex min-h-full flex-col lg:h-full lg:min-h-0">
 
         {{-- Success messages are rendered once, globally, by layouts.app (partials.flash-success). --}}
 
@@ -71,7 +71,7 @@
         <div class="mb-6 flex shrink-0 flex-wrap items-start justify-between gap-4">
             <div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <h2 class="text-xl font-bold text-gray-900">{{ $purchaseOrder->po_number }}</h2>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ $purchaseOrder->po_number }}</h2>
                     <span id="poStatusPill" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $statusStyles[$status] ?? 'bg-gray-100 text-gray-600' }}">
                         {{ $status }}
                     </span>
@@ -123,7 +123,8 @@
 
         {{-- Status progress (hidden once cancelled — the cancellation notice lives in the Order details card) --}}
         @if (! $isCancelled)
-            <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white px-4 py-4 shadow-sm">
+            <div class="mb-4 shrink-0 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                <h3 class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Order progress</h3>
                 <ol id="poStatusTracker" class="flex flex-wrap items-center gap-y-3">
                     @foreach ($stages as $index => $stage)
                         @php
@@ -151,47 +152,47 @@
             </div>
         @endif
 
-        {{-- Supplier and delivery --}}
-        <div class="mb-4 grid shrink-0 grid-cols-1 gap-4 md:grid-cols-2">
+        {{-- Two-column layout: rail of labeled cards + items table --}}
+        <div class="grid grid-cols-1 items-start gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[330px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
 
-            <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
-                <div class="flex min-h-[48px] shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-4 py-2.5">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Supplier</h3>
-                </div>
-                <div class="flex flex-1 flex-col justify-center px-4 py-3">
+            {{-- LEFT RAIL --}}
+            <div class="flex flex-col gap-4">
+
+                {{-- Supplier --}}
+                <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Supplier</p>
                     <div class="flex items-center gap-3">
-                        <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#2a7a94]/10 text-xs font-bold text-[#2a7a94]">
+                        <span class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#2a7a94]/10 text-xs font-bold text-[#2a7a94]">
                             {{ $initials }}
                         </span>
                         <div class="min-w-0">
                             <p class="truncate font-semibold text-gray-900">{{ $supplierName }}</p>
-                            <p class="text-xs text-gray-500">{{ $supplier?->contact_person ?? 'No contact person' }}</p>
+                            <p class="mt-0.5 text-[11px] text-gray-500">{{ $supplier?->contact_person ?? 'No contact person' }}</p>
                         </div>
                     </div>
 
-                    <dl class="mt-3 space-y-1.5 text-sm">
-                        <div class="flex items-start justify-between gap-2">
-                            <dt class="text-xs text-gray-500">Email</dt>
-                            <dd class="text-right text-xs font-medium text-gray-800">{{ $supplier?->email ?? '—' }}</dd>
+                    <div class="mt-3 divide-y divide-gray-100">
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Email</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $supplier?->email ?? '—' }}</span>
                         </div>
-                        <div class="flex items-start justify-between gap-2">
-                            <dt class="text-xs text-gray-500">Phone</dt>
-                            <dd class="text-right text-xs font-medium text-gray-800">{{ $supplier?->contact_no ?? '—' }}</dd>
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Phone</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $supplier?->contact_no ?? '—' }}</span>
                         </div>
-                        <div class="flex items-start justify-between gap-2">
-                            <dt class="text-xs text-gray-500">Address</dt>
-                            <dd class="max-w-[70%] truncate text-right text-xs font-medium text-gray-800" title="{{ $supplier?->address }}">{{ $supplier?->address ?? '—' }}</dd>
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Address</span>
+                            <span class="max-w-[70%] truncate text-right font-semibold text-gray-900" title="{{ $supplier?->address }}">{{ $supplier?->address ?? '—' }}</span>
                         </div>
-                    </dl>
+                    </div>
                 </div>
-            </div>
 
-            <div class="flex flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
-                <div class="flex min-h-[46px] shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-2.5">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Order details</h3>
+                {{-- Order details --}}
+                <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Order details</p>
 
                     @if ($isCancelled)
-                        <div class="flex min-w-0 items-center gap-1.5 rounded-md border border-red-100 bg-red-50/70 px-2 py-1">
+                        <div class="mb-2 flex min-w-0 items-center gap-1.5 rounded-md border border-red-100 bg-red-50/70 px-2 py-1">
                             <svg class="h-3.5 w-3.5 flex-shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
                             </svg>
@@ -199,59 +200,66 @@
                             <span class="hidden max-w-[220px] truncate text-[11px] text-red-500/90 md:inline" title="{{ $purchaseOrder->cancel_reason ?: 'No reason recorded.' }}">&middot; {{ $purchaseOrder->cancel_reason ?: 'No reason recorded.' }}</span>
                         </div>
                     @endif
-                </div>
-                <div class="flex flex-1 flex-col justify-center px-4 py-3">
-                    <dl class="space-y-1.5 text-sm">
-                        <div class="flex items-start justify-between gap-2">
-                            <dt class="text-xs text-gray-500">Date issued</dt>
-                            <dd class="text-right text-xs font-medium text-gray-800">{{ $purchaseOrder->issued_on?->format('M j, Y') ?? 'Not issued yet' }}</dd>
-                        </div>
-                        <div class="flex items-start justify-between gap-2">
-                            <dt class="text-xs text-gray-500">Expected delivery</dt>
-                            <dd class="text-right text-xs font-medium text-gray-800">{{ $purchaseOrder->expected_delivery_on?->format('M j, Y') ?? 'Not set' }}</dd>
-                        </div>
-                        <div class="flex items-start justify-between gap-2">
-                            <dt class="text-xs text-gray-500">Payment terms</dt>
-                            <dd class="text-right text-xs font-medium text-gray-800">{{ $purchaseOrder->payment_terms ?? '—' }}</dd>
-                        </div>
-                        <div class="flex items-start justify-between gap-2">
-                            <dt class="text-xs text-gray-500">Deliver to</dt>
-                            <dd class="text-right text-xs font-medium text-gray-800">{{ $purchaseOrder->deliver_to ?? '—' }}</dd>
-                        </div>
-                        <div class="flex items-start justify-between gap-2">
-                            <dt class="text-xs text-gray-500">Items</dt>
-                            <dd class="text-right text-xs font-medium text-gray-800">{{ $items->count() }} line items</dd>
-                        </div>
-                    </dl>
-                </div>
-            </div>
-        </div>
 
-        {{-- Items ordered --}}
-        <div class="flex min-h-[240px] flex-1 flex-col rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-2.5">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700">Items ordered</h3>
-                <div class="flex flex-wrap items-center gap-2">
-                    <span id="receiptSummary" class="inline-flex items-center rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-xs font-medium text-[#2a7a94]">
-                        {{ $receivedCount }} of {{ $items->count() }} received
-                    </span>
-                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                        {{ $items->count() }} items
-                    </span>
+                    <div class="divide-y divide-gray-100">
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Date issued</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $purchaseOrder->issued_on?->format('M j, Y') ?? 'Not issued yet' }}</span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Expected delivery</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $purchaseOrder->expected_delivery_on?->format('M j, Y') ?? 'Not set' }}</span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Payment terms</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $purchaseOrder->payment_terms ?? '—' }}</span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Deliver to</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $purchaseOrder->deliver_to ?? '—' }}</span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Items</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $items->count() }} line items</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="min-h-[120px] flex-1 overflow-auto">
-                <table class="w-full text-xs">
+            {{-- ITEMS ORDERED --}}
+            <div class="flex min-h-[240px] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:h-full lg:min-h-0">
+                <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-2.5">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Items ordered</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span id="receiptSummary" class="inline-flex items-center rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-xs font-medium text-[#2a7a94]">
+                            {{ $receivedCount }} of {{ $items->count() }} received
+                        </span>
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                            {{ $items->count() }} items
+                        </span>
+                    </div>
+                </div>
+
+                <div class="lg:min-h-0 lg:flex-1 lg:overflow-auto">
+                <table class="w-full table-fixed text-xs">
+                    <colgroup>
+                        <col class="w-[5%]">
+                        <col class="w-[33%]">
+                        <col class="w-[9%]">
+                        <col class="w-[14%]">
+                        <col class="w-[13%]">
+                        <col class="w-[13%]">
+                        <col class="w-[13%]">
+                    </colgroup>
                     <thead class="sticky top-0 z-10 bg-[#0e5266]">
-                        <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
-                            <th scope="col" class="w-12 px-3 py-2 text-center">#</th>
+                        <tr class="text-left text-[10px] font-semibold uppercase tracking-wider text-white">
+                            <th scope="col" class="px-3 py-2.5 text-center">#</th>
                             <th scope="col" class="px-3 py-2">Item</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-center">Qty</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-center">Shelf life req.</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-center">Received</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-right">Unit price</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2 text-right">Extended</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Qty</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Shelf life req.</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Received</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Unit price</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Extended</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -266,15 +274,15 @@
                                     <p class="font-medium text-gray-900 break-words">{{ $item->item?->name ?? 'Item removed' }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">{{ $item->item?->unit ?? '' }}</p>
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-2 text-center text-gray-700">{{ $item->qty }}</td>
-                                <td class="whitespace-nowrap px-3 py-2 text-center">
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center text-gray-700">{{ $item->qty }}</td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     @if ($minShelf > 0)
                                         <span class="text-gray-700" title="Minimum {{ $minShelf }} months remaining shelf life at delivery">&ge; {{ $minShelf }} mo</span>
                                     @else
                                         <span class="text-xs text-gray-400" title="Non-perishable">&mdash;</span>
                                     @endif
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-2 text-center">
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     @if ($isReceived)
                                         {{-- Locked: once received, the line cannot be unmarked from this screen --}}
                                         <input type="checkbox" checked disabled
@@ -320,7 +328,7 @@
             {{-- Fixed summary — visible no matter how many rows scroll --}}
             <div class="flex shrink-0 items-center justify-between gap-4 border-t border-gray-100 bg-gray-50/60 px-4 py-2.5">
                 <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Total &middot; {{ $items->count() }} {{ $items->count() === 1 ? 'line item' : 'line items' }}</p>
-                <p class="text-sm font-bold text-gray-900">{{ $peso($total) }}</p>
+                <p class="text-sm font-extrabold text-[#0e5266]">{{ $peso($total) }}</p>
             </div>
 
             <div class="shrink-0 border-t border-gray-100 px-4 py-2.5">
@@ -331,7 +339,9 @@
                     Tick <span class="font-medium text-gray-500">Received</span> when the full quantity for a line has arrived and passed the shelf-life check. Batch/lot expiry is recorded at receiving.
                 </p>
             </div>
-        </div>
+            </div>
+
+        </div>{{-- /grid --}}
 
         {{-- Footer actions --}}
         <div class="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-3">
