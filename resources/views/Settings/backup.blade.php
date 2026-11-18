@@ -76,36 +76,52 @@
                         </svg>
                     </summary>
 
-                    <div class="max-h-[560px] space-y-4 overflow-y-auto border-t border-gray-100 px-4 py-4 text-xs leading-relaxed text-gray-600">
+                    <div class="max-h-[560px] space-y-4 overflow-y-auto border-t border-gray-100 px-4 py-5 text-xs leading-relaxed text-gray-600">
                         <p class="text-[10px] uppercase tracking-wider text-gray-400">Close with Esc.</p>
 
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">When you would use this</p>
                             <ul class="mt-1 list-disc space-y-1 pl-5">
-                                <li>You open the system and a section looks empty or broken (projects, prep lists, quotations, purchase orders, items).</li>
-                                <li>You want to move the system to a new computer exactly as it was.</li>
-                                <li>You did not see any error, but the data is wrong in a way you cannot fix by re-entering it.</li>
+                                <li>A section suddenly looks empty or broken — projects, prep lists, quotations, purchase orders, items.</li>
+                                <li>You need to move the system to a new computer exactly as it was.</li>
+                                <li>The data is wrong in a way you cannot fix by re-entering it, and you have not yet captured evidence of the change.</li>
                             </ul>
                         </div>
 
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Fastest path — restore in-app</p>
                             <ol class="mt-1 list-decimal space-y-1 pl-5">
-                                <li>In the back-up history on the right, find the back-up you want and click <span class="font-semibold text-gray-800">Restore</span> on that row.</li>
-                                <li>Type <span class="font-mono text-[11px] text-gray-800">RESTORE</span> when prompted, then confirm. A safety back-up of the current state is created automatically before anything changes.</li>
-                                <li>Sessions (who is logged in right now) are never touched — you will not be logged out.</li>
+                                <li>In the back-up history on the right, find the file you want and click <span class="font-semibold text-gray-800">Restore</span> on that row.</li>
+                                <li>Read the red warning box, then type <span class="font-mono text-[11px] text-gray-800">RESTORE</span> and press <span class="font-semibold text-gray-800">Restore database</span>.</li>
+                                <li>A <span class="font-semibold text-gray-800">safety back-up of the current state is created automatically</span> before anything is replayed — nothing is written to the database until that snapshot exists.</li>
+                                <li>The selected file is replayed; the <span class="font-semibold text-gray-800">sessions table is left untouched</span>, so anyone logged in stays in.</li>
+                                <li>The fresh <span class="font-semibold text-gray-800">safety back-up appears in the history</span> alongside the restored file — it is your way back if the restore turns out wrong.</li>
                             </ol>
+
+                            <div class="mt-2 rounded-md border border-amber-100 bg-amber-50/60 px-3 py-2 text-[10px] leading-snug text-amber-900">
+                                <b class="font-semibold">If the restore fails part-way:</b> there is no automatic rollback. The error banner names the safety back-up file. Click <b class="font-semibold">Restore</b> on that file in the list to get back to the original state.
+                            </div>
                         </div>
 
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Step 1 — take a back-up of what you have now (if you prefer the command line)</p>
-                            <p class="mt-1">This is the single most important step: it makes the restore reversible.</p>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">What "restore in-app" will not do</p>
+                            <ul class="mt-1 list-disc space-y-1 pl-5">
+                                <li>Restore anything that is not one of the rows in the list (old files, files renamed or moved outside <code>storage/app/private/backups/</code>).</li>
+                                <li>Restore a back-up whose writer never confirmed success — if the file is missing the trailing completion marker, it is rejected before anything is replayed.</li>
+                                <li>Restore anything that is not a MySQL database. The restore replays the same MySQL statements every <code>DatabaseDumper</code> writes; SQLite, PostgreSQL, etc. are not supported.</li>
+                                <li>Bring back the Excel files uploaded in the Quotation tracker — those are files, not database rows.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Step 1 — take a back-up of what you have now (command-line fallback)</p>
+                            <p class="mt-1">The in-app restore already does this for you, but if the web app itself is broken, this is the manual fallback. It makes the restore reversible.</p>
                             <ol class="mt-1 list-decimal space-y-1 pl-5">
                                 <li>Click the <span class="font-semibold text-gray-800">Create back-up</span> button on the right side of this page.</li>
                                 <li>Wait for the green banner at the top that says <span class="font-semibold text-gray-800">“Database back-up created.”</span></li>
                                 <li>A new file name appears at the top of the back-up history list (it looks like <span class="font-mono text-[11px] text-gray-800">purchasing-YYYY-MM-DD-HHMMSS.sql</span>).</li>
                             </ol>
-                            <p class="mt-1">If that step failed with a red error message, stop here and contact your IT support. Do not try the restore.</p>
+                            <p class="mt-1">If that step failed with a red error message, stop here and contact your IT support. Do not attempt the restore.</p>
                         </div>
 
                         <div>
@@ -133,7 +149,8 @@
                             <ul class="mt-1 list-disc space-y-1 pl-5">
                                 <li><span class="font-semibold text-gray-800">Restored:</span> everything kept in the database — users and roles (and the privilege matrix), projects, items, prep lists, quotations, purchase orders, receiving history, and activity logs.</li>
                                 <li><span class="font-semibold text-gray-800">Not restored:</span> the Excel files uploaded in the Quotation tracker. Those live in the `storage/app/private` folder, not the database.</li>
-                                <li><span class="font-semibold text-gray-800">Command-line restore will sign everyone out</span> — the dump replays `DROP TABLE sessions`. The in-app Restore keeps sessions untouched.</li>
+                                <li><span class="font-semibold text-gray-800">Command-line restore will sign everyone out</span> — the dump replays `DROP TABLE sessions`. The in-app Restore skips the sessions table entirely, so operators stay logged in either way.</li>
+                                <li><span class="font-semibold text-gray-800">A partial failure is recoverable</span> — the pre-restore safety back-up is in the list; click <b class="font-semibold text-gray-800">Restore</b> on it to get back to the original state.</li>
                             </ul>
                         </div>
                     </div>
