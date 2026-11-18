@@ -32,30 +32,6 @@
                 &middot; quantities re-checked at checkout
             </p>
         </div>
-
-        @if (! empty($grouped))
-            <div class="flex flex-wrap items-center gap-2">
-                <form method="POST" action="{{ route('po-cart.clear') }}"
-                      onsubmit="return confirm('Clear your cart? Nothing will be ordered.');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit"
-                            class="flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Clear cart
-                    </button>
-                </form>
-                <button type="button" id="checkoutOpenBtn"
-                        class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#236b80]">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    Checkout{{ $totalLines > 0 ? ' ('.$totalLines.')' : '' }}
-                </button>
-            </div>
-        @endif
     </div>
 
     @if (empty($grouped))
@@ -220,13 +196,27 @@
                     <p class="mt-2 text-[10px] leading-snug text-gray-500">
                         Checkout re-checks quantities, prices, and on-hand stock. If anything is no longer orderable, the whole checkout stops and tells you which lines. No order is sent to suppliers yet — the draft POs wait on the Purchase Orders list.
                     </p>
-                    <button type="button" id="checkoutOpenBtnSummary"
-                            class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#236b80]">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Checkout<span data-checkout-lines-wrap>{{ $totalLines > 0 ? ' ('.$totalLines.' line'.($totalLines === 1 ? '' : 's').')' : '' }}</span>
-                    </button>
+                    <div class="mt-3 flex items-stretch gap-2">
+                        <form method="POST" action="{{ route('po-cart.clear') }}" class="shrink-0"
+                              onsubmit="return confirm('Clear your cart? Nothing will be ordered.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="flex h-full items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                <span class="hidden sm:inline">Clear cart</span>
+                            </button>
+                        </form>
+                        <button type="button" id="checkoutOpenBtnSummary"
+                                class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#236b80]">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Checkout<span data-checkout-lines-wrap>{{ $totalLines > 0 ? ' ('.$totalLines.' line'.($totalLines === 1 ? '' : 's').')' : '' }}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -305,7 +295,7 @@
             return;
         }
 
-        var openButtons = [document.getElementById('checkoutOpenBtn'), document.getElementById('checkoutOpenBtnSummary')].filter(Boolean);
+        var openButtons = [document.getElementById('checkoutOpenBtnSummary')].filter(Boolean);
         var closeButtons = modal.querySelectorAll('[data-close-checkout]');
         var overlay = document.getElementById('checkoutOverlay');
 
