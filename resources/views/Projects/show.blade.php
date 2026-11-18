@@ -172,7 +172,7 @@
                     <table class="w-full">
                         <thead class="sticky top-0 z-10 bg-[#0e5266]">
                             <tr>
-                                <th class="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Item description</th>
+                                <th class="whitespace-nowrap max-w-[22rem] px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Item description</th>
                                 <th class="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-white">To procure</th>
                                 <th class="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Unit</th>
                                 <th class="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-white">Unit cost</th>
@@ -197,7 +197,7 @@
                                     };
                                 @endphp
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-sm text-gray-900 break-words">{{ $projectItem->item?->name ?? '-' }}</td>
+                                    <td class="max-w-[22rem] px-4 py-3 text-sm text-gray-900 break-words">{{ $projectItem->item?->name ?? '-' }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ $remaining }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>
