@@ -41,6 +41,14 @@
 
         $peso = fn ($amount) => '₱ '.number_format((float) $amount, 2);
 
+        // Aggregate figures for the item-breakdown header.
+        $totalRequested = $items->sum('requested');
+        $sourceProjectCount = $items
+            ->flatMap(fn ($item) => collect($item['allocations'] ?? [])->pluck('project'))
+            ->filter()
+            ->unique()
+            ->count();
+
         // Difference (in days) between the required expiry date and the
         // supplier's expiry that still counts as "close" rather than "good".
         $expiryCloseWindow = 30;
@@ -70,9 +78,10 @@
     </form>
     @endif
 
-    <div class="flex h-full min-h-0 flex-col">
+    <div class="flex min-h-full flex-col lg:h-full lg:min-h-0">
+
         @if (! $preplist)
-            <div class="mb-6 flex shrink-0 items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-4">
+            <div class="mb-4 flex shrink-0 items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-5 py-4">
                 <div class="flex min-w-0 items-start gap-3">
                     <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
@@ -105,43 +114,78 @@
             </div>
         @endif
 
-        {{-- Quotation details + supplier's quotation document, side by side --}}
-        <div class="mb-6 shrink-0 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-            <div class="grid gap-5 md:grid-cols-2">
-                {{-- Quotation details --}}
-                <div class="min-w-0">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="min-w-0">
-                            <h2 class="text-xl font-bold text-gray-900">{{ $supplier?->name ?? 'Supplier removed' }}</h2>
-                            <p class="mt-1 text-xs text-gray-500">
-                                {{ $preplist?->name ?? 'Prep list removed' }}
-                                <span class="mx-1 text-gray-300">&middot;</span>
-                                {{ $preplist?->reference_no ?? 'Prep list removed' }}
-                            </p>
-                            @if ($quotation->rfq_number)
-                                <p class="mt-0.5 text-xs text-gray-400">{{ $quotation->rfq_number }}</p>
-                            @endif
-                        </div>
+        {{-- Page header with status chips --}}
+        <div class="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3">
+            <div class="min-w-0">
+                <h2 class="text-2xl font-bold text-gray-900">{{ $supplier?->name ?? 'Supplier removed' }}</h2>
+                <p class="mt-1 text-xs text-gray-500">
+                    {{ $preplist?->name ?? 'Prep list removed' }}
+                    <span class="mx-1 text-gray-300">&middot;</span>
+                    {{ $preplist?->reference_no ?? 'Prep list removed' }}
+                    @if ($quotation->rfq_number)
+                        <span class="mx-1 text-gray-300">&middot;</span>
+                        {{ $quotation->rfq_number }}
+                    @endif
+                </p>
+            </div>
 
-                        <span class="inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium
-                            {{ $status === 'Quoted' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600' }}">
-                            {{ $status }}
-                        </span>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                    {{ $itemsQuoted }} / {{ $totalItems }} items quoted
+                </span>
+                @if ($status === 'Quoted')
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                        Quoted
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                        Awaiting quote
+                    </span>
+                @endif
+            </div>
+        </div>
+
+        {{-- Main two-column layout --}}
+        <div class="grid grid-cols-1 items-start gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[330px_minmax(0,1fr)]">
+
+            {{-- LEFT RAIL --}}
+            <div class="flex flex-col gap-4 self-start lg:max-h-full lg:overflow-y-auto">
+
+                {{-- Quotation details --}}
+                <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Quotation details</p>
+                    <div class="mt-2 divide-y divide-gray-100">
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Supplier</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $supplier?->name ?? 'Supplier removed' }}</span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Prep list</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $preplist?->name ?? 'Removed' }}</span>
+                        </div>
+                        <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                            <span class="text-gray-500">Prep list ref</span>
+                            <span class="text-right font-semibold text-gray-900">{{ $preplist?->reference_no ?? '—' }}</span>
+                        </div>
+                        @if ($quotation->rfq_number)
+                            <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                                <span class="text-gray-500">RFQ number</span>
+                                <span class="text-right font-semibold text-gray-900">{{ $quotation->rfq_number }}</span>
+                            </div>
+                        @endif
                     </div>
 
-                    <div class="mt-4">
-                        <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Items quoted</p>
-                        <p class="mt-1 text-lg font-bold {{ $fractionColor }}">
-                            {{ $itemsQuoted }} / {{ $totalItems }}
-                        </p>
+                    <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Items quoted</span>
+                        <span class="text-2xl font-extrabold leading-none {{ $fractionColor }}">{{ $itemsQuoted }}<span class="text-sm font-semibold text-gray-400"> / {{ $totalItems }}</span></span>
                     </div>
                 </div>
 
                 {{-- Supplier's quotation document --}}
-                <div class="min-w-0 border-t border-gray-100 pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
-                    <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                        Supplier's quotation document
-                    </p>
+                <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Supplier's quotation document</p>
 
                     @if ($errors->has('document'))
                         <div class="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -195,163 +239,177 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m9.5 13.5 5 5m0-5-5 5"/>
                             </svg>
-                            <p class="text-sm text-gray-500">No supplier quotation submitted yet. Use “Submit quotation” to upload the supplier’s completed file.</p>
+                            <p class="text-xs leading-snug text-gray-500">No supplier quotation submitted yet. Use <span class="font-medium text-gray-700">Submit quotation</span> to upload the supplier’s completed file.</p>
                         </div>
+                    @endif
+
+                    @if (! $quotation->document_path)
+                        @if ($preplist && $canManageQuotation && ! ($removeBlockedReason ?? null))
+                            <label for="supplierQuotationFile"
+                                   class="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                </svg>
+                                Submit quotation
+                            </label>
+                        @else
+                            <span class="mt-3 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
+                                  title="{{ $removeBlockedReason ?? ($preplist ? 'Your role does not have access to upload files.' : 'This quotation’s prep list has been deleted') }}">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                </svg>
+                                Submit quotation
+                            </span>
+                        @endif
                     @endif
                 </div>
             </div>
-        </div>
 
-        {{-- Item breakdown --}}
-        <p class="mb-2 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Item breakdown</p>
-
-        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-            @forelse ($items as $item)
-                @php
-                    $quotedItem = $quotationItems->get((int) $item['key']);
-                    $isQuoted = $quotedItem?->unit_price !== null;
-                    $requiredShelf = $item['min_remaining_months'] ?? 0;
-                    $brand = $quotedItem?->brand;
-                    $expiryDate = $quotedItem?->expiry;
-                    $expiry = $expiryDate?->format('M j, Y');
-                @endphp
-
-                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm" data-item-collapsible>
-                    {{-- Item header doubles as the expand/collapse toggle --}}
-                    <button type="button" data-item-toggle aria-expanded="false"
-                            class="flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300">
-                        <div class="min-w-0">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <p class="font-bold text-gray-900 break-words">{{ $item['name'] }}</p>
-                            </div>
-                            <p class="mt-1 text-xs text-gray-500">
-                                {{ $item['requested'] }} {{ $item['unit'] }} requested
-                            </p>
-                            <p class="mt-0.5 text-xs text-gray-500">
-                                @if ($requiredShelf > 0)
-                                    Shelf life required:
-                                    <span class="font-medium text-gray-700">&ge; {{ $requiredShelf }} months at delivery</span>
-                                @else
-                                    Non-perishable &mdash; no shelf-life requirement
-                                @endif
-                            </p>
-                        </div>
-
-                        <svg class="item-chevron mt-1 h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 18l6-6-6-6"/>
-                        </svg>
-                    </button>
-
-                    <div class="hidden divide-y divide-gray-100 border-t border-gray-100" data-item-details>
-                        <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-3 text-xs text-gray-500">
-                            @if ($isQuoted)
-                                <div class="flex flex-wrap items-center gap-x-6 gap-y-1">
-                                    <p>
-                                        Brand:
-                                        <span class="font-medium text-gray-700">{{ $brand ?: 'Not stated' }}</span>
-                                    </p>
-                                    <p>
-                                        Expiry:
-                                        <span class="font-medium text-gray-700">{{ $expiry ?: 'Not stated' }}</span>
-                                    </p>
-                                </div>
-
-                                <div class="flex-shrink-0 text-right">
-                                    <p class="break-words text-sm font-bold text-gray-900">
-                                        {{ $peso($quotedItem->unit_price) }} / {{ $item['unit'] }}
-                                    </p>
-                                    <p class="mt-0.5 text-xs text-gray-500">
-                                        {{ $peso($quotedItem->unit_price * $item['requested']) }} subtotal
-                                    </p>
-                                </div>
-                            @else
-                                <p class="text-sm text-gray-400">Pending</p>
-                            @endif
-                        </div>
-                        @foreach ($item['allocations'] as $allocation)
-                            @php
-                                // The supplier's expiry is judged against what this
-                                // particular project requires: its delivery due date
-                                // plus the prep list's minimum shelf life.
-                                $requiredExpiry = empty($allocation['required_expiry_date'])
-                                    ? null
-                                    : \Carbon\CarbonImmutable::parse($allocation['required_expiry_date'])->startOfDay();
-                                $requiredExpiryLabel = $requiredExpiry?->format('M j, Y');
-                                $allocationStatus = 'unknown';
-
-                                if ($isQuoted && $expiryDate && $requiredExpiry) {
-                                    if ($expiryDate->lessThan($requiredExpiry)) {
-                                        $allocationStatus = 'short';
-                                    } elseif ($expiryDate->lessThanOrEqualTo($requiredExpiry->addDays($expiryCloseWindow))) {
-                                        $allocationStatus = 'close';
-                                    } else {
-                                        $allocationStatus = 'good';
-                                    }
-                                }
-                            @endphp
-
-                            <div class="flex items-center justify-between gap-4 px-5 py-3">
-                                <div class="flex min-w-0 items-center gap-2">
-                                    <svg class="h-4 w-4 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>
-                                    </svg>
-                                    <div class="min-w-0">
-                                        <p class="truncate text-sm text-gray-600">
-                                            {{ $allocation['project'] }}
-                                            <span class="mx-1 text-gray-300">&middot;</span>
-                                            <span class="text-xs text-gray-400">{{ $allocation['reference'] }}</span>
-                                        </p>
-                                        @if ($isQuoted)
-                                            <p data-expiry-status="{{ $allocationStatus }}"
-                                               @class([
-                                                   'mt-0.5 text-[11px]',
-                                                   'text-red-600' => $allocationStatus === 'short',
-                                                   'text-yellow-600' => $allocationStatus === 'close',
-                                                   'text-green-600' => $allocationStatus === 'good',
-                                                   'text-gray-400' => $allocationStatus === 'unknown',
-                                               ])>
-                                                @if ($allocationStatus === 'short')
-                                                    Expiry {{ $expiry }} &middot; before the required {{ $requiredExpiryLabel }}
-                                                @elseif ($allocationStatus === 'close')
-                                                    Expiry {{ $expiry }} &middot; close to the required {{ $requiredExpiryLabel }}
-                                                @elseif ($allocationStatus === 'good')
-                                                    Expiry {{ $expiry }} &middot; meets the required {{ $requiredExpiryLabel }}
-                                                @elseif ($expiry && $requiredExpiryLabel)
-                                                    Expiry {{ $expiry }} &middot; required {{ $requiredExpiryLabel }}
-                                                @elseif ($requiredExpiryLabel)
-                                                    Supplier expiry not stated &middot; required {{ $requiredExpiryLabel }}
-                                                @else
-                                                    Supplier expiry not stated
-                                                @endif
-                                            </p>
-                                        @endif
-                                    </div>
-                                </div>
-                                <p class="flex-shrink-0 text-sm font-medium text-gray-900">
-                                    {{ $allocation['qty'] }} {{ $allocation['unit'] }}
-                                </p>
-                            </div>
-                        @endforeach
+            {{-- RIGHT — ITEM BREAKDOWN --}}
+            <div class="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:h-full lg:min-h-0">
+                <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
+                    <div>
+                        <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Item breakdown</p>
+                        <p class="mt-0.5 text-[11px] text-gray-500">{{ $totalItems }} {{ $totalItems === 1 ? 'line' : 'lines' }} · across {{ $sourceProjectCount }} {{ $sourceProjectCount === 1 ? 'project' : 'projects' }} · Total requested: {{ number_format($totalRequested) }} units</p>
                     </div>
+                    <p class="text-[11px] text-gray-500">Grand total: <span class="text-xs font-bold text-gray-900">{{ $peso($quotedTotal) }}</span></p>
                 </div>
-            @empty
-                <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
-                    <h3 class="text-base font-semibold text-gray-900">No items in this prep list</h3>
-                    <p class="mt-1 text-sm text-gray-500">This quotation has no items to track.</p>
-                </div>
-            @endforelse
-        </div>
 
-        {{-- Grand total for quoted items only --}}
-        @if ($quotedTotal > 0)
-            <div class="mt-3 flex shrink-0 items-center justify-end gap-2 text-sm">
-                <span class="font-bold text-gray-900">Total quoted so far:</span>
-                <span class="font-bold text-gray-900">{{ $peso($quotedTotal) }}</span>
+                <div class="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+                    <table class="w-full table-fixed">
+                        <colgroup>
+                            <col class="w-[38%]">
+                            <col class="w-[11%]">
+                            <col class="w-[15%]">
+                            <col class="w-[12%]">
+                            <col class="w-[24%]">
+                        </colgroup>
+                        <thead class="sticky top-0 z-10 bg-[#0e5266]">
+                            <tr>
+                                <th scope="col" class="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Item</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-white">Requested</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Shelf life</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-white">Quoted</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-white">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($items as $item)
+                                @php
+                                    $quotedItem = $quotationItems->get((int) $item['key']);
+                                    $isQuoted = $quotedItem?->unit_price !== null;
+                                    $requiredShelf = $item['min_remaining_months'] ?? 0;
+                                    $brand = $quotedItem?->brand;
+                                    $expiryDate = $quotedItem?->expiry;
+                                    $expiry = $expiryDate?->format('M j, Y');
+                                    $isZebra = ($loop->iteration % 2) === 0;
+                                @endphp
+                                <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }} transition-colors hover:bg-[#e4edf0]">
+                                    <td class="px-4 py-2.5 align-top">
+                                        <p class="break-words text-[13px] font-semibold leading-snug text-gray-900">{{ $item['name'] }}</p>
+                                        <p class="mt-0.5 text-[10px] text-gray-500">{{ $item['unit'] }}</p>
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-2.5 text-center align-top text-xs font-semibold text-gray-900">{{ number_format($item['requested']) }} {{ $item['unit'] }}</td>
+                                    <td class="px-4 py-2.5 align-top text-xs text-gray-700">
+                                        @if ($requiredShelf > 0)
+                                            &ge; {{ $requiredShelf }} month{{ $requiredShelf === 1 ? '' : 's' }}
+                                        @else
+                                            Non-perishable
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-2.5 text-center align-top">
+                                        @if ($isQuoted)
+                                            <span class="text-xs font-bold text-gray-900">{{ $peso($quotedItem->unit_price) }} / {{ $item['unit'] }}</span>
+                                            <span class="block text-[9px] font-medium text-gray-500">{{ $peso($quotedItem->unit_price * $item['requested']) }} subtotal</span>
+                                        @else
+                                            <span class="text-xs text-gray-400">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-2.5 text-center align-top">
+                                        @if ($isQuoted)
+                                            <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-800">Quoted</span>
+                                        @else
+                                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">Awaiting quote</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @if ($isQuoted)
+                                    <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }}">
+                                        <td colspan="5" class="border-t border-dashed border-gray-200 px-4 py-1 text-[10px] text-gray-500">
+                                            Brand: <span class="font-medium text-gray-700">{{ $brand ?: 'Not stated' }}</span>
+                                            <span class="mx-1 text-gray-300">·</span>
+                                            Expiry: <span class="font-medium text-gray-700">{{ $expiry ?: 'Not stated' }}</span>
+                                        </td>
+                                    </tr>
+                                @endif
+                                @foreach ($item['allocations'] as $allocation)
+                                    @php
+                                        // The supplier's expiry is judged against what this
+                                        // particular project requires: its delivery due date
+                                        // plus the prep list's minimum shelf life.
+                                        $requiredExpiry = empty($allocation['required_expiry_date'])
+                                            ? null
+                                            : \Carbon\CarbonImmutable::parse($allocation['required_expiry_date'])->startOfDay();
+                                        $requiredExpiryLabel = $requiredExpiry?->format('M j, Y');
+                                        $allocationStatus = 'unknown';
+
+                                        if ($isQuoted && $expiryDate && $requiredExpiry) {
+                                            if ($expiryDate->lessThan($requiredExpiry)) {
+                                                $allocationStatus = 'short';
+                                            } elseif ($expiryDate->lessThanOrEqualTo($requiredExpiry->addDays($expiryCloseWindow))) {
+                                                $allocationStatus = 'close';
+                                            } else {
+                                                $allocationStatus = 'good';
+                                            }
+                                        }
+
+                                        $statusClass = match ($allocationStatus) {
+                                            'short' => 'text-red-600',
+                                            'close' => 'text-yellow-600',
+                                            'good' => 'text-green-600',
+                                            default => 'text-gray-400',
+                                        };
+                                    @endphp
+
+                                    <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }}">
+                                        <td colspan="5" class="border-t border-dashed border-gray-200 py-1.5 pl-10 pr-4 text-[10px] text-gray-500">
+                                            Contributes <span class="font-semibold text-gray-800">{{ number_format($allocation['qty']) }} {{ $allocation['unit'] }}</span> · <span class="text-gray-700">{{ $allocation['project'] }}</span> · <span class="text-gray-500">{{ $allocation['reference'] }}</span>
+                                            @if ($isQuoted)
+                                                <span class="ml-2 {{ $statusClass }}" data-expiry-status="{{ $allocationStatus }}">
+                                                    @if ($allocationStatus === 'short')
+                                                        Expiry {{ $expiry }} &middot; before the required {{ $requiredExpiryLabel }}
+                                                    @elseif ($allocationStatus === 'close')
+                                                        Expiry {{ $expiry }} &middot; close to the required {{ $requiredExpiryLabel }}
+                                                    @elseif ($allocationStatus === 'good')
+                                                        Expiry {{ $expiry }} &middot; meets the required {{ $requiredExpiryLabel }}
+                                                    @elseif ($expiry && $requiredExpiryLabel)
+                                                        Expiry {{ $expiry }} &middot; required {{ $requiredExpiryLabel }}
+                                                    @elseif ($requiredExpiryLabel)
+                                                        Supplier expiry not stated &middot; required {{ $requiredExpiryLabel }}
+                                                    @else
+                                                        Supplier expiry not stated
+                                                    @endif
+                                                </span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-6 py-10 text-center">
+                                        <h3 class="text-base font-semibold text-gray-900">No items in this prep list</h3>
+                                        <p class="mt-1 text-sm text-gray-500">This quotation has no items to track.</p>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        @endif
+        </div>
 
         {{-- Footer actions --}}
-        <div class="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div class="no-print mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
             <a href="{{ route('quotation') }}"
                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -410,24 +468,6 @@
                         <span class="flex cursor-not-allowed items-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
                               title="This quotation's prep list has been deleted">
                             Add to cart
-                        </span>
-                    @endif
-                @else
-                    @if ($preplist && $canManageQuotation && ! ($removeBlockedReason ?? null))
-                        <label for="supplierQuotationFile"
-                               class="flex cursor-pointer items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                            </svg>
-                            Submit quotation
-                        </label>
-                    @else
-                        <span class="flex cursor-not-allowed items-center gap-2 rounded-lg bg-gray-300 px-4 py-2 text-sm font-medium text-gray-500"
-                              title="{{ $removeBlockedReason ?? ($preplist ? 'Your role does not have access to upload files.' : 'This quotation’s prep list has been deleted') }}">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                            </svg>
-                            Submit quotation
                         </span>
                     @endif
                 @endif
@@ -493,29 +533,6 @@
 
     @push('scripts')
     <script>
-        // Collapsible item rows: clicking the item header toggles its
-        // allocations (source projects) below it.
-        (function () {
-            var toggles = document.querySelectorAll('[data-item-toggle]');
-
-            toggles.forEach(function (toggle) {
-                toggle.addEventListener('click', function () {
-                    var card = toggle.closest('[data-item-collapsible]');
-                    var details = card ? card.querySelector('[data-item-details]') : null;
-                    var expanded = toggle.getAttribute('aria-expanded') === 'true';
-                    var chevron = toggle.querySelector('.item-chevron');
-
-                    toggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-                    if (details) details.classList.toggle('hidden', expanded);
-                    if (chevron) chevron.style.transform = expanded ? '' : 'rotate(180deg)';
-                });
-            });
-        })();
-    </script>
-    @endpush
-
-    @push('scripts')
-    <script>
         // Remove quotation confirmation modal
         (function () {
             const btn = document.getElementById('quotationRemoveBtn');
@@ -554,13 +571,7 @@
                     form.submit();
                 });
             }
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-                    closeModal();
-                }
-            });
         })();
     </script>
     @endpush
-
 @endsection
