@@ -1,13 +1,36 @@
 {{-- Print sheet: shared by the on-screen preview modal and the printed output. --}}
-<div class="flex items-start justify-between border-b border-gray-300 pb-4">
-    <div>
-        <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Project Summary</p>
-        <h1 class="mt-1 text-xl font-bold text-gray-900">{{ $project->title }}</h1>
-        <p class="mt-0.5 text-xs text-gray-500">Reference no. <span class="font-semibold text-gray-800">{{ $project->reference_no }}</span></p>
+<div class="flex flex-col border-b border-gray-300 pb-4">
+    <div class="flex items-center justify-center">
+        <img src="{{ asset('images/primelink-pharmaceutical-logo.png') }}" alt="Primelink Pharmaceutical" class="h-16 w-auto">
     </div>
-    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$statusColor] }}">
-        {{ $status }}
-    </span>
+    <p class="mt-1 text-center text-[10px] text-gray-500">0042 F. Toledo St. Dao, Tagbilaran City, Bohol</p>
+    <p class="text-center text-[10px] text-gray-500">Telephone No: (038) 502-2781 ; Mobile Nos. 09204295864;</p>
+    <p class="text-center text-[10px] text-gray-500">Email Address: plpharma_ph@yahoo.com</p>
+
+    <div class="mt-4 flex items-end justify-between gap-10 border-t border-gray-200 pt-3">
+        <div class="flex flex-1 items-end gap-2">
+            <span class="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-gray-600">NOA</span>
+            <span class="block h-5 flex-1 border-b border-gray-400"></span>
+        </div>
+        <div class="flex flex-1 items-end gap-2">
+            <span class="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-gray-600">PO</span>
+            <span class="block h-5 flex-1 border-b border-gray-400"></span>
+        </div>
+        <div class="flex flex-1 items-end gap-2">
+            <span class="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-gray-600">NTP</span>
+            <span class="block h-5 flex-1 border-b border-gray-400"></span>
+        </div>
+    </div>
+
+    <div class="mt-4 flex items-end justify-between gap-4 border-t border-gray-100 pt-3">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">{{ $project->title }}</h1>
+            <p class="mt-0.5 text-xs text-gray-500">Reference no. <span class="font-semibold text-gray-800">{{ $project->reference_no }}</span></p>
+        </div>
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ $statusPillClasses[$statusColor] }}">
+            {{ $status }}
+        </span>
+    </div>
 </div>
 
 <div class="mt-4 grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs">
@@ -103,5 +126,24 @@
         @endforelse
     </tbody>
 </table>
+
+<div class="mt-4 border-t border-gray-200 pt-3">
+    <p class="text-[10px] leading-snug text-gray-600"><span class="font-semibold">Note:</span> For questionable item details such as price, quantity, unit and description do not proceed with preparation unless clarified with the concerned individuals in the soonest time possible.</p>
+
+    <div class="mt-5 flex items-end justify-between gap-10">
+        <div class="flex-1">
+            <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Prepared by</p>
+            <p class="mt-6 border-b border-gray-400 px-2 pb-1 text-xs font-medium text-gray-900">{{ auth()->user()?->name ?? auth()->user()?->email ?? ' ' }}</p>
+        </div>
+        <div class="flex-1">
+            <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Checked by</p>
+            <p class="mt-6 border-b border-gray-400 px-2 pb-1 text-xs text-gray-900">&nbsp;</p>
+        </div>
+        <div class="flex-1">
+            <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Date</p>
+            <p class="mt-6 border-b border-gray-400 px-2 pb-1 text-xs text-gray-900">&nbsp;</p>
+        </div>
+    </div>
+</div>
 
 <p class="mt-4 text-[10px] text-gray-400">Generated {{ now()->format('F j, Y g:i A') }} · Purchasing</p>

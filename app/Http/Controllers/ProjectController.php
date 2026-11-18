@@ -170,13 +170,15 @@ class ProjectController extends Controller
      * the same data shown on the project detail page. Opened in the normal
      * grid view so the sheet renders in every spreadsheet application.
      */
-    public function download(Project $project)
+    public function download(Request $request, Project $project)
     {
         $project->load(['procuringEntity', 'items.item']);
 
         $reference = preg_replace('/[^a-z0-9_-]+/i', '-', (string) $project->reference_no) ?: 'project';
 
-        return response(ProjectSummaryWorkbook::build($project), 200, [
+        $preparedBy = $request->user()?->name ?: $request->user()?->email;
+
+        return response(ProjectSummaryWorkbook::build($project, $preparedBy), 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment; filename="'.$reference.'_Project_Summary.xlsx"',
         ]);

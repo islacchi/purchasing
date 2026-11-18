@@ -25,9 +25,10 @@ class ProjectSummaryWorkbook
     /**
      * @return string Raw .xlsx contents (binary zip)
      */
-    public static function build(Project $project): string
+    public static function build(Project $project, ?string $preparedBy = null): string
     {
         $project->loadMissing(['procuringEntity', 'items.item']);
+        $preparedBy = trim((string) $preparedBy) !== '' ? trim((string) $preparedBy) : ' ';
 
         $modeLabels = [
             'shopping' => 'Shopping',
@@ -71,10 +72,27 @@ class ProjectSummaryWorkbook
         $merges = [];
         $rowNumber = 1;
 
-        $rows[] = self::row($rowNumber++, [self::cell('A1', 1, 'PROJECT SUMMARY')], 17, self::merge($merges, 'A1:N1'));
-        $rows[] = self::row($rowNumber++, [self::cell('A2', 2, $project->title)], 24, self::merge($merges, 'A2:N2'));
-        $rows[] = self::row($rowNumber++, [self::cell('A3', 3, 'Reference no. '.$project->reference_no)], 14, self::merge($merges, 'A3:N3'));
-        $rows[] = self::row($rowNumber++, [self::cell('A4', $statusStyle, $status)], 18, self::merge($merges, 'A4:N4'));
+        $logoRow = $rowNumber++;
+        $rows[] = self::blankRow($logoRow, 58);
+
+        $addr1 = $rowNumber++;
+        $rows[] = self::mergedRow($addr1, 'A'.$addr1.':N'.$addr1, $merges, self::cell('A'.$addr1, 24, '0042 F. Toledo St. Dao, Tagbilaran City, Bohol'), 14);
+        $addr2 = $rowNumber++;
+        $rows[] = self::mergedRow($addr2, 'A'.$addr2.':N'.$addr2, $merges, self::cell('A'.$addr2, 24, 'Telephone No: (038) 502-2781 ; Mobile Nos. 09204295864;'), 15);
+        $addr3 = $rowNumber++;
+        $rows[] = self::mergedRow($addr3, 'A'.$addr3.':N'.$addr3, $merges, self::cell('A'.$addr3, 24, 'Email Address: plpharma_ph@yahoo.com'), 15);
+        $rows[] = self::blankRow($rowNumber++, 5);
+
+        $noaRow = $rowNumber++;
+        $rows[] = self::mergedRow($noaRow, 'A'.$noaRow.':N'.$noaRow, $merges, self::cell('A'.$noaRow, 25, 'NOA ____________________          PO ____________________          NTP ____________________'), 19);
+        $rows[] = self::blankRow($rowNumber++, 6);
+
+        $titleRow = $rowNumber++;
+        $rows[] = self::mergedRow($titleRow, 'A'.$titleRow.':N'.$titleRow, $merges, self::cell('A'.$titleRow, 2, $project->title), 26);
+        $refRow = $rowNumber++;
+        $rows[] = self::mergedRow($refRow, 'A'.$refRow.':N'.$refRow, $merges, self::cell('A'.$refRow, 3, 'Reference no. '.$project->reference_no), 15);
+        $statusRow = $rowNumber++;
+        $rows[] = self::mergedRow($statusRow, 'A'.$statusRow.':N'.$statusRow, $merges, self::cell('A'.$statusRow, $statusStyle, $status), 18);
         $rows[] = self::blankRow($rowNumber++, 6);
 
         $rows[] = self::infoRow($rowNumber++, 'Entity', $project->procuringEntity?->name ?? '—', 'Mode', $modeLabel, $merges);
@@ -157,11 +175,26 @@ class ProjectSummaryWorkbook
             }
         }
 
-        $rows[] = self::blankRow($rowNumber++, 10);
+        $rows[] = self::blankRow($rowNumber++, 8);
+
+        $noteRow = $rowNumber++;
+        $rows[] = self::mergedRow($noteRow, 'A'.$noteRow.':N'.$noteRow, $merges, self::cell('A'.$noteRow, 26, 'Note: For questionable item details such as price, quantity, unit and description do not proceed with preparation unless clarified with the concerned individuals in the soonest time possible.'), 30);
+
+        $rows[] = self::blankRow($rowNumber++, 6);
+
+        $preparedRow = $rowNumber++;
+        $rows[] = self::mergedRow($preparedRow, 'A'.$preparedRow.':N'.$preparedRow, $merges, self::cell('A'.$preparedRow, 27, 'Prepared by:  '.$preparedBy), 18);
+        $checkedRow = $rowNumber++;
+        $rows[] = self::mergedRow($checkedRow, 'A'.$checkedRow.':N'.$checkedRow, $merges, self::cell('A'.$checkedRow, 28, 'Checked by:  ______________________________________________'), 18);
+        $dateRow = $rowNumber++;
+        $rows[] = self::mergedRow($dateRow, 'A'.$dateRow.':N'.$dateRow, $merges, self::cell('A'.$dateRow, 28, 'Date:  ______________________________________________'), 18);
+
+        $rows[] = self::blankRow($rowNumber++, 8);
 
         $footerRow = $rowNumber++;
-        $rows[] = self::row($footerRow, [self::cell('A'.$footerRow, 18, 'Generated '.now()->format('F j, Y g:i A').' · Purchasing')], 16, self::merge($merges, 'A'.$footerRow.':N'.$footerRow));
+        $rows[] = self::mergedRow($footerRow, 'A'.$footerRow.':N'.$footerRow, $merges, self::cell('A'.$footerRow, 18, 'Generated '.now()->format('F j, Y g:i A').' ? Purchasing'), 16);
 
+        $dimensions = 'A1:'.self::LAST_COL.$footerRow;
         $mergeCells = '<mergeCells count="'.count($merges).'">';
         foreach ($merges as $merge) {
             $mergeCells .= '<mergeCell ref="'.$merge.'"/>';
@@ -172,7 +205,7 @@ class ProjectSummaryWorkbook
             .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
             .'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
             .'<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
-            .'<dimension ref="A1:'.self::LAST_COL.$footerRow.'"/>'
+            .'<dimension ref="'.$dimensions.'"/>'
             .'<sheetViews><sheetView tabSelected="1" view="normal" zoomScaleNormal="100" workbookViewId="0"/></sheetViews>'
             .'<sheetFormatPr defaultRowHeight="15"/>'
             .'<cols>'
@@ -185,9 +218,9 @@ class ProjectSummaryWorkbook
             .'<col min="7" max="7" width="13" customWidth="1"/>'
             .'<col min="8" max="8" width="11" customWidth="1"/>'
             .'<col min="9" max="9" width="11" customWidth="1"/>'
-            .'<col min="10" max="10" width="13.5" customWidth="1"/>'
-            .'<col min="11" max="11" width="13.5" customWidth="1"/>'
-            .'<col min="12" max="12" width="16" customWidth="1"/>'
+            .'<col min="10" max="10" width="15" customWidth="1"/>'
+            .'<col min="11" max="11" width="15" customWidth="1"/>'
+            .'<col min="12" max="12" width="24" customWidth="1"/>'
             .'<col min="13" max="13" width="17" customWidth="1"/>'
             .'<col min="14" max="14" width="10.5" customWidth="1"/>'
             .'</cols>'
@@ -195,6 +228,7 @@ class ProjectSummaryWorkbook
             .$mergeCells
             .'<pageMargins left="0.35" right="0.35" top="0.3" bottom="0.3" header="0.15" footer="0.15"/>'
             .'<pageSetup paperSize="14" scale="100" orientation="landscape" fitToWidth="1" fitToHeight="0"/>'
+            .'<drawing r:id="rId1"/>'
             .'</worksheet>';
 
         $workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -207,14 +241,37 @@ class ProjectSummaryWorkbook
 
         $generated = now()->utc();
 
+        $logoPng = public_path('images/primelink-pharmaceutical-logo.png');
+
+        if (! file_exists($logoPng)) {
+            throw new \RuntimeException('The company logo is missing. Expected public/images/primelink-pharmaceutical-logo.png.');
+        }
+
+        $logoBytes = (string) file_get_contents($logoPng);
+
+        $drawing = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            .'<xdr:wsDrawing xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" '
+            .'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+            .'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            .'<xdr:oneCellAnchor>'
+            .'<xdr:from><xdr:col>0</xdr:col><xdr:colOff>3600000</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>36576</xdr:rowOff></xdr:from>'
+            .'<xdr:ext cx="2926080" cy="436000"/>'
+            .'<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="Primelink Pharmaceutical Logo"/><xdr:cNvPicPr/></xdr:nvPicPr>'
+            .'<xdr:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'
+            .'<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2926080" cy="436000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>'
+            .'</xdr:pic><xdr:clientData/></xdr:oneCellAnchor>'
+            .'</xdr:wsDrawing>';
+
         return self::zip([
             '[Content_Types].xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
                 .'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
                 .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
                 .'<Default Extension="xml" ContentType="application/xml"/>'
+                .'<Default Extension="png" ContentType="image/png"/>'
                 .'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
                 .'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
                 .'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+                .'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'
                 .'<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
                 .'<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
                 .'</Types>',
@@ -230,6 +287,16 @@ class ProjectSummaryWorkbook
                 .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
                 .'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
                 .'</Relationships>',
+            'xl/worksheets/_rels/sheet1.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>'
+                .'</Relationships>',
+            'xl/drawings/_rels/drawing1.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>'
+                .'</Relationships>',
+            'xl/media/image1.png' => $logoBytes,
+            'xl/drawings/drawing1.xml' => $drawing,
             'xl/worksheets/sheet1.xml' => $sheet,
             'xl/styles.xml' => self::stylesXml(),
             'docProps/core.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -284,6 +351,13 @@ class ProjectSummaryWorkbook
     /**
      * @param  array<int, string>  $merges
      */
+    private static function mergedRow(int $number, string $merge, array &$merges, string $cell, float $height): string
+    {
+        $merges[] = $merge;
+
+        return self::row($number, [$cell], $height);
+    }
+
     private static function merge(array &$merges, string $reference): string
     {
         $merges[] = $reference;
@@ -444,6 +518,11 @@ class ProjectSummaryWorkbook
             21 => '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="right" vertical="center" wrapText="1"/></xf>', // 21 info value
             22 => '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>', // 22 info value spacer
             23 => '<xf numFmtId="0" fontId="13" fillId="0" borderId="2" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>', // 23 right-aligned text
+            24 => '<xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>', // 24 address line centered
+            25 => '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>', // 25 NOA/PO/NTP row centered
+            26 => '<xf numFmtId="0" fontId="10" fillId="4" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="left" vertical="center" wrapText="1"/></xf>', // 26 note text boxed, wrap
+            27 => '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="left" vertical="center"/></xf>', // 27 prepared by row
+            28 => '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="left" vertical="center"/></xf>', // 28 checked/date rows
         ];
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
