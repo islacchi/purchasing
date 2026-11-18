@@ -237,6 +237,43 @@ class ProjectTest extends TestCase
         ]);
     }
 
+    public function test_project_rejects_negative_item_quantities_and_prices(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $this->actingAs($user)
+            ->post(route('projects.store'), [
+                'procuring_entity_id' => $entity->id,
+                'title' => 'Negative trap test',
+                'reference_no' => 'RF-2026-0055',
+                'mode_of_procurement' => 'small_value',
+                'amount_awarded' => 100.00,
+                'date_awarded' => '2026-07-03',
+                'delivery_days' => 30,
+                'items' => [
+                    [
+                        'description' => 'Mefenamic Capsule - 500mg',
+                        'category' => 'drugs and medicines',
+                        'unit' => 'Box',
+                        'quantity' => -5,
+                        'unit_cost' => -10.00,
+                        'quoted_price' => -5.00,
+                        'in_stock' => -1,
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors([
+                'items.0.quantity',
+                'items.0.unit_cost',
+                'items.0.quoted_price',
+                'items.0.in_stock',
+            ]);
+
+        $this->assertDatabaseCount('projects', 0);
+        $this->assertDatabaseCount('project_items', 0);
+    }
+
     public function test_project_edit_form_shows_original_data(): void
     {
         $user = $this->admin();

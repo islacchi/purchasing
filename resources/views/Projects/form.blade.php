@@ -153,7 +153,7 @@
 
                         <div class="mb-3">
                             <label for="amount_awarded" class="mb-1 block text-[11px] font-semibold text-gray-600">Amount awarded</label>
-                            <input id="amount_awarded" type="number" step="0.01" name="amount_awarded" value="{{ $amountAwarded }}"
+                            <input id="amount_awarded" type="number" min="0" step="0.01" name="amount_awarded" value="{{ $amountAwarded }}"
                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
 
@@ -274,19 +274,19 @@
                                    class="{{ $fieldClass }}">
                         </div>
                         <div>
-                            <input type="number" name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] ?? '' }}"
+                            <input type="number" min="1" name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
                                    title="{{ $lockTitle }}"
                                    class="{{ $fieldClass }} text-right">
                         </div>
                         <div>
-                            <input type="number" step="0.01" name="items[{{ $i }}][unit_cost]" value="{{ $item['unit_cost'] ?? '' }}"
+                            <input type="number" min="0" step="0.01" name="items[{{ $i }}][unit_cost]" value="{{ $item['unit_cost'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
                                    title="{{ $lockTitle }}"
                                    class="{{ $fieldClass }} text-right">
                         </div>
                         <div>
-                            <input type="number" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] ?? '' }}"
+                            <input type="number" min="0" step="0.01" name="items[{{ $i }}][quoted_price]" value="{{ $item['quoted_price'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
                                    title="{{ $lockTitle }}"
                                    class="{{ $fieldClass }} text-right">
@@ -1229,7 +1229,7 @@
                     return window.__unlinkRow(existing.cloneNode(true));
                 }
                 var wrapper = document.createElement('div');
-                wrapper.innerHTML = '<div class="item-row grid grid-cols-[2fr_1.1fr_0.8fr_0.8fr_1fr_1fr_0.8fr_44px] gap-2 items-center border-t border-gray-100 px-3 py-1.5"><div><input type="text" name="items[0][description]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><select name="items[0][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"><option value="">Select...</option><option value="drugs and medicines">Drugs and medicines</option><option value="supplies and equipments">Supplies and equipments</option></select></div><div><input type="text" name="items[0][unit]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" name="items[0][quantity]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" step="0.01" name="items[0][unit_cost]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" step="0.01" name="items[0][quoted_price]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="1" name="items[0][in_stock]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300" placeholder="0"></div><div class="checkbox-cell pb-2 hidden"><input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300"></div></div>';
+                wrapper.innerHTML = '<div class="item-row grid grid-cols-[2fr_1.1fr_0.8fr_0.8fr_1fr_1fr_0.8fr_44px] gap-2 items-center border-t border-gray-100 px-3 py-1.5"><div><input type="text" name="items[0][description]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><select name="items[0][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"><option value="">Select...</option><option value="drugs and medicines">Drugs and medicines</option><option value="supplies and equipments">Supplies and equipments</option></select></div><div><input type="text" name="items[0][unit]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="1" name="items[0][quantity]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="0.01" name="items[0][unit_cost]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="0.01" name="items[0][quoted_price]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="1" name="items[0][in_stock]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300" placeholder="0"></div><div class="checkbox-cell pb-2 hidden"><input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300"></div></div>';
                 return wrapper.firstElementChild;
             }
 
@@ -1411,5 +1411,16 @@
                 }
             });
         })();
+
+        // Never let a typed value sit below the field's min — snap back on change/blur.
+        document.querySelectorAll('input[type="number"][min]').forEach(function (input) {
+            input.addEventListener('change', function () {
+                const min = parseFloat(input.getAttribute('min'));
+                const value = parseFloat(input.value);
+                if (input.value.trim() !== '' && !Number.isNaN(min) && !Number.isNaN(value) && value < min) {
+                    input.value = String(min);
+                }
+            });
+        });
     </script>
 @endpush
