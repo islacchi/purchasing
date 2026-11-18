@@ -456,7 +456,7 @@ class PreplistTest extends TestCase
             ->assertSee($preplist->reference_no)
             ->assertSee($item->name)
             ->assertSee($project->title)
-            ->assertSee('50 Box to procure')
+            ->assertSee('To procure')
             ->assertSee($preplist->created_at->format('M d, Y g:i A'));
     }
 
@@ -575,6 +575,15 @@ class PreplistTest extends TestCase
 
         $this->assertNull(Preplist::withTrashed()->find($preplist->id)->deleted_at);
         $this->assertDatabaseHas('quotations', ['id' => $quotation->id]);
+
+        // The detail page floats the anti-delete overlay explaining the block,
+        // and the header chips reflect the priced (quoted) quotation.
+        $this->actingAs($user)
+            ->get(route('preplist.show', ['preplist' => $preplist->id]))
+            ->assertOk()
+            ->assertSee('This prep list cannot be deleted yet.')
+            ->assertSee('1 linked quotation')
+            ->assertSee('1 quoted');
     }
 
     public function test_preplist_cannot_be_deleted_when_a_quotation_has_an_uploaded_document(): void
