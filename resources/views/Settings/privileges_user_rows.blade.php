@@ -28,27 +28,27 @@
     @php
         $statusClass = $user->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
     @endphp
-    <tr class="hover:bg-gray-50 transition-colors cursor-pointer"
+    <tr class="odd:bg-white even:bg-[#f2f7f8] transition-colors hover:bg-[#e4edf0] cursor-pointer"
         data-href="{{ route('settings.privileges.edit', $user->id) }}">
-        <td class="px-6 py-4 whitespace-nowrap">
+        <td class="whitespace-nowrap px-4 py-3">
             <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center w-9 h-9 rounded-full bg-[#2a7a94]/10 text-[#2a7a94] text-xs font-semibold shrink-0">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2a7a94]/10 text-xs font-semibold text-[#2a7a94]">
                     {{ initialsFromName($user->name) }}
                 </div>
-                <div>
-                    <p class="text-sm font-bold text-gray-900">{{ $user->name }}</p>
-                    <p class="text-xs text-gray-500 mt-0.5">{{ $user->email }}</p>
+                <div class="min-w-0">
+                    <p class="truncate text-xs font-bold text-gray-900">{{ $user->name }}</p>
+                    <p class="mt-0.5 truncate text-[10px] text-gray-500">{{ $user->email }}</p>
                 </div>
             </div>
         </td>
-        <td class="px-6 py-4 whitespace-nowrap">
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $rolePill($user->role?->name) }}">{{ $user->role?->name ?? 'Unassigned' }}</span>
+        <td class="whitespace-nowrap px-4 py-3">
+            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold {{ $rolePill($user->role?->name) }}">{{ $user->role?->name ?? 'Unassigned' }}</span>
         </td>
-        <td class="px-6 py-4 whitespace-nowrap">
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold {{ $statusClass }}">{{ $user->is_active ? 'Active' : 'Inactive' }}</span>
+        <td class="whitespace-nowrap px-4 py-3">
+            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold {{ $statusClass }}">{{ $user->is_active ? 'Active' : 'Inactive' }}</span>
         </td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->created_at?->format('M j, Y') ?? '—' }}</td>
-        <td class="px-6 py-4 text-center whitespace-nowrap">
+        <td class="whitespace-nowrap px-4 py-3 text-xs text-gray-500">{{ $user->created_at?->format('M j, Y') ?? '—' }}</td>
+        <td class="whitespace-nowrap px-4 py-3 text-center">
             <div class="relative inline-block">
                 <button type="button" class="dropdown-trigger p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Actions">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -90,7 +90,7 @@
     </tr>
 @empty
     <tr class="no-results-row">
-        <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">
+        <td colspan="5" class="px-6 py-10 text-center text-xs text-gray-500">
             {{ ! empty($search) ? 'No users match your search.' : 'No user accounts yet.' }}
         </td>
     </tr>
