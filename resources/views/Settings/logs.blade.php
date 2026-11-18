@@ -259,6 +259,17 @@
                 <div class="no-print">{{ $logs->links() }}</div>
             </div>
         </div>
+
+        {{-- Back to settings — pinned to the very bottom like the privileges page --}}
+        <div class="no-print mt-4 flex shrink-0 items-center justify-start">
+            <a href="{{ route('settings') }}"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+                </svg>
+                Back to settings
+            </a>
+        </div>
     </div>
 @endsection
 
