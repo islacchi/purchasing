@@ -44,7 +44,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 | **Role-based access control** | Role × module matrix (None / View / Manage) enforced server-side on every module route; admin bypass; greyed/hidden write affordances for view-only roles; shared access-restricted dialog; friendly 403 page | ✅ Working |
 | **Item Catalog** | One row per item on a fully-received PO line: order counts, qty, total spend, best/latest price, last supplier; item detail page with per-supplier comparison, price-over-time chart and full purchase history | ✅ Database-backed |
 | **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage); Administrator rows are locked full access | ✅ Working |
-| **Settings → Logs** | Activity/log viewer — real rows from `ActivityLogger` on every module create/edit/delete, plus user/matrix changes; paginated at 50 rows per page | ✅ Working |
+| **Settings → Logs** | Activity/log viewer — real rows from `ActivityLogger` on every module create/edit/delete, plus user/matrix changes; paginated at 50 rows per page; 365-day retention via scheduled `activity:prune` | ✅ Working |
 | **Settings → Backup** | Full database backup (schema **and** contents) via `App\Support\DatabaseDumper` (through the app's own DB connection — no external `mysqldump`); download or delete any backup; built-in restore instructions on the page | ✅ Working |
 | **Excel export** | Project summary export (`.xlsx`) produced by `ProjectSummaryWorkbook`, paired with a print-ready folio view | ✅ Working |
 
@@ -153,6 +153,11 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Every module write (create/edit/delete) writes an `activity_logs` row: `user_name`, `role_name`, `action`, `module`, `record_label`, `subject_type`, `subject_id`.
 - Filters: module, user, action, from-date, to-date; results paginated 50 per page by default, selectable between 10 / 25 / 50 / 100.
 - Nothing is written without an action — the `logs` page is read-only.
+- **Retention (pruning):** `php artisan activity:prune` deletes entries older than a retention window (default **365 days**). `--days=N` sets a custom window; `--dry-run` prints how many entries would be deleted without deleting anything. The command is registered on the weekly schedule, but the server still needs a cron/task entry that runs `php artisan schedule:run` for it to fire:
+  ```
+  * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
+  ```
+  Without cron, run `activity:prune --days=365` manually (e.g., weekly, from a task scheduler or as part of the backup routine). There is no archival — pruned entries are deleted, not exported first — so adopters who need a longer audit trail should pass a larger `--days` or export before pruning.
 
 ### Settings → Backup (`/settings/backup`)
 
@@ -178,7 +183,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 ## Database schema
 
-The schema is 29 migrations deep and is described in full by the ER diagram below. Tables are grouped into **auth/roles**, **catalog**, **procurement/project & prep lists**, **quotation tracker**, **purchase orders**, and **audit**.
+The schema is 34 migrations deep and is described in full by the ER diagram below. Tables are grouped into **auth/roles**, **catalog**, **procurement/project & prep lists**, **quotation tracker**, **purchase orders**, and **audit**.
 
 ### ER diagram
 
@@ -445,7 +450,7 @@ erDiagram
 
 | Table | Purpose |
 |-------|---------|
-| `activity_logs` | Append-only audit trail; subject_type + subject_id identifies the affected record; used for the Settings → Logs viewer and role-matrix changes. |
+| `activity_logs` | Append-only audit trail, pruned by `activity:prune` (default 365 days); subject_type + subject_id identifies the affected record; used for the Settings → Logs viewer and role-matrix changes. |
 
 ---
 
@@ -683,7 +688,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 228 passing (1363 assertions)
+- [x] **Tests** — 240 passing (1411 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
@@ -692,6 +697,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-based access control** — `role_module_access` matrix (None / View / Manage) configured from Settings → Privileges; enforced by the `module:{module}` middleware
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
 - [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
+- [x] **Activity log retention** — automatic pruning: `php artisan activity:prune` deletes entries older than 365 days (`--days=N` custom window, `--dry-run` previews, refuses `--days < 1`); registered on the weekly schedule (runs with cron/task `php artisan schedule:run`)
 - [x] **Settings → Backup** — administrator-only full-database backup with plain-language restore instructions in-place
 - [x] **Item Catalog** — `/item-catalog`: one row per item on a fully-received PO line, aggregated server-side (order counts, total qty/spend, weighted avg, best/latest price, last supplier); KPIs (items tracked / spend / suppliers used / lines bought); filters (search, category, supplier, from/to date range); item detail page (`/item-catalog/{item}`) with full purchase history, per-supplier comparison table, weighted avg / best-price / last-purchase tiles, and an inline SVG price-over-time chart; nav sidebar, `role_module_access` key, sidebar icon, README docs, and feature tests updated.
 
@@ -702,9 +708,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [ ] **PO re-download** — the PO Excel is produced once at creation; there's no way to re-download it from the detail page
 - [ ] **PO tracking reference numbers** — PO only references the quotation; PO→project links via allocations are not yet surfaced on the PO detail page
 - [ ] **Notifications** are computed on every page view; there's no persisted notification log or read state
-- [ ] **Activity log retention** — the activity trail is unbounded; no pruning/archival policy yet
 - [ ] **PhpSpreadsheet migration** — if `ext-gd` is enabled later, the manual workbook generator can be replaced
-- [ ] **The activity log is unbounded**; it will grow indefinitely unless pruned.
 
 ### Known fragility worth addressing
 
@@ -732,7 +736,7 @@ Accepted trade-offs in the current build — worth knowing before relying on the
 ```
 purchasing/
 ├── app/
-│   ├── Console/Commands/       # db:dump — dev snapshot helper (used for database/purchasing_db.sql)
+│   ├── Console/Commands/       # activity:prune — retention prune (weekly schedule; --days / --dry-run); db:dump — dev snapshot helper
 │   ├── Http/Controllers/       # Auth, Entity, Entities, Projects, Preplist, ItemCatalog, PurchaseOrder, Quotation, Settings
 │   ├── Http/Middleware/        # EnsureSessionIsActive, EnsureModuleAccess (module:{module})
 │   ├── Models/                 # 21 models + casts, scopes, relationships
@@ -741,7 +745,7 @@ purchasing/
 │   │                           #   ProjectSummaryWorkbook, DatabaseDumper, BackupStorage, Pagination
 │   └── Providers/              # access-settings gate; view composer feeds the bell icon
 ├── database/
-│   ├── migrations/             # 29 migrations covering the whole domain (seeded role grants, activity logs,
+│   ├── migrations/             # 34 migrations covering the whole domain (seeded role grants, activity logs,
 │   │                           #   unique junction indexes, expiry → DATE columns)
 │   ├── seeders/                # AdminUserSeeder (admin / user1 / user2 + seeded module grants)
 │   └── purchasing_db.sql       # committed dump for the dev snapshot
