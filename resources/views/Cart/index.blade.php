@@ -98,10 +98,10 @@
                                                     @endif
                                                     · {{ $line['requested'] }} needed
                                                     @if ($line['itemBox'])
-                                                        ? pack: Box of {{ $line['itemBox'] }}
+                                                        · pack: Box of {{ $line['itemBox'] }}
                                                     @endif
                                                     @if ($line['supplierBox'])
-                                                        ? supplier: Box of {{ $line['supplierBox'] }}
+                                                        · supplier: Box of {{ $line['supplierBox'] }}
                                                     @endif
                                                 </p>
 
