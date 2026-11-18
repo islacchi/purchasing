@@ -177,7 +177,7 @@
                     @endif
                     <div class="sidebar-icon flex items-center gap-3">
                         <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 10a2 2 0 100 4m8-4a2 2 0 100 4M8 13h8"/>
                         </svg>
                         <span class="label whitespace-nowrap">PO Cart</span>
                     </div>
@@ -288,11 +288,11 @@
                         <div class="relative flex h-6 w-6 items-center justify-center">
                             <button id="cartButton" type="button" aria-label="Purchase order cart" class="flex h-6 w-6 items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 0 0-8 0v4M5 9h14l1 12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2L5 9z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 10a2 2 0 100 4m8-4a2 2 0 100 4M8 13h8"/>
                                 </svg>
                             </button>
                             @if ($headerCartCount > 0)
-                                <span class="pointer-events-none absolute -top-1 -right-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-teal-300 text-[10px] font-bold text-[#0e3a4c] leading-none">{{ $headerCartCount }}</span>
+                                <span class="pointer-events-none absolute -top-1 -right-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-red-600 text-[10px] font-bold leading-none text-white">{{ $headerCartCount }}</span>
                             @endif
                         </div>
 
