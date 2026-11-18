@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProcuringEntity;
+use App\Models\Project;
 use App\Models\PurchaseOrderItem;
 use App\Models\Quotation;
 use App\Models\Supplier;
@@ -120,10 +121,27 @@ class EntityController extends Controller
         $record = $model::query()->findOrFail($id);
 
         if ($type === 'procuring_entity') {
+            // Real projects that reference this entity (linked from the profile).
+            $relatedProjects = Project::query()
+                ->where('procuring_entity_id', $record->id)
+                ->orderByDesc('id')
+                ->limit(20)
+                ->get()
+                ->map(fn (Project $project) => [
+                    'id' => $project->id,
+                    'name' => $project->title,
+                    'reference' => $project->reference_no,
+                    'status' => $project->statusLabel(),
+                    'statusColor' => $project->statusColor(),
+                ])
+                ->values()
+                ->all();
+
             return view('Entities.show', [
                 'type' => $type,
                 'id' => (int) $id,
                 'entity' => $record->toArray(),
+                'relatedProjects' => $relatedProjects,
             ]);
         }
 

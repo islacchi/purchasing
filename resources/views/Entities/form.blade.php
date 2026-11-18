@@ -44,7 +44,7 @@
 
         $config = $typeConfigs[$type];
         $typeLabel = $config['title'].' FORM';
-        $formTitle = ($isEdit ? 'EDIT ' : 'ADD ').$config['title'];
+        $formTitle = ($isEdit ? 'Edit ' : 'Add ').$config['singular'];
         $saveLabel = ($isEdit ? 'Save ' : 'Add ').$config['singular'];
         $returnTab = $type === 'supplier' ? 'suppliers' : 'entities';
 
@@ -55,29 +55,46 @@
         $formColumns = array_values($formColumns);
     @endphp
 
-    {{-- Type label --}}
-    <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">{{ $typeLabel }}</p>
+    {{-- Back link --}}
+    <a href="{{ route('entities', ['tab' => $returnTab]) }}" class="mb-3 inline-flex items-center gap-2 text-xs text-gray-500 transition-colors hover:text-[#2a7a94]">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+        </svg>
+        Back to Entities
+    </a>
 
-    <form action="{{ $isEdit ? route('entities.update', ['type' => $type, 'id' => $id]) : route('entities.store', ['type' => $type]) }}" method="POST" class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+    {{-- Page header --}}
+    <div class="mb-4">
+        <h2 class="text-2xl font-bold text-gray-900">{{ $formTitle }}</h2>
+        <p class="mt-1 text-xs text-gray-500">{{ $typeLabel }} — {{ $isEdit ? 'update the details below' : 'fill in the details below' }}. Fields marked with an asterisk are required.</p>
+    </div>
+
+    <form action="{{ $isEdit ? route('entities.update', ['type' => $type, 'id' => $id]) : route('entities.store', ['type' => $type]) }}" method="POST" class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         @csrf
         @if ($isEdit)
             @method('PUT')
         @endif
 
-        <h2 class="text-xl font-bold text-gray-900 uppercase tracking-wide">{{ $formTitle }}</h2>
+        <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{{ $config['title'] }} details</p>
 
-        <div class="{{ count($formColumns) > 1 ? 'grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-5 mt-6' : 'max-w-2xl mt-6' }}">
+        <div class="{{ count($formColumns) > 1 ? 'grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-4 mt-4' : 'max-w-2xl mt-4' }}">
             @foreach ($formColumns as $columnFields)
                 <div class="{{ $loop->first ? 'space-y-4' : 'flex flex-col' }}">
                     @foreach ($columnFields as $field)
                         <div>
-                            <label for="field-{{ $field['name'] }}" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                            <label for="field-{{ $field['name'] }}" class="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                                @php $required = in_array($field['name'], ['name', 'type'], true); @endphp
                                 {{ $field['label'] }}
+                                @if ($required)
+                                    <span class="text-red-500">*</span>
+                                @else
+                                    <span class="font-normal normal-case tracking-normal text-gray-400">(optional)</span>
+                                @endif
                             </label>
 
                             @if ($field['type'] === 'select')
                                 <select id="field-{{ $field['name'] }}" name="{{ $field['name'] }}"
-                                        class="w-full px-3 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                        class="h-9 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-300">
                                     <option value="" {{ (string) old($field['name'], $record[$field['name']] ?? '') === '' ? 'selected' : '' }}>
                                         {{ $field['placeholder'] }}
                                     </option>
@@ -91,12 +108,12 @@
                                 <textarea id="field-{{ $field['name'] }}" name="{{ $field['name'] }}"
                                           rows="{{ $field['rows'] ?? 4 }}"
                                           placeholder="{{ $field['placeholder'] }}"
-                                          class="w-full min-h-[280px] px-3 py-2 rounded-md border border-gray-200 bg-white text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ old($field['name'], $record[$field['name']] ?? '') }}</textarea>
+                                          class="min-h-[260px] w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">{{ old($field['name'], $record[$field['name']] ?? '') }}</textarea>
                             @else
                                 <input id="field-{{ $field['name'] }}" type="{{ $field['type'] }}" name="{{ $field['name'] }}"
                                        value="{{ old($field['name'], $record[$field['name']] ?? '') }}"
                                        placeholder="{{ $field['placeholder'] }}"
-                                       class="w-full px-3 py-1.5 rounded-md border border-gray-200 bg-white text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                       class="h-9 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
                             @endif
 
                             @error($field['name'])
@@ -108,24 +125,22 @@
             @endforeach
         </div>
 
-        <div class="flex items-center justify-end gap-3 mt-8 pt-5 border-t border-gray-100">
+        <div class="no-print mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-5">
             <a href="{{ route('entities', ['tab' => $returnTab]) }}"
-               class="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+               class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
                 Cancel
             </a>
             <button type="submit"
-                    class="flex items-center gap-2 px-4 py-2 rounded-md bg-[#2a7a94] text-white text-sm font-medium hover:bg-[#236b80] transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0V3h6v4m-6 0h6"/>
+                    class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-6 0V3h6v4m-6 0h6"/>
                 </svg>
                 {{ $saveLabel }}
             </button>
         </div>
     </form>
-
-    <div class="pb-4"></div>
 
 @endsection

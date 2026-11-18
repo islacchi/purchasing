@@ -20,6 +20,39 @@ class EntityTest extends TestCase
         return User::where('name', 'admin')->firstOrFail();
     }
 
+    public function test_procuring_entity_profile_renders_related_projects(): void
+    {
+        $admin = $this->admin();
+        $entity = ProcuringEntity::create([
+            'name' => 'DOH Region VII',
+            'type' => 'Regional Office',
+            'address' => 'Osmeña Blvd, Cebu City',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('entities.show', ['type' => 'procuring_entity', 'id' => $entity->id]))
+            ->assertOk()
+            ->assertSee('DOH Region VII')
+            ->assertSee('Related projects')
+            ->assertSee('Portfolio');
+    }
+
+    public function test_supplier_profile_renders_related_history(): void
+    {
+        $admin = $this->admin();
+        $supplier = Supplier::create([
+            'name' => 'Greencore Pharmaceuticals',
+            'contact_person' => 'P. Domingo',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('entities.show', ['type' => 'supplier', 'id' => $supplier->id]))
+            ->assertOk()
+            ->assertSee('Greencore Pharmaceuticals')
+            ->assertSee('No RFQs sent to this supplier yet.')
+            ->assertSee('Relationship');
+    }
+
     public function test_entity_module_lists_real_database_records(): void
     {
         $entity = ProcuringEntity::create([

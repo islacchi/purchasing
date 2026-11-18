@@ -9,8 +9,14 @@
         $activeTab = request('tab') === 'suppliers' ? 'suppliers' : 'entities';
     @endphp
 
+    {{-- Page header --}}
+    <div class="mb-4">
+        <h2 class="text-2xl font-bold text-gray-900">Entities</h2>
+        <p class="mt-1 text-xs text-gray-500">Procuring entities and suppliers — two tabs, one directory.</p>
+    </div>
+
     {{-- Tabs --}}
-    <div class="flex flex-wrap items-center gap-2 mb-6" role="tablist" aria-label="Entity records" data-active-tab="{{ $activeTab }}">
+    <div class="flex flex-wrap items-center gap-2 mb-4" role="tablist" aria-label="Entity records" data-active-tab="{{ $activeTab }}">
         <button type="button" role="tab" aria-selected="{{ $activeTab === 'entities' ? 'true' : 'false' }}" data-tab="entities"
                 class="tab-btn px-4 py-2 rounded-md border text-sm font-medium transition-colors {{ $activeTab === 'entities' ? 'bg-[#2a7a94] text-white border-[#2a7a94] shadow-sm' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
             Procuring Entities
@@ -32,8 +38,8 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
                         </svg>
                     </span>
-                    <input type="text" placeholder="Search procuring entities..."
-                           class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
+                    <input type="text" data-entity-search="entities" placeholder="Search procuring entities…"
+                           class="h-9 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
                 </div>
             </div>
             @if (auth()->user()?->canModule('entities', 'manage'))
@@ -56,7 +62,8 @@
         </div>
 
         {{-- Table --}}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-[#0e5266]">
                     <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
@@ -126,8 +133,16 @@
                             <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-500">No procuring entities found.</td>
                         </tr>
                     @endforelse
+                        <tr class="search-empty hidden">
+                            <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400">No matches for your search.</td>
+                        </tr>
                 </tbody>
             </table>
+            </div>
+            <div class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-gray-200 px-4 py-2 text-[11px] text-gray-500">
+                <span>{{ count($entities) }} procuring entit{{ count($entities) === 1 ? 'y' : 'ies' }}</span>
+                <span>Click a row for its profile</span>
+            </div>
         </div>
     </div>
 
@@ -142,8 +157,8 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z"/>
                         </svg>
                     </span>
-                    <input type="text" placeholder="Search suppliers..."
-                           class="w-full pl-10 pr-4 py-2 rounded-lg bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 border border-gray-200">
+                    <input type="text" data-entity-search="suppliers" placeholder="Search suppliers…"
+                           class="h-9 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300">
                 </div>
             </div>
             @if (auth()->user()?->canModule('entities', 'manage'))
@@ -166,7 +181,8 @@
         </div>
 
         {{-- Table --}}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-[#0e5266]">
                     <tr class="text-left text-xs font-semibold uppercase tracking-wider text-white">
@@ -232,8 +248,16 @@
                             <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">No suppliers found.</td>
                         </tr>
                     @endforelse
+                        <tr class="search-empty hidden">
+                            <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-400">No matches for your search.</td>
+                        </tr>
                 </tbody>
             </table>
+            </div>
+            <div class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-gray-200 px-4 py-2 text-[11px] text-gray-500">
+                <span>{{ count($suppliers) }} supplier{{ count($suppliers) === 1 ? '' : 's' }}</span>
+                <span>Click a row for its profile</span>
+            </div>
         </div>
     </div>
 
@@ -339,6 +363,25 @@
             document.querySelectorAll('.dropdown-action').forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     e.stopPropagation();
+                });
+            });
+
+            // Client-side filter: live-narrow rows within each tab panel.
+            document.querySelectorAll('[data-entity-search]').forEach(function (input) {
+                input.addEventListener('input', function () {
+                    const panel = input.closest('.tab-panel');
+                    if (!panel) return;
+                    const query = String(input.value || '').trim().toLowerCase();
+                    let visible = 0;
+                    panel.querySelectorAll('tbody tr[data-href]').forEach(function (row) {
+                        const match = query === '' || row.textContent.toLowerCase().includes(query);
+                        row.classList.toggle('hidden', !match);
+                        if (match) visible++;
+                    });
+                    const emptyMatch = panel.querySelector('.search-empty');
+                    if (emptyMatch) {
+                        emptyMatch.classList.toggle('hidden', !(query !== '' && visible === 0));
+                    }
                 });
             });
 
