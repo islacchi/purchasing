@@ -81,11 +81,12 @@
                                     $itemName = $preplistItem->item?->name ?? 'Item';
                                     $unit = $preplistItem->item?->unit ?? '';
                                     $requested = $preplistItem->remainingQuantity();
+                                    $itemBox = $preplistItem->item?->box_size !== null ? (int) $preplistItem->item->box_size : null;
                                     $highlight = $highlights[$preplistItem->id] ?? ['best_price' => null, 'best_expiry' => null];
                                     $lineIsBestPrice = $line !== null
-                                        && $line['unit_price'] !== null
+                                        && $line['effective_unit_price'] !== null
                                         && $highlight['best_price'] !== null
-                                        && abs((float) $line['unit_price'] - $highlight['best_price']) < 0.0001;
+                                        && abs((float) $line['effective_unit_price'] - $highlight['best_price']) < 0.0001;
                                     $lineIsBestExpiry = $line !== null
                                         && $line['expiry'] !== null
                                         && $highlight['best_expiry'] !== null
@@ -96,6 +97,9 @@
                                     <div class="min-w-0 break-words">
                                         <p class="text-gray-900"><span class="font-medium">{{ $itemName }}</span>
                                             <span class="text-xs text-gray-500"> · {{ $requested }} {{ $unit }}</span>
+                                            @if ($line && ($line['supplier_box_size'] ?? null) && $itemBox !== null && $line['supplier_box_size'] !== $itemBox)
+                                                <span class="block text-[10px] font-medium text-amber-700">{{ $line['supplier_box_size'] }}/box; needs {{ $line['needed_their_boxes'] }} their boxes for {{ $requested }} req.</span>
+                                            @endif
                                         </p>
                                         @if ($line && $line['unit_price'] !== null)
                                             <p class="mt-0.5 text-xs text-gray-500">
@@ -110,6 +114,18 @@
                                                     @endif
                                                 @endif
                                             </p>
+                                            @if ($itemBox || ($line['supplier_box_size'] ?? null))
+                                                <p class="mt-0.5 text-[10px] font-medium text-gray-400">
+                                                    @if ($itemBox)
+                                                        Req: Box of {{ $itemBox }}
+                                                    @endif
+                                                    @if (($line['supplier_box_size'] ?? null))
+                                                        <span class="ml-1 rounded bg-amber-50 px-1 py-0.5 font-semibold text-amber-700">Supplier: Box of {{ $line['supplier_box_size'] }}</span>
+                                                    @elseif ($itemBox)
+                                                        <span class="ml-1 text-gray-300">· pack not stated</span>
+                                                    @endif
+                                                </p>
+                                            @endif
                                         @endif
                                     </div>
 
@@ -123,6 +139,9 @@
                                         <div class="flex shrink-0 flex-col items-end gap-0.5">
                                             <div class="flex items-center gap-2">
                                                 <p class="whitespace-nowrap text-sm {{ $lineIsBestPrice ? 'font-bold text-green-800' : 'font-semibold text-gray-900' }}">{{ $peso($line['unit_price']) }}
+                                                @if (abs((float) $line['effective_unit_price'] - (float) $line['unit_price']) > 0.004)
+                                                    <span class="block text-[10px] font-medium text-gray-400" title="Unit price ÷ box size — the per-smallest-unit cost used for comparing suppliers">≈ {{ $peso($line['effective_unit_price']) }} / small unit</span>
+                                                @endif
                                                     @if ($lineIsBestPrice)
                                                         <span class="ml-0.5 inline-flex items-center rounded-full bg-green-600 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-white">Best price</span>
                                                     @endif
@@ -265,7 +284,11 @@
                             </div>
                             <div class="shrink-0 text-right">
                                 @if ($suggestion['winner'])
-                                    <p class="text-sm font-semibold text-gray-900">{{ $peso($suggestion['winner']['quote']['unit_price']) }}</p>
+                                    <p class="text-sm font-semibold text-gray-900">{{ $peso($suggestion['winner']['quote']['effective_unit_price'] ?? $suggestion['winner']['quote']['unit_price']) }}
+                                        @if (isset($suggestion['winner']['quote']['effective_unit_price']) && abs((float) $suggestion['winner']['quote']['effective_unit_price'] - (float) $suggestion['winner']['quote']['unit_price']) > 0.004)
+                                            <span class="block text-[10px] font-normal text-gray-400">quoted at {{ $peso($suggestion['winner']['quote']['unit_price']) }}/box</span>
+                                        @endif
+                                    </p>
                                     <p class="text-xs text-gray-500">
                                         {{ $suggestion['winner']['supplier'] }}
                                         @if ($suggestion['winner']['quote']['expiry_label'])
@@ -321,7 +344,7 @@
                                         @foreach ($sections as $section)
                                             @php
                                                 $cellLine = $section['lines'][$preplistItem->id] ?? null;
-                                                $cellPrice = $cellLine !== null && $cellLine['unit_price'] !== null ? (float) $cellLine['unit_price'] : null;
+                                                $cellPrice = $cellLine !== null && $cellLine['effective_unit_price'] !== null ? (float) $cellLine['effective_unit_price'] : null;
                                                 $cellIsBest = $cellPrice !== null && $matrixBest !== null && abs($cellPrice - $matrixBest) < 0.0001;
                                             @endphp
                                             <td class="px-3 py-2.5 text-center">
@@ -402,7 +425,7 @@
                         @foreach ($sections as $section)
                             @php
                                 $printLine = $section['lines'][$preplistItem->id] ?? null;
-                                $printPrice = $printLine !== null && $printLine['unit_price'] !== null ? (float) $printLine['unit_price'] : null;
+                                $printPrice = $printLine !== null && $printLine['effective_unit_price'] !== null ? (float) $printLine['effective_unit_price'] : null;
                                 $printIsBest = $printPrice !== null && $printBest !== null && abs($printPrice - $printBest) < 0.0001;
                                 $printIsExpiry = $printLine !== null && $printLine['expiry'] !== null && $printBestExpiry !== null && $printLine['expiry'] === $printBestExpiry;
                             @endphp

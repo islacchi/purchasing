@@ -25,7 +25,15 @@ class Item extends Model
         'name',
         'unit',
         'default_min_shelf_life_months',
+        'box_size',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'box_size' => 'integer',
+        ];
+    }
 
     /**
      * The category this item belongs to.

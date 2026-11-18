@@ -174,8 +174,8 @@ class QuotationTest extends TestCase
         return $this->patchWorksheet($binary, function (string $sheet) use ($prices) {
             foreach ($prices as $row => $price) {
                 $sheet = str_replace(
-                    '<c r="F'.$row.'" s="4"/>',
-                    '<c r="F'.$row.'" s="4"><v>'.$price.'</v></c>',
+                    '<c r="G'.$row.'" s="4"/>',
+                    '<c r="G'.$row.'" s="4"><v>'.$price.'</v></c>',
                     $sheet,
                 );
             }
@@ -185,12 +185,12 @@ class QuotationTest extends TestCase
     }
 
     /**
-     * Patch the supplier-entered Brand (E) and Expiry (G) cells.
+     * Patch the supplier-entered Brand (F) and Expiry (H) cells.
      */
     private function fillItemDetails(string $binary, int $row, ?string $brand = null, ?string $expiry = null): string
     {
         return $this->patchWorksheet($binary, function (string $sheet) use ($row, $brand, $expiry) {
-            foreach (['E' => $brand, 'G' => $expiry] as $column => $value) {
+            foreach (['F' => $brand, 'H' => $expiry] as $column => $value) {
                 if ($value === null) {
                     continue;
                 }

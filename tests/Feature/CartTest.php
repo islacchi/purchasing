@@ -164,6 +164,29 @@ class CartTest extends TestCase
             ->assertSee('Order summary');
     }
 
+    public function test_checkout_accepts_submitted_qty_overrides(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $item = $this->seedPricedLine($user, $entity, $supplier, 'Amoxicillin 500mg', 305.00);
+
+        $this->actingAs($user)->post(route('po-cart.add'), ['quotation_id' => $item->quotation_id]);
+
+        $cartItem = PoCartItem::firstOrFail();
+
+        // Submit a higher quantity through the checkout form payload.
+        $this->actingAs($user)
+            ->post(route('po-cart.checkout'), [
+                'qty' => [(string) $cartItem->id => 30],
+            ]);
+
+        $this->assertDatabaseCount('purchase_orders', 1);
+        $po = \App\Models\PurchaseOrder::firstOrFail();
+        $this->assertSame(30, (int) $po->items()->firstOrFail()->qty);
+    }
+
     public function test_adding_same_line_is_idempotent(): void
     {
         $user = $this->admin();

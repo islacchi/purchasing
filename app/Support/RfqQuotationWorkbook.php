@@ -79,6 +79,8 @@ class RfqQuotationWorkbook
             self::cell('F1', 14, null),
             self::cell('G1', 14, null),
             self::cell('H1', 14, null),
+            self::cell('I1', 14, null),
+            self::cell('J1', 14, null),
         ], 71.25);
 
         $rows[] = self::row($rowNumber++, [
@@ -90,6 +92,8 @@ class RfqQuotationWorkbook
             self::cell('F2', 14, null),
             self::cell('G2', 14, null),
             self::cell('H2', 14, null),
+            self::cell('I2', 14, null),
+            self::cell('J2', 14, null),
         ], 15);
 
         $rows[] = self::row($rowNumber++, [
@@ -101,6 +105,8 @@ class RfqQuotationWorkbook
             self::cell('F3', 14, null),
             self::cell('G3', 14, null),
             self::cell('H3', 14, null),
+            self::cell('I3', 14, null),
+            self::cell('J3', 14, null),
         ], 13.5);
 
         $rows[] = self::row($rowNumber++, [
@@ -112,6 +118,8 @@ class RfqQuotationWorkbook
             self::cell('F4', 14, null),
             self::cell('G4', 14, null),
             self::cell('H4', 14, null),
+            self::cell('I4', 14, null),
+            self::cell('J4', 14, null),
         ], 13.5);
 
         $rows[] = self::row($rowNumber++, [
@@ -123,6 +131,8 @@ class RfqQuotationWorkbook
             self::cell('F5', 14, null),
             self::cell('G5', 14, null),
             self::cell('H5', 14, null),
+            self::cell('I5', 14, null),
+            self::cell('J5', 14, null),
         ], 28.5);
 
         $rows[] = self::row($rowNumber++, [
@@ -134,6 +144,8 @@ class RfqQuotationWorkbook
             self::cell('F6', 15, null),
             self::cell('G6', 15, null),
             self::cell('H6', 15, null),
+            self::cell('I6', 15, null),
+            self::cell('J6', 15, null),
         ], 21);
 
         $rows[] = self::row($rowNumber++, [
@@ -145,6 +157,8 @@ class RfqQuotationWorkbook
             self::cell('F7', 16, null),
             self::cell('G7', 16, null),
             self::cell('H7', 16, null),
+            self::cell('I7', 16, null),
+            self::cell('J7', 16, null),
         ], 16.5);
 
         $rows[] = self::customFormatRow($rowNumber++, [
@@ -155,6 +169,9 @@ class RfqQuotationWorkbook
             self::cell('E8', 6, null),
             self::cell('F8', 6, null),
             self::cell('G8', 6, null),
+            self::cell('H8', 6, null),
+            self::cell('I8', 6, null),
+            self::cell('J8', 6, null),
         ], 21);
 
         $rows[] = self::blankRow($rowNumber++, 10.5);
@@ -166,6 +183,10 @@ class RfqQuotationWorkbook
             self::cell('D10', 7, null),
             self::cell('E10', 7, null),
             self::cell('F10', 7, null),
+            self::cell('G10', 7, null),
+            self::cell('H10', 7, null),
+            self::cell('I10', 7, null),
+            self::cell('J10', 7, null),
         ], 26.25);
 
         $rows[] = self::row($rowNumber++, [
@@ -175,6 +196,10 @@ class RfqQuotationWorkbook
             self::cell('D11', 5, null),
             self::cell('E11', 5, null),
             self::cell('F11', 5, null),
+            self::cell('G11', 5, null),
+            self::cell('H11', 5, null),
+            self::cell('I11', 5, null),
+            self::cell('J11', 5, null),
         ], 22.5);
 
         $rows[] = self::row($rowNumber++, [
@@ -184,6 +209,10 @@ class RfqQuotationWorkbook
             self::cell('D12', 5, null),
             self::cell('E12', 5, null),
             self::cell('F12', 5, null),
+            self::cell('G12', 5, null),
+            self::cell('H12', 5, null),
+            self::cell('I12', 5, null),
+            self::cell('J12', 5, null),
         ], 23.25);
 
         $rows[] = self::customFormatRow($rowNumber++, [
@@ -197,13 +226,17 @@ class RfqQuotationWorkbook
         ], 11.25);
 
         $rows[] = self::row($rowNumber++, [
-            self::cell('A15', 12, 'Please quote your best firm unit price for the items below. Quantities are not disclosed; indicate the minimum shelf-life you can comply with at delivery.'),
+            self::cell('A15', 12, 'Please quote your best firm unit price per unit for the items below. The "Box of" column states our required packaging (e.g., Box of 100). If your packaging is different, write your units-per-box in the "Supplier Box of" column (e.g., 50); leave it blank to accept ours.'),
             self::cell('B15', 13, null),
             self::cell('C15', 13, null),
             self::cell('D15', 13, null),
             self::cell('E15', 13, null),
             self::cell('F15', 13, null),
-        ], 30);
+            self::cell('G15', 13, null),
+            self::cell('H15', 13, null),
+            self::cell('I15', 13, null),
+            self::cell('J15', 13, null),
+        ], 42);
 
         $rows[] = self::blankRow($rowNumber++, 3.95);
 
@@ -212,17 +245,21 @@ class RfqQuotationWorkbook
             self::cell('A'.$headerRow, 2, 'No.'),
             self::cell('B'.$headerRow, 2, 'Item Description'),
             self::cell('C'.$headerRow, 2, 'Unit'),
-            self::cell('D'.$headerRow, 2, 'Min. Shelf Life at Delivery'),
-            self::cell('E'.$headerRow, 2, 'Brand'),
-            self::cell('F'.$headerRow, 2, 'Unit Price (PHP)'),
-            self::cell('G'.$headerRow, 2, 'Expiry'),
-            self::cell('H'.$headerRow, 2, 'Suppliers Remarks'),
-        ], 30);
+            self::cell('D'.$headerRow, 2, 'Box of'),
+            self::cell('E'.$headerRow, 2, 'Min. Shelf Life at Delivery'),
+            self::cell('F'.$headerRow, 2, 'Brand'),
+            self::cell('G'.$headerRow, 2, 'Unit Price (PHP)'),
+            self::cell('H'.$headerRow, 2, 'Expiry'),
+            self::cell('I'.$headerRow, 2, 'Suppliers Remarks'),
+            self::cell('J'.$headerRow, 2, 'Supplier Box of'),
+        ], 32);
 
         foreach ($items->values() as $index => $preplistItem) {
             $itemRow = $headerRow + $index + 1;
             $itemName = $preplistItem->item?->name ?? 'Item';
             $unit = $preplistItem->item?->unit ?? '';
+            $itemBoxSize = $preplistItem->item?->box_size;
+            $packageRequirement = $itemBoxSize ? 'Box of '.$itemBoxSize.'s' : '';
             $shelfLife = (int) $preplistItem->min_shelf_life_months;
             $requirement = $shelfLife > 0 ? '≥ '.$shelfLife.' months' : 'Non-perishable';
 
@@ -230,11 +267,13 @@ class RfqQuotationWorkbook
                 self::cell('A'.$itemRow, 4, (string) ($index + 1)),
                 self::cell('B'.$itemRow, 3, $itemName),
                 self::cell('C'.$itemRow, 4, $unit !== '' ? $unit : null),
-                self::cell('D'.$itemRow, 4, $requirement),
-                self::cell('E'.$itemRow, 4, null),
+                self::cell('D'.$itemRow, 4, $packageRequirement !== '' ? $packageRequirement : null),
+                self::cell('E'.$itemRow, 4, $requirement),
                 self::cell('F'.$itemRow, 4, null),
                 self::cell('G'.$itemRow, 4, null),
                 self::cell('H'.$itemRow, 4, null),
+                self::cell('I'.$itemRow, 4, null),
+                self::cell('J'.$itemRow, 4, null),
             ], 18);
         }
 
@@ -251,18 +290,20 @@ class RfqQuotationWorkbook
             self::cell('F'.$noteRow, 11, null),
             self::cell('G'.$noteRow, 11, null),
             self::cell('H'.$noteRow, 11, null),
+            self::cell('I'.$noteRow, 11, null),
+            self::cell('J'.$noteRow, 11, null),
         ], 27.95);
 
         $merges = [
-            'A1:H1',
-            'A2:H2',
-            'A3:H3',
-            'A4:H4',
-            'A5:H5',
-            'A6:H6',
-            'A7:H7',
-            'A15:F15',
-            'A'.$noteRow.':H'.$noteRow,
+            'A1:J1',
+            'A2:J2',
+            'A3:J3',
+            'A4:J4',
+            'A5:J5',
+            'A6:J6',
+            'A7:J7',
+            'A15:I15',
+            'A'.$noteRow.':J'.$noteRow,
         ];
 
         $mergeCells = '<mergeCells count="'.count($merges).'">';
@@ -274,17 +315,19 @@ class RfqQuotationWorkbook
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac">'
             .'<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
-            .'<dimension ref="A1:H'.$noteRow.'"/>'
+            .'<dimension ref="A1:J'.$noteRow.'"/>'
             .'<sheetViews><sheetView tabSelected="1" view="pageLayout" zoomScaleNormal="100" workbookViewId="0"><selection activeCell="A6" sqref="A6:H6"/></sheetView></sheetViews>'
             .'<sheetFormatPr defaultRowHeight="15" x14ac:dyDescent="0.25"/>'
             .'<cols>'
             .'<col min="1" max="1" width="15.28515625" customWidth="1"/>'
             .'<col min="2" max="2" width="55" customWidth="1"/>'
             .'<col min="3" max="3" width="14" customWidth="1"/>'
-            .'<col min="4" max="5" width="24" customWidth="1"/>'
-            .'<col min="6" max="6" width="22" customWidth="1"/>'
-            .'<col min="7" max="7" width="19.28515625" customWidth="1"/>'
-            .'<col min="8" max="8" width="15.85546875" customWidth="1"/>'
+            .'<col min="4" max="4" width="14" customWidth="1"/>'
+            .'<col min="5" max="6" width="24" customWidth="1"/>'
+            .'<col min="7" max="7" width="22" customWidth="1"/>'
+            .'<col min="8" max="8" width="17" customWidth="1"/>'
+            .'<col min="9" max="9" width="17" customWidth="1"/>'
+            .'<col min="10" max="10" width="16" customWidth="1"/>'
             .'</cols>'
             .'<sheetData>'.implode('', $rows).'</sheetData>'
             .$mergeCells
@@ -299,7 +342,7 @@ class RfqQuotationWorkbook
      */
     private static function row(int $number, array $cells, float $height): string
     {
-        return '<row r="'.$number.'" spans="1:8" ht="'.self::number($height).'" customHeight="1" x14ac:dyDescent="0.25">'
+        return '<row r="'.$number.'" spans="1:10" ht="'.self::number($height).'" customHeight="1" x14ac:dyDescent="0.25">'
             .implode('', $cells)
             .'</row>';
     }
@@ -309,14 +352,14 @@ class RfqQuotationWorkbook
      */
     private static function customFormatRow(int $number, array $cells, float $height): string
     {
-        return '<row r="'.$number.'" spans="1:8" s="5" customFormat="1" ht="'.self::number($height).'" customHeight="1" x14ac:dyDescent="0.25">'
+        return '<row r="'.$number.'" spans="1:10" s="5" customFormat="1" ht="'.self::number($height).'" customHeight="1" x14ac:dyDescent="0.25">'
             .implode('', $cells)
             .'</row>';
     }
 
     private static function blankRow(int $number, float $height): string
     {
-        return '<row r="'.$number.'" spans="1:8" ht="'.self::number($height).'" customHeight="1" x14ac:dyDescent="0.25"/>';
+        return '<row r="'.$number.'" spans="1:10" ht="'.self::number($height).'" customHeight="1" x14ac:dyDescent="0.25"/>';
     }
 
     private static function cell(string $reference, int $style, ?string $value): string

@@ -68,6 +68,15 @@ class PoCartController extends Controller
                 ? (($price - $best) / $best) * 100
                 : null;
 
+            $itemBox = $item?->box_size;
+            $supplierBox = $qi->supplier_box_size;
+            $requiredOurBoxes = $remaining;
+            $packageSuggestion = \App\Support\PackagingAdjuster::suggestion(
+                $itemBox !== null ? (int) $itemBox : null,
+                $supplierBox !== null ? (int) $supplierBox : null,
+                (int) $requiredOurBoxes,
+            );
+
             $lines[] = [
                 'cartItem' => $cartItem,
                 'quotation' => $qi->quotation,
@@ -81,6 +90,10 @@ class PoCartController extends Controller
                 'line_total' => $lineTotal,
                 'min_remaining_months' => (int) $qi->min_remaining_months,
                 'premium' => $premium,
+                'itemBox' => $itemBox !== null ? (int) $itemBox : null,
+                'supplierBox' => $supplierBox !== null ? (int) $supplierBox : null,
+                'packageSuggestion' => $packageSuggestion,
+                'allowedMax' => $this->cartLineAllowedMax($itemBox, $supplierBox, (int) $remaining),
             ];
         }
 
@@ -249,29 +262,36 @@ class PoCartController extends Controller
     /**
      * Change a line's quantity in the cart (clamped to what is still needed).
      */
-    public function update(Request $request, PoCartItem $cartItem)
+    /**
+     * Same packaging-aware ceiling used elsewhere in this controller, as a
+     * plain helper for the cart view.
+     */
+    private function cartLineAllowedMax($itemBox, $supplierBox, int $remaining): int
     {
-        $this->authorizeLine($request, $cartItem);
+        $suggestion = \App\Support\PackagingAdjuster::suggestion(
+            $itemBox !== null ? (int) $itemBox : null,
+            $supplierBox !== null ? (int) $supplierBox : null,
+            $remaining,
+        );
 
-        $validated = $request->validate([
-            'qty' => ['required', 'integer', 'min:1', 'max:1000000'],
-        ]);
+        return $suggestion ? $suggestion['neededBoxes'] : $remaining;
+    }
 
-        $remaining = $cartItem->quotationItem->preplistItem?->remainingQuantity() ?? 0;
+    /**
+     * The ceiling for a line on the current packaging — the plain remaining
+     * requirement unless the supplier packs differently, in which case it is
+     * the number of their boxes needed to cover the requirement.
+     */
+    private function packagingAllowedMax(PoCartItem $cartItem, int $remaining): int
+    {
+        $qi = $cartItem->quotationItem;
+        $item = $qi?->preplistItem?->item;
+        $itemBox = $item?->box_size !== null ? (int) $item->box_size : null;
+        $supplierBox = $qi?->supplier_box_size !== null ? (int) $qi->supplier_box_size : null;
 
-        if ($remaining <= 0) {
-            $cartItem->delete();
+        $suggestion = \App\Support\PackagingAdjuster::suggestion($itemBox, $supplierBox, $remaining);
 
-            return back()->withErrors(['cart' => '"'.($cartItem->quotationItem->preplistItem?->item?->name ?? 'That line').'" is fully covered by on-hand stock and was removed from your cart.']);
-        }
-
-        if ($validated['qty'] > $remaining) {
-            return back()->withErrors(['cart' => 'Only '.$remaining.' remain for that line.']);
-        }
-
-        $cartItem->update(['qty' => $validated['qty']]);
-
-        return back()->with('status', 'Quantity updated.');
+        return $suggestion ? $suggestion['neededBoxes'] : $remaining;
     }
 
     /**
@@ -317,7 +337,11 @@ class PoCartController extends Controller
             'payment_terms' => ['nullable', 'string', 'max:255'],
             'deliver_to' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'qty' => ['nullable', 'array'],
+            'qty.*' => ['integer', 'min:1', 'max:1000000'],
         ]);
+
+        $submittedQty = $validated['qty'] ?? [];
 
         $cartItems = $request->user()->poCartItems()
             ->with([
@@ -329,6 +353,15 @@ class PoCartController extends Controller
 
         if ($cartItems->isEmpty()) {
             return back()->withErrors(['cart' => 'Your cart is empty.']);
+        }
+
+        // Quantities live in the browser until checkout; find them here and
+        // apply them to the in-memory cart lines before any further handling.
+        foreach ($cartItems as $cartItem) {
+            $submitted = $submittedQty[$cartItem->id] ?? $submittedQty[(string) $cartItem->id] ?? null;
+            if ($submitted !== null) {
+                $cartItem->qty = (int) $submitted;
+            }
         }
 
         // All-or-nothing: a single bad line aborts everything, loudly.
@@ -349,8 +382,8 @@ class PoCartController extends Controller
 
                 continue;
             }
-            if ($cartItem->qty < 1 || $cartItem->qty > $requested) {
-                $invalid[] = $name.' (qty '.$cartItem->qty.' exceeds the remaining '.$requested.')';
+            if ($cartItem->qty < 1 || $cartItem->qty > $this->packagingAllowedMax($cartItem, (int) $requested)) {
+                $invalid[] = $name.' (qty '.$cartItem->qty.' exceeds what remains on the supplier packaging)';
 
                 continue;
             }
@@ -365,9 +398,21 @@ class PoCartController extends Controller
         $remainingByPreplistItem = [];
 
         foreach ($cartItems as $cartItem) {
-            if ($cartItem->quotationItem) {
-                $remainingByPreplistItem[$cartItem->quotationItem->preplist_item_id] =
-                    $cartItem->quotationItem->preplistItem?->remainingQuantity() ?? 0;
+            $qi = $cartItem->quotationItem;
+
+            if ($qi) {
+                $remaining = $qi->preplistItem?->remainingQuantity() ?? 0;
+                $itemBox = $qi->preplistItem?->item?->box_size !== null
+                    ? (int) $qi->preplistItem->item->box_size
+                    : null;
+                $supplierBox = $qi->supplier_box_size !== null
+                    ? (int) $qi->supplier_box_size
+                    : null;
+                $max = \App\Support\PackagingAdjuster::suggestion($itemBox, $supplierBox, (int) $remaining);
+
+                $remainingByPreplistItem[$qi->preplist_item_id] = $max
+                    ? $max['neededBoxes']
+                    : (int) $remaining;
             }
         }
 

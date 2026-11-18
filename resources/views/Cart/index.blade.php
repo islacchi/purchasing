@@ -121,18 +121,40 @@
                                                         · min. {{ $line['min_remaining_months'] }} mo. shelf life
                                                     @endif
                                                     · {{ $line['requested'] }} needed
+                                                    @if ($line['itemBox'])
+                                                        ? pack: Box of {{ $line['itemBox'] }}
+                                                    @endif
+                                                    @if ($line['supplierBox'])
+                                                        ? supplier: Box of {{ $line['supplierBox'] }}
+                                                    @endif
                                                 </p>
+
+                                                @if ($line['packageSuggestion'])
+                                                    @php $suggest = $line['packageSuggestion']; @endphp
+                                                    <div class="mt-1.5 max-w-[22rem] rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] font-medium leading-snug text-amber-800">
+                                                        Your requirement is packed differently from this supplier. Order
+                                                        <span class="font-bold">{{ $suggest['neededBoxes'] }} boxes (Box of {{ $suggest['theirBox'] }})</span>
+                                                        to cover {{ number_format($suggest['totalUnits']) }} units.
+                                                        @if ($suggest['over'] > 0)
+                                                            Covers {{ $suggest['over'] }} extra units.
+                                                        @endif
+                                                        <button type="button" data-apply-packaging="{{ $suggest['neededBoxes'] }}" data-target="qty-{{ $line['cartItem']->id }}"
+                                                                class="mt-1 rounded border border-amber-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-amber-800 hover:bg-amber-100">
+                                                            Apply: set qty to {{ $suggest['neededBoxes'] }} boxes
+                                                        </button>
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td class="px-3 py-2.5 text-right">
-                                                <form method="POST" action="{{ route('po-cart.update', $line['cartItem']) }}" onchange="this.requestSubmit()">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <label class="sr-only" for="qty-{{ $line['cartItem']->id }}">Quantity for {{ $line['name'] }}</label>
-                                                    <input id="qty-{{ $line['cartItem']->id }}"
-                                                           type="number" name="qty" min="1" max="{{ min($line['requested'], 1000000) }}"
-                                                           value="{{ $line['qty'] }}"
-                                                           class="h-[30px] w-14 rounded-md border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300">
-                                                </form>
+                                                <label class="sr-only" for="qty-{{ $line['cartItem']->id }}">Quantity for {{ $line['name'] }}</label>
+                                                <input id="qty-{{ $line['cartItem']->id }}"
+                                                       type="number" class="cart-qty h-[30px] w-14 rounded-md border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                                                       name="qty[{{ $line['cartItem']->id }}]" min="1" max="{{ $line['allowedMax'] }}"
+                                                       data-cart-item-id="{{ $line['cartItem']->id }}"
+                                                       data-unit-price="{{ $line['unit_price'] }}"
+                                                       data-supplier-id="{{ $group['supplier']->id ?? '' }}"
+                                                       value="{{ $line['qty'] }}"
+                                                       form="checkoutForm">
                                             </td>
                                             <td class="px-3 py-2.5 text-right">
                                                 <p class="text-sm text-gray-700">{{ $peso($line['unit_price']) }}</p>
@@ -142,7 +164,7 @@
                                                     </span>
                                                 @endif
                                             </td>
-                                            <td class="whitespace-nowrap px-3 py-2.5 text-right text-sm font-semibold text-gray-900">{{ $peso($line['line_total']) }}</td>
+                                            <td class="whitespace-nowrap px-3 py-2.5 text-right text-sm font-semibold text-gray-900" id="lineTotal-{{ $line['cartItem']->id }}">{{ $peso($line['line_total']) }}</td>
                                             <td class="px-2 py-2.5 text-center">
                                                 <form method="POST" action="{{ route('po-cart.remove', $line['cartItem']) }}">
                                                     @csrf
@@ -173,11 +195,11 @@
                     <div class="mt-2 divide-y divide-gray-100">
                         <div class="flex items-baseline justify-between gap-4 py-2.5 text-xs">
                             <span class="text-gray-500">Lines</span>
-                            <span class="font-semibold text-gray-900">{{ $totalLines }}</span>
+                            <span class="font-semibold text-gray-900" data-cart-lines-count>{{ $totalLines }}</span>
                         </div>
                         <div class="flex items-baseline justify-between gap-4 py-2.5 text-xs">
                             <span class="text-gray-500">Draft POs to create</span>
-                            <span class="text-right font-semibold text-gray-900">{{ $poCount }}<span class="ml-1 font-normal text-gray-400">(one per awarded quotation)</span></span>
+                            <span class="text-right font-semibold text-gray-900" data-cart-po-count>{{ $poCount }}</span><span class="ml-1 font-normal text-gray-400">(one per awarded quotation)</span>
                         </div>
                     </div>
 
@@ -185,14 +207,14 @@
                         @foreach ($grouped as $group)
                             <div class="flex items-baseline justify-between gap-3 py-1.5 text-[11px]">
                                 <span class="min-w-0 truncate font-semibold uppercase text-gray-700">{{ $group['supplier']->name }}</span>
-                                <span class="whitespace-nowrap text-gray-500">{{ $peso($group['subtotal']) }}</span>
+                                <span class="whitespace-nowrap text-gray-500" data-supplier-subtotal="{{ $group['supplier']->id }}">{{ $peso($group['subtotal']) }}</span>
                             </div>
                         @endforeach
                     </div>
 
                     <div class="mt-2 flex items-baseline justify-between gap-4 border-t border-gray-200 pt-3">
                         <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Grand total</span>
-                        <span class="text-2xl font-extrabold text-[#0e5266]">{{ $peso($grandTotal) }}</span>
+                        <span class="text-2xl font-extrabold text-[#0e5266]" data-grand-total>{{ $peso($grandTotal) }}</span>
                     </div>
 
                     <p class="mt-2 text-[10px] leading-snug text-gray-500">
@@ -203,7 +225,7 @@
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        Checkout{{ $totalLines > 0 ? ' ('.$totalLines.' line'.($totalLines === 1 ? '' : 's').')' : '' }}
+                        Checkout<span data-checkout-lines-wrap>{{ $totalLines > 0 ? ' ('.$totalLines.' line'.($totalLines === 1 ? '' : 's').')' : '' }}</span>
                     </button>
                 </div>
             </div>
@@ -229,9 +251,9 @@
                 </div>
                 <div class="space-y-4 px-5 py-4">
                     <p class="text-sm text-gray-600">
-                        This will create <strong>{{ $poCount }} draft purchase order{{ $poCount === 1 ? '' : 's' }}</strong>
-                        with <strong>{{ $totalLines }} line{{ $totalLines === 1 ? '' : 's' }}</strong>
-                        totalling <strong>{{ $peso($grandTotal) }}</strong>. Nothing goes to suppliers yet.
+                        This will create <strong data-checkout-po-count>{{ $poCount }}</strong> draft purchase order<span data-checkout-po-plural>{{ $poCount === 1 ? '' : 's' }}</span>
+                        with <strong data-checkout-lines>{{ $totalLines }}</strong> line<span data-checkout-lines-plural>{{ $totalLines === 1 ? '' : 's' }}</span>
+                        totalling <strong data-checkout-grand-total>{{ $peso($grandTotal) }}</strong>. Nothing goes to suppliers yet.
                     </p>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -315,6 +337,99 @@
                 closeModal();
             }
         });
+    })();
+
+    // Live recompute: quantities are held client-side until checkout; the
+    // totals shown here follow the numbers the user typed.
+    (function () {
+        var qtyInputs = document.querySelectorAll('.cart-qty');
+        if (!qtyInputs.length) {
+            return;
+        }
+
+        function toNumber(value) {
+            var n = Number(value);
+            return Number.isFinite(n) ? n : 0;
+        }
+
+        function recompute() {
+            var grand = 0;
+            var lines = 0;
+            var perSupplier = {};
+
+            qtyInputs.forEach(function (input) {
+                var qty = Math.max(0, Math.floor(toNumber(input.value)));
+                var price = toNumber(input.getAttribute('data-unit-price'));
+                var lineEl = document.getElementById('lineTotal-' + input.getAttribute('data-cart-item-id'));
+                if (lineEl) {
+                    lineEl.textContent = '₱' + (qty * price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+                grand += qty * price;
+                if (qty > 0) {
+                    lines += 1;
+                }
+                var supplier = input.getAttribute('data-supplier-id');
+                if (supplier) {
+                    perSupplier[supplier] = (perSupplier[supplier] || 0) + qty * price;
+                }
+            });
+
+            function renderPeso(value) {
+                return '₱' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            var grandEl = document.querySelector('[data-grand-total]');
+            if (grandEl) {
+                grandEl.textContent = renderPeso(grand);
+            }
+            var checkoutTotal = document.querySelector('[data-checkout-grand-total]');
+            if (checkoutTotal) {
+                checkoutTotal.textContent = renderPeso(grand);
+            }
+            var linesEl = document.querySelector('[data-cart-lines-count]');
+            if (linesEl) {
+                linesEl.textContent = String(lines);
+            }
+            var checkoutLines = document.querySelector('[data-checkout-lines]');
+            if (checkoutLines) {
+                checkoutLines.textContent = String(lines);
+            }
+            var checkoutLinesWrap = document.querySelector('[data-checkout-lines-wrap]');
+            if (checkoutLinesWrap) {
+                checkoutLinesWrap.textContent = lines > 0 ? ' (' + lines + ' line' + (lines === 1 ? '' : 's') + ')' : '';
+            }
+            var checkoutLinesPlural = document.querySelector('[data-checkout-lines-plural]');
+            if (checkoutLinesPlural) {
+                checkoutLinesPlural.textContent = lines === 1 ? '' : 's';
+            }
+
+            Object.keys(perSupplier).forEach(function (supplier) {
+                var el = document.querySelector('[data-supplier-subtotal="' + supplier + '"]');
+                if (el) {
+                    el.textContent = renderPeso(perSupplier[supplier]);
+                }
+            });
+        }
+
+        qtyInputs.forEach(function (input) {
+            input.addEventListener('input', recompute);
+            input.addEventListener('change', recompute);
+        });
+
+        // Apply button on a packaging-suggestion callout
+        document.querySelectorAll('[data-apply-packaging]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var target = btn.getAttribute('data-target');
+                var desired = parseInt(btn.getAttribute('data-apply-packaging'), 10);
+                var input = document.getElementById(target);
+                if (input) {
+                    input.value = String(desired);
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+        });
+
+        recompute();
     })();
 </script>
 @endpush

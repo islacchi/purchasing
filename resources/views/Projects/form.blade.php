@@ -236,10 +236,11 @@
                         </div>
                     </div>
                     <div id="itemRows" class="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-                        <div class="sticky top-0 z-10 grid grid-cols-[2fr_1.1fr_0.8fr_0.8fr_1fr_1fr_0.8fr_44px] gap-2 bg-[#0e5266] px-3 py-2">
+                        <div class="sticky top-0 z-10 grid grid-cols-[2fr_1.1fr_0.8fr_0.45fr_0.8fr_0.8fr_1fr_0.9fr_44px] gap-2 bg-[#0e5266] px-3 py-2">
                             <div class="text-[10px] font-semibold uppercase tracking-wider text-white">Description</div>
                             <div class="text-[10px] font-semibold uppercase tracking-wider text-white">Category</div>
                             <div class="text-[10px] font-semibold uppercase tracking-wider text-white">Unit</div>
+                            <div class="text-center text-[10px] font-semibold uppercase tracking-wider text-white" title="Units per box — leave blank if not packaged">Box of</div>
                             <div class="text-right text-[10px] font-semibold uppercase tracking-wider text-white">Quantity</div>
                             <div class="text-right text-[10px] font-semibold uppercase tracking-wider text-white">Unit cost</div>
                             <div class="text-right text-[10px] font-semibold uppercase tracking-wider text-white">Quoted price</div>
@@ -257,7 +258,7 @@
                                 ? 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-500'
                                 : 'border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-300');
                     @endphp
-                    <div class="item-row grid grid-cols-[2fr_1.1fr_0.8fr_0.8fr_1fr_1fr_0.8fr_44px] gap-2 items-center border-t border-gray-100 px-3 py-1.5 {{ $locked ? 'is-locked' : '' }}">
+                    <div class="item-row grid grid-cols-[2fr_1.1fr_0.8fr_0.45fr_0.8fr_0.8fr_1fr_0.9fr_44px] gap-2 items-center border-t border-gray-100 px-3 py-1.5 {{ $locked ? 'is-locked' : '' }}">
                         <div class="relative min-w-0">
                             <input type="text" name="items[{{ $i }}][description]" value="{{ $item['description'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}
@@ -286,6 +287,15 @@
                                    {{ $locked ? 'readonly' : '' }}
                                    title="{{ $lockTitle }}"
                                    class="{{ $fieldClass }}">
+                        </div>
+                        <div>
+                            <input type="number" min="1" max="10000" step="1" name="items[{{ $i }}][box_size]" value="{{ $item['box_size'] ?? '' }}"
+                                   {{ $locked ? 'readonly' : '' }}
+                                   title="{{ $lockTitle }}"
+                                   placeholder="Box of…"
+                                   inputmode="numeric"
+                                   aria-label="Units per box for {{ $item['description'] ?? 'this item' }}"
+                                   class="{{ $fieldClass }} text-right">
                         </div>
                         <div>
                             <input type="number" min="1" name="items[{{ $i }}][quantity]" value="{{ $item['quantity'] ?? '' }}"
@@ -1243,7 +1253,7 @@
                     return window.__unlinkRow(existing.cloneNode(true));
                 }
                 var wrapper = document.createElement('div');
-                wrapper.innerHTML = '<div class="item-row grid grid-cols-[2fr_1.1fr_0.8fr_0.8fr_1fr_1fr_0.8fr_44px] gap-2 items-center border-t border-gray-100 px-3 py-1.5"><div><input type="text" name="items[0][description]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><select name="items[0][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"><option value="">Select...</option><option value="drugs and medicines">Drugs and medicines</option><option value="supplies and equipments">Supplies and equipments</option></select></div><div><input type="text" name="items[0][unit]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="1" name="items[0][quantity]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="0.01" name="items[0][unit_cost]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="0.01" name="items[0][quoted_price]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="1" name="items[0][in_stock]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300" placeholder="0"></div><div class="checkbox-cell pb-2 hidden"><input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300"></div></div>';
+                wrapper.innerHTML = '<div class="item-row grid grid-cols-[2fr_1.1fr_0.8fr_0.45fr_0.8fr_0.8fr_1fr_0.9fr_44px] gap-2 items-center border-t border-gray-100 px-3 py-1.5"><div><input type="text" name="items[0][description]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><select name="items[0][category]" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"><option value="">Select...</option><option value="drugs and medicines">Drugs and medicines</option><option value="supplies and equipments">Supplies and equipments</option></select></div><div><input type="text" name="items[0][unit]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="1" max="10000" step="1" name="items[0][box_size]" value="" placeholder="Box of…" inputmode="numeric" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="1" name="items[0][quantity]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="0.01" name="items[0][unit_cost]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="0.01" name="items[0][quoted_price]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300"></div><div><input type="number" min="0" step="1" name="items[0][in_stock]" value="" class="w-full px-2.5 py-1.5 rounded-md border border-gray-300 bg-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-teal-300" placeholder="0"></div><div class="checkbox-cell pb-2 hidden"><input type="checkbox" class="item-select w-4 h-4 rounded border-gray-300"></div></div>';
                 return wrapper.firstElementChild;
             }
 

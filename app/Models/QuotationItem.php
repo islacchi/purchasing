@@ -24,6 +24,7 @@ class QuotationItem extends Model
         'preplist_item_id',
         'min_remaining_months',
         'unit_price',
+        'supplier_box_size',
         'brand',
         'expiry',
         'available_qty',
@@ -40,6 +41,7 @@ class QuotationItem extends Model
         return [
             'min_remaining_months' => 'integer',
             'unit_price' => 'decimal:2',
+            'supplier_box_size' => 'integer',
             'expiry' => 'immutable_date:Y-m-d',
             'available_qty' => 'integer',
             'quoted_at' => 'datetime',

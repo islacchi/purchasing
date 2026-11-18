@@ -20,7 +20,7 @@ class QuotationWorkbookParser
     /**
      * Read the worksheet and return the parsed item rows.
      *
-     * @return array<int, array{description: string, brand: string|null, expiry: string|null, unit_price: float|null}>
+     * @return array<int, array{description: string, brand: string|null, expiry: string|null, unit_price: float|null, supplier_box_size: int|null}>
      */
     public static function parse(string $path): array
     {
@@ -90,15 +90,16 @@ class QuotationWorkbookParser
 
             $parsed[] = [
                 'description' => $description,
-                'brand' => self::brandValue(self::findCell($row, 'E'), $sharedStrings),
+                'brand' => self::brandValue(self::findCell($row, 'F'), $sharedStrings),
                 'expiry' => self::expiryFromCell(
-                    self::findCell($row, 'G'),
+                    self::findCell($row, 'H'),
                     $sharedStrings,
                     $dateStyles,
                     $rowNumber,
                     $description,
                 ),
-                'unit_price' => self::unitPrice($cells['F'] ?? null),
+                'unit_price' => self::unitPrice($cells['G'] ?? null),
+                'supplier_box_size' => self::supplierBoxSize($cells['J'] ?? null, $rowNumber, $description),
             ];
         }
 
@@ -119,11 +120,11 @@ class QuotationWorkbookParser
             $cells = self::rowCells($row, $sharedStrings);
 
             if (
-                isset($cells['A'], $cells['B'], $cells['F'], $cells['H'])
+                isset($cells['A'], $cells['B'], $cells['G'], $cells['I'])
                 && trim((string) $cells['A']) === 'No.'
                 && trim((string) $cells['B']) === 'Item Description'
-                && trim((string) $cells['F']) === 'Unit Price (PHP)'
-                && trim((string) $cells['H']) === 'Suppliers Remarks'
+                && trim((string) $cells['G']) === 'Unit Price (PHP)'
+                && trim((string) $cells['I']) === 'Suppliers Remarks'
             ) {
                 return (int) $row['r'];
             }
@@ -362,6 +363,36 @@ class QuotationWorkbookParser
             'str' => $value,
             default => $value,
         };
+    }
+
+    /**
+     * The supplier's box size for an item (units per box), when the supplier
+     * wrote one in J. A positive whole number wins; anything else aborts the
+     * upload with the row number.
+     */
+    private static function supplierBoxSize(?string $raw, int $rowNumber, string $description): ?int
+    {
+        if ($raw === null) {
+            return null;
+        }
+
+        $cleaned = trim($raw);
+
+        if ($cleaned === '') {
+            return null;
+        }
+
+        if (! preg_match('/^\d+$/', $cleaned)) {
+            throw new RuntimeException('Row '.$rowNumber.' ("'.$description.'"): Supplier Box of must be a whole number of units, e.g. 50.');
+        }
+
+        $value = (int) $cleaned;
+
+        if ($value < 1) {
+            throw new RuntimeException('Row '.$rowNumber.' ("'.$description.'"): Supplier Box of must be at least 1 unit.');
+        }
+
+        return $value;
     }
 
     private static function unitPrice(?string $raw): ?float

@@ -199,26 +199,52 @@ class QuotationController extends Controller
                     'lines' => $preplistItems->mapWithKeys(function (PreplistItem $preplistItem) use ($line) {
                         $lineItem = $line->get($preplistItem->id);
 
+                        if ($lineItem === null) {
+                            return [$preplistItem->id => null];
+                        }
+
+                        $itemBox = $preplistItem->item?->box_size !== null ? (int) $preplistItem->item->box_size : null;
+                        $supplierBox = $lineItem->supplier_box_size !== null ? (int) $lineItem->supplier_box_size : null;
+                        $unitBox = $itemBox ?? $supplierBox;
+                        $requested = (int) $preplistItem->remainingQuantity();
+
+                        // Unit is "box" — compare like-for-like per crate:
+                        // divide the quote by the supplier's box size to get
+                        // the per-crate cost, and rank by that.
+                        $supplierPack = $supplierBox ?? $itemBox;
+                        $effectiveUnitPrice = $lineItem->unit_price !== null && $supplierPack && $supplierPack > 0
+                            ? (float) $lineItem->unit_price / $supplierPack
+                            : ($lineItem->unit_price !== null ? (float) $lineItem->unit_price : null);
+
+                        $requiredUnits = $itemBox ? $requested * $itemBox : $requested;
+                        $theirBoxes = $supplierPack && $supplierPack > 0
+                            ? (int) ceil($requiredUnits / $supplierPack)
+                            : $requested;
+
                         return [
-                            $preplistItem->id => $lineItem === null
-                                ? null
-                                : [
-                                    'id' => $lineItem->id,
-                                    'preplist_item_id' => $preplistItem->id,
-                                    'unit_price' => $lineItem->unit_price !== null ? (float) $lineItem->unit_price : null,
-                                    'brand' => $lineItem->brand,
-                                    'expiry' => $lineItem->expiry?->toDateString(),
-                                    'expiry_label' => $lineItem->expiry?->format('M j, Y'),
-                                    'min_remaining_months' => (int) $lineItem->min_remaining_months,
-                                    'on_po' => PurchaseOrderItem::query()->where('quotation_item_id', $lineItem->id)->exists(),
-                                ],
+                            $preplistItem->id => [
+                                'id' => $lineItem->id,
+                                'preplist_item_id' => $preplistItem->id,
+                                'unit_price' => $lineItem->unit_price !== null ? (float) $lineItem->unit_price : null,
+                                'effective_unit_price' => $effectiveUnitPrice,
+                                'effective_total' => $lineItem->unit_price !== null ? $theirBoxes * (float) $lineItem->unit_price : null,
+                                'needed_their_boxes' => $theirBoxes,
+                                'brand' => $lineItem->brand,
+                                'expiry' => $lineItem->expiry?->toDateString(),
+                                'expiry_label' => $lineItem->expiry?->format('M j, Y'),
+                                'supplier_box_size' => $supplierBox,
+                                'item_box_size' => $itemBox,
+                                'min_remaining_months' => (int) $lineItem->min_remaining_months,
+                                'on_po' => PurchaseOrderItem::query()->where('quotation_item_id', $lineItem->id)->exists(),
+                            ],
                         ];
                     })->all(),
                 ];
             })
             ->values();
 
-        // Suggestion: cheapest unit price for each item across all priced
+        // Suggestion: cheapest normalised unit price (adjusted for box-size
+        // mismatch against our packaging) for each item across all priced
         // lines for this preplist. User overrides by picking in the columns.
         $suggestions = $preplistItems->map(function (PreplistItem $preplistItem) use ($sections) {
             $candidates = collect();
@@ -236,7 +262,7 @@ class QuotationController extends Controller
                 }
             }
 
-            $candidates = $candidates->sortBy('quote.unit_price')->values();
+            $candidates = $candidates->sortBy('quote.effective_unit_price')->values();
             $winner = $candidates->first();
 
             // Annotation: raw price win vs freshest stated expiry, so the buyer
@@ -255,7 +281,7 @@ class QuotationController extends Controller
                         .' has '.date('M j, Y', strtotime($freshest['quote']['expiry']));
                 } else {
                     $extraDays = (int) round(abs((strtotime($freshest['quote']['expiry']) - strtotime($winnerExpiry)) / 86400));
-                    $priceDelta = (float) $freshest['quote']['unit_price'] - (float) $winner['quote']['unit_price'];
+                    $priceDelta = (float) $freshest['quote']['effective_unit_price'] - (float) $winner['quote']['effective_unit_price'];
 
                     $expiryNote = $freshest['supplier'].' lasts '.$extraDays.' days longer'
                         .($priceDelta > 0.004 ? ' for ₱'.number_format($priceDelta, 2).' more' : '');
@@ -274,13 +300,14 @@ class QuotationController extends Controller
         })->values();
 
         // Per-item highlight map used to color the best price (green) and
-        // best expiry (teal) inside the supplier columns.
+        // best expiry (teal) inside the supplier columns. Best price = the
+        // lowest normalised per-unit cost (fair across box-size mismatches).
         $highlights = $preplistItems->mapWithKeys(function (PreplistItem $preplistItem) use ($sections) {
             $lines = collect($sections)
                 ->map(fn ($section) => $section['lines'][$preplistItem->id] ?? null)
-                ->filter(fn ($line) => $line !== null && $line['unit_price'] !== null);
+                ->filter(fn ($line) => $line !== null && $line['effective_unit_price'] !== null);
 
-            $bestPrice = $lines->min('unit_price');
+            $bestPrice = $lines->min('effective_unit_price');
             $bestExpiry = $lines
                 ->filter(fn ($line) => $line['expiry'] !== null)
                 ->max('expiry');
@@ -372,6 +399,7 @@ class QuotationController extends Controller
                         'name' => $preplistItem->item?->name ?? 'Item',
                         'requested' => (int) $requested,
                         'unit' => $unit,
+                        'box_size' => $preplistItem->item?->box_size !== null ? (int) $preplistItem->item->box_size : null,
                         'min_remaining_months' => $requiredShelfLife,
                         'allocations' => $allocations,
                     ];
@@ -502,6 +530,7 @@ class QuotationController extends Controller
                 'brand' => $row['brand'],
                 'expiry' => $row['expiry'],
                 'unit_price' => $row['unit_price'],
+                'supplier_box_size' => $row['supplier_box_size'] ?? null,
             ];
         }
 
@@ -529,6 +558,7 @@ class QuotationController extends Controller
                             'brand' => $data['brand'],
                             'expiry' => $data['expiry'],
                             'unit_price' => $data['unit_price'],
+                            'supplier_box_size' => $data['supplier_box_size'],
                             'quoted_at' => now(),
                         ],
                     );

@@ -217,6 +217,7 @@ class ProjectController extends Controller
                         'description' => $projectItem->item?->name ?? '',
                         'category' => $projectItem->item?->category?->name ?? '',
                         'unit' => $projectItem->item?->unit ?? '',
+                        'box_size' => $projectItem->item?->box_size ?? '',
                         'quantity' => $projectItem->quantity,
                         'in_stock' => $projectItem->in_stock,
                         'unit_cost' => $projectItem->unit_cost,
@@ -253,6 +254,7 @@ class ProjectController extends Controller
             'description' => '',
             'category' => '',
             'unit' => '',
+            'box_size' => '',
             'quantity' => '',
             'in_stock' => '',
             'unit_cost' => '',
@@ -351,14 +353,23 @@ class ProjectController extends Controller
         $categoryName = trim((string) ($row['category'] ?? ''));
         $name = trim((string) ($row['description'] ?? ''));
         $unit = trim((string) ($row['unit'] ?? ''));
+        $boxSize = $row['box_size'] ?? null;
+        $boxSize = is_numeric($boxSize) && (int) $boxSize >= 1 ? (int) $boxSize : null;
 
         if ($createMissing) {
             $category = ItemCategory::query()->firstOrCreate(['name' => $categoryName]);
 
-            return Item::query()->firstOrCreate(
+            $item = Item::query()->firstOrCreate(
                 ['category_id' => $category->id, 'name' => $name, 'unit' => $unit],
-                ['default_min_shelf_life_months' => 0],
+                ['default_min_shelf_life_months' => 0, 'box_size' => null],
             );
+
+            // Keep the master record's box size in step with the submitted row.
+            if ((int) ($item->box_size ?? 0) !== (int) ($boxSize ?? 0)) {
+                $item->update(['box_size' => $boxSize]);
+            }
+
+            return $item;
         }
 
         $categoryId = ItemCategory::query()->where('name', $categoryName)->value('id');
@@ -385,6 +396,7 @@ class ProjectController extends Controller
             (int) $item->quantity,
             (float) $item->unit_cost,
             (int) $item->in_stock,
+            (int) ($item->item?->box_size ?? 0),
         ]))->sort()->implode("\n");
 
         $fields = implode('|', [
@@ -521,6 +533,7 @@ class ProjectController extends Controller
             'items.*.unit_cost' => ['required', 'numeric', 'min:0'],
             'items.*.quoted_price' => ['nullable', 'numeric', 'min:0'],
             'items.*.in_stock' => ['nullable', 'integer', 'min:0'],
+            'items.*.box_size' => ['nullable', 'integer', 'min:1', 'max:10000'],
         ]);
     }
 

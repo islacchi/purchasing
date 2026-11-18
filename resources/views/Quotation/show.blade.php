@@ -335,10 +335,29 @@
                                 </tr>
                                 @if ($isQuoted)
                                     <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }}">
-                                        <td colspan="5" class="border-t border-dashed border-gray-200 px-4 py-1 text-[10px] text-gray-500">
-                                            Brand: <span class="font-medium text-gray-700">{{ $brand ?: 'Not stated' }}</span>
-                                            <span class="mx-1 text-gray-300">·</span>
-                                            Expiry: <span class="font-medium text-gray-700">{{ $expiry ?: 'Not stated' }}</span>
+                                        <td colspan="5" class="border-t border-dashed border-gray-200 px-4 py-2">
+                                            <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500">
+                                                <span>Brand: <span class="font-medium text-gray-700">{{ $brand ?: 'Not stated' }}</span></span>
+                                                <span class="text-gray-300">·</span>
+                                                <span>Expiry: <span class="font-medium text-gray-700">{{ $expiry ?: 'Not stated' }}</span></span>
+                                                @if ($quotedItem->supplier_box_size)
+                                                    <span class="text-gray-300">·</span>
+                                                    <span>Supplier pack: <span class="font-semibold text-gray-700">Box of {{ $quotedItem->supplier_box_size }}</span></span>
+                                                @endif
+                                                @if (! empty($item['box_size']))
+                                                    <span class="text-gray-300">·</span>
+                                                    <span>Requirement: <span class="font-medium text-gray-700">Box of {{ $item['box_size'] }}</span></span>
+                                                @endif
+                                            </p>
+                                            @if ($quotedItem->supplier_box_size && ! empty($item['box_size']) && $quotedItem->supplier_box_size !== $item['box_size'])
+                                                @php
+                                                    $needUnits = $item['requested'] * $item['box_size'];
+                                                    $neededTheirBoxes = (int) ceil($needUnits / $quotedItem->supplier_box_size);
+                                                @endphp
+                                                <p class="mt-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] font-medium text-amber-800">
+                                                    They ship <strong>Box of {{ $quotedItem->supplier_box_size }}</strong> (you asked for Box of {{ $item['box_size'] }}). To cover your requirement of {{ number_format($needUnits) }} units, you would need to buy <strong>{{ $neededTheirBoxes }} boxes</strong> from them instead of {{ $item['requested'] }}.
+                                                </p>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endif

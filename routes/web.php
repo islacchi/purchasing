@@ -178,7 +178,7 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::get('/cart', [PoCartController::class, 'index'])->name('po-cart');
         Route::post('/cart/items', [PoCartController::class, 'store'])->name('po-cart.add');
         Route::post('/cart/bulk-add-best', [PoCartController::class, 'bulkAddBestPrices'])->name('po-cart.bulk-add');
-        Route::patch('/cart/items/{cartItem}', [PoCartController::class, 'update'])->whereNumber('cartItem')->name('po-cart.update');
+
         Route::delete('/cart/items/{cartItem}', [PoCartController::class, 'destroy'])->whereNumber('cartItem')->name('po-cart.remove');
         Route::delete('/cart', [PoCartController::class, 'clear'])->name('po-cart.clear');
         Route::post('/cart/checkout', [PoCartController::class, 'checkout'])->name('po-cart.checkout');
