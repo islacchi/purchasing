@@ -163,6 +163,7 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::get('/settings/backup', [SettingsController::class, 'backup'])->name('settings.backup');
         Route::post('/settings/backup', [SettingsController::class, 'storeBackup'])->name('settings.backup.store');
         Route::get('/settings/backup/download/{file}', [SettingsController::class, 'downloadBackup'])->name('settings.backup.download');
+        Route::post('/settings/backup/restore', [SettingsController::class, 'restoreBackup'])->name('settings.backup.restore');
         Route::delete('/settings/backup/{file}', [SettingsController::class, 'destroyBackup'])->name('settings.backup.destroy');
 
         // Dummy configuration page (front end only; back-end TODOs live in the view).

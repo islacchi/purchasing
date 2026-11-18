@@ -45,7 +45,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 | **Item Catalog** | One row per item on a fully-received PO line: order counts, qty, total spend, best/latest price, last supplier; item detail page with per-supplier comparison, price-over-time chart and full purchase history | ✅ Database-backed |
 | **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage); Administrator rows are locked full access | ✅ Working |
 | **Settings → Logs** | Activity/log viewer — real rows from `ActivityLogger` on every module create/edit/delete, plus user/matrix changes; paginated at 50 rows per page; 365-day retention via scheduled `activity:prune` | ✅ Working |
-| **Settings → Backup** | Full database backup (schema **and** contents) via `App\Support\DatabaseDumper` (through the app's own DB connection — no external `mysqldump`); download or delete any backup; built-in restore instructions on the page | ✅ Working |
+| **Settings → Backup** | Full database backup (schema **and** contents) via `App\Support\DatabaseDumper` (through the app's own DB connection — no external `mysqldump`); one-click restore selected from the history list (`DatabaseRestorer`), with an automatic safety snapshot before every replay; download or delete any backup | ✅ Working |
 | **Excel export** | Project summary export (`.xlsx`) produced by `ProjectSummaryWorkbook`, paired with a print-ready folio view | ✅ Working |
 
 ---
@@ -163,10 +163,11 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 - Back-up page gated by `access-settings` (administrator-only).
 - One-click **full** database dump (schema **and** contents) produced through the application's own DB connection (no external `mysqldump` binary required).
+- **One-click restore** — pick a back-up from the history list, type `RESTORE` to confirm. Before any statement is replayed, the system takes a safety back-up of the **current** state automatically; the sessions table is left untouched so operators stay logged in.
 - Back-ups stored in `storage/app/private/backups/` with timestamped names; the **15 newest** are kept automatically.
 - Download or delete any backup from the page.
-- Comprehensive in-page restore instructions written for a **non-technical** admin (readable by any role shift); includes the exact command lines for restoring on the production box.
-- On the same page, a plain-language "what to expect" note covers the restore steps (maintenance mode → run the file → read schema counts back).
+- Comprehensive in-page restore instructions for a **non-technical** admin remain as the manual fallback.
+- No transactional guarantees — the safety snapshot is the recovery path if a restore fails mid-way.
 
 ### Settings → Configuration (`/settings/configuration`)
 
@@ -632,26 +633,27 @@ One-click, full-database **schema + contents** — no external mysqldump binary 
 
 ### Create, download, delete
 
-- **Create**: click **Download Database Back-up** on `/settings/backup`.
+- **Create**: click **Create back-up** on `/settings/backup`.
 - **Download**: click the Download icon next to a backup file in the history table.
 - **Delete**: click the Delete button; accept the confirmation prompt.
+- **Restore**: pick a backup and click the **Restore** pill in its row — the modal asks for the confirmation phrase `RESTORE` (safety snapshot of the current state is taken automatically before the replay starts).
 
-### Restore (plain-language, for any future admin)
+### Restore — in-app
 
-The restore is a one-way door: it **replaces** the current database with the backed-up one. Take a fresh back-up first if you need to keep the current state.
+Administrators can restore the database from any back-up in the history list, without touching the command line.
 
-1. Put the system into maintenance mode: `php artisan down`.
-2. Open a terminal in the project root and run (adjust paths as needed):
-   ```bash
-   mysql -h {{ host }} -P {{ port }} -u {{ user }} -p {{ database }} < path/to/backups/purchasing-*.sql
-   ```
-   (Double-check that you are pointing at the right server and database.)
-3. Bring the system back: `php artisan up`.
-4. Verify counts in the panel on `/settings/backup` match your current data.
+1. On `/settings/backup`, pick the back-up you want and click **Restore** on that row.
+2. Type `RESTORE` exactly, then confirm. A **safety back-up of the current state is created first**, and a failed restore leaves it available for rollback. The MySQL `sessions` table is not replayed, so acting administrators stay logged in.
+3. The back-up file itself is validated (must end with `-- Dump completed` marker) before the replay starts; a truncated or foreign file is rejected.
+4. After the restore, verify counts in the panel on `/settings/backup` — all logs and modules show the restored counts.
 
-Reminder: the restorer is `mysql`, not `mysqldump`. Running `mysql` against a backup file drops + rebuilds the database; no app-level flag toggles this — it just happens.
+The command-line path below stays valid as an alternate restore route, and remains necessary for installations whose DB driver cannot replay the statement list directly.
 
-Verification checklist after restore:
+### Restore (command line, fallback for any future admin)
+
+The restore is a one-way door: it **replaces** the current database with the backed-up one. Even so, the in-app flow takes a safety back-up of the current database automatically before anything is replayed, so the pre-restore state is always recoverable as a new back-up in the history list — restored with one more click.
+
+### Verifying a restore (either path)
 
 - Projects, prep lists, quotations, POs visible in lists (counts match expectations).
 - `/settings/logs` shows the restored entries with today's timestamp for the back-up entry itself.
@@ -667,7 +669,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **228 passed / 1363 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **248 passed / 1430 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -698,7 +700,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
 - [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
 - [x] **Activity log retention** — automatic pruning: `php artisan activity:prune` deletes entries older than 365 days (`--days=N` custom window, `--dry-run` previews, refuses `--days < 1`); registered on the weekly schedule (runs with cron/task `php artisan schedule:run`)
-- [x] **Settings → Backup** — administrator-only full-database backup with plain-language restore instructions in-place
+- [x] **Settings → Backup** — administrator-only full-database backup with one-click in-app restore (automatic pre-restore safety snapshot, confirmation phrase, session preservation) plus plain-language restore instructions
 - [x] **Item Catalog** — `/item-catalog`: one row per item on a fully-received PO line, aggregated server-side (order counts, total qty/spend, weighted avg, best/latest price, last supplier); KPIs (items tracked / spend / suppliers used / lines bought); filters (search, category, supplier, from/to date range); item detail page (`/item-catalog/{item}`) with full purchase history, per-supplier comparison table, weighted avg / best-price / last-purchase tiles, and an inline SVG price-over-time chart; nav sidebar, `role_module_access` key, sidebar icon, README docs, and feature tests updated.
 
 
@@ -742,7 +744,7 @@ purchasing/
 │   ├── Models/                 # 21 models + casts, scopes, relationships
 │   ├── Support/                # RfqQuotationWorkbook, PurchaseOrderWorkbook, QuotationWorkbookParser,
 │   │                           #   ExpiryParser, DeliveryNotifications, ActivityLogger, ModuleAccess,
-│   │                           #   ProjectSummaryWorkbook, DatabaseDumper, BackupStorage, Pagination
+│   │                           #   ProjectSummaryWorkbook, DatabaseDumper, DatabaseRestorer, BackupStorage, Pagination
 │   └── Providers/              # access-settings gate; view composer feeds the bell icon
 ├── database/
 │   ├── migrations/             # 34 migrations covering the whole domain (seeded role grants, activity logs,

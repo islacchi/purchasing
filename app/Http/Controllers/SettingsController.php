@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\ActivityLogger;
 use App\Support\BackupStorage;
 use App\Support\DatabaseDumper;
+use App\Support\DatabaseRestorer;
 use App\Support\ModuleAccess;
 use App\Support\Pagination;
 use DateTime;
@@ -509,6 +510,58 @@ class SettingsController extends Controller
             $file,
             ['Content-Type' => 'application/sql'],
         );
+    }
+
+    /**
+     * Restore the database from $file, taking a safety back-up of the
+     * current state first.
+     */
+    public function restoreBackup(Request $request)
+    {
+        $validated = $request->validate([
+            'file' => ['required', 'string'],
+            'expected_restore_phrase' => ['required', 'string'],
+        ]);
+
+        if ($validated['expected_restore_phrase'] !== 'RESTORE') {
+            return back()->withErrors(['expected_restore_phrase' => 'Type RESTORE exactly to confirm the restore.']);
+        }
+
+        $file = $validated['file'];
+
+        try {
+            $path = BackupStorage::path($file);
+        } catch (RuntimeException) {
+            abort(404);
+        }
+
+        if (! Storage::disk('local')->exists(BackupStorage::DIRECTORY.'/'.$file)) {
+            return back()->withErrors(['backup' => 'The selected back-up file no longer exists.']);
+        }
+
+        // Safety net first: a fresh snapshot of the CURRENT state must
+        // exist before anything is replayed.
+        $safetyName = BackupStorage::createFilename();
+
+        try {
+            app(DatabaseDumper::class)->dump(BackupStorage::path($safetyName));
+        } catch (RuntimeException $exception) {
+            return back()->withErrors(['backup' => 'The safety back-up of the current state could not be taken, so nothing was restored: '.$exception->getMessage()]);
+        }
+
+        BackupStorage::prune();
+
+        try {
+            $executed = app(DatabaseRestorer::class)->restore($path);
+        } catch (RuntimeException $exception) {
+            return back()->withErrors(['backup' => 'The back-up could not be restored. The database may be partially restored — do NOT retry blindly. A safety back-up of the pre-restore state exists: '.$safetyName.'. '.$exception->getMessage()]);
+        }
+
+        ActivityLogger::log('Restored', 'Settings', "Database restored from back-up: {$file}; safety snapshot: {$safetyName}");
+
+        return redirect()
+            ->route('settings.backup')
+            ->with('status', "Database restored from {$file}. A safety back-up of the pre-restore state was kept as {$safetyName}.");
     }
 
     /**
