@@ -92,7 +92,19 @@ PS;
             'TOAST_MESSAGE' => $message,
         ]);
 
-        $process = new Process(['powershell.exe', '-NoProfile', '-WindowStyle', 'Hidden', '-NonInteractive', '-File', $path], null, $env, null, 15);
+        // Launch PowerShell through the windowless VBS runner so this can
+        // never flash a console — even though the scheduler itself already
+        // runs windowless, a windowless parent still triggers a fresh
+        // console for a console-subsystem child.
+        $process = new Process([
+            (getenv('SystemRoot') ?: 'C:\\Windows') . '\\System32\\wscript.exe',
+            '//nologo',
+            base_path('resources/scripts/hidden.vbs'),
+            'powershell.exe',
+            '-NoProfile',
+            '-ExecutionPolicy', 'Bypass',
+            '-File', $path,
+        ], null, $env, null, 15);
         $process->run();
         @unlink($path);
 

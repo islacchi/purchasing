@@ -44,15 +44,23 @@ class SchedulerInstaller
     }
 
     /**
+     * Absolute path of the hidden VBS runner committed with the repo.
+     */
+    public static function hiddenRunnerPath(): string
+    {
+        return base_path('resources/scripts/hidden.vbs');
+    }
+
+    /**
      * The command string registered with Task Scheduler.
      *
-     * Wrapped in a hidden PowerShell so the scheduled run never flashes a
-     * console window. The wrapper hides its own console, and the PHP child
-     * shares it — the toast still pops up in the interactive session.
+     * Runs `schedule:run` through a windowless VBS launcher (wscript.exe is
+     * a GUI process, so no console is ever created). The VBS handles
+     * quoting of any argument containing spaces.
      */
     public static function taskCommand(): string
     {
-        return '"powershell.exe" -NoProfile -WindowStyle Hidden -Command "& \'' . static::phpCli() . '\' \'' . static::artisanPath() . '\' schedule:run"';
+        return '"' . (getenv('SystemRoot') ?: 'C:\\Windows') . '\\System32\\wscript.exe" //nologo "' . static::hiddenRunnerPath() . '" "' . static::phpCli() . '" "' . static::artisanPath() . '" schedule:run';
     }
 
     /**
