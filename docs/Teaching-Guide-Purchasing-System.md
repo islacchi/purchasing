@@ -211,7 +211,7 @@ Run this exactly as written the first time. Keep it hands-on — every learner s
 1. Open the prep list → **Generate RFQ**.
 2. Tick 2 suppliers → **Download**. Open the file. Show that there are no quantities — only items, units, and required shelf life.
 3. Say: *"This file goes to the suppliers. When they answer, we upload it here — that's Stage B."*
-4. Upload a sample supplier file (keep two dummy files ready).
+4. Upload a dummy supplier file (prepare two before the session: save the RFQ downloads from step 2, then fill each copy in with made-up prices, brands, and expiry dates — that is exactly the file a supplier would return; sample RFQ/PO printouts no longer ship with the repository).
 5. Show **Submit quotation** and **Replace**.
 
 **0:34–0:40 — Item Catalog (the decision)**

@@ -768,7 +768,7 @@ purchasing/
 │   └── views/                  # Blade modules mirroring the sidebar; role-aware affordances via canModule()
 │       ├── components/         # access-restricted-modal (shared amber dialog)
 │       └── errors/             # 403 — friendly module-access page
-├── docs/                       # Procurement-flow PDFs; sample RFQ/PO artifacts; RUNBOOK.md (back-up & DR)
+├── docs/                       # RUNBOOK.md (back-up & DR); Teaching-Guide-Purchasing-System.md (staff training)
 ├── routes/
 │   └── web.php                 # All routes (login/logout public; rest behind auth + session.active;
 │                               #   six module groups additionally behind module:{module})
@@ -781,13 +781,10 @@ purchasing/
 
 ## Documentation
 
-- `docs/Procurement-Flow-Project-A.pdf` — end-to-end flow for a sample project
-- `docs/Sample-Request-for-Quotation-RFQ-2026-0042.pdf|.xlsx`
-- `docs/Sample-Purchase-Order-PO-2026-0117.pdf|.xlsx`
 - `docs/Teaching-Guide-Purchasing-System.md` — onboarding guide for new users (this README extends it)
 - `docs/RUNBOOK.md` — disaster recovery, back-up/restore drills, and unmanaged-server operations (start here when replacing the PC)
 
-These describe the intended workflow; historical PDFs may reference earlier UI iterations.
+The Teaching Guide covers staff onboarding; the RUNBOOK covers operations and disaster recovery. This README is the architecture and feature reference.
 
 ---
 
