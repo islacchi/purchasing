@@ -12,6 +12,8 @@ use Illuminate\Support\Collection;
  * The rule is deliberately simple and entirely data-driven:
  *
  *   - Projects without a delivery due date are ignored.
+ *   - Projects with no items are ignored — they cannot produce a
+ *     resolvable alarm.
  *   - Projects that are already fully fulfilled are ignored.
  *   - Red   – overdue, or due within 2 days
  *   - Amber – due within 7 days (or within 14 days with nothing fulfilled yet)
@@ -58,8 +60,8 @@ class DeliveryNotifications
     }
 
     /**
-     * Build one notification, or null when the project is already complete
-     * or too far out to matter.
+     * Build one notification, or null when the project is empty, already
+     * complete, or too far out to matter.
      *
      * @return array{project_id: int, title: string, entity: string, due: string, days_left: int, fulfilled_items: int, total_items: int, progress_percent: int, severity: string, label: string, href: string}|null
      */
@@ -69,7 +71,14 @@ class DeliveryNotifications
         $fulfilledItems = (int) ($project->fulfilled_items_count ?? 0);
         $progressPercent = $totalItems > 0 ? (int) floor($fulfilledItems / $totalItems * 100) : 0;
 
-        if ($totalItems > 0 && $progressPercent >= 100) {
+        if ($totalItems === 0) {
+            // An empty project has nothing to deliver — it could never
+            // clear a delivery-risk alert by doing the work, so don't
+            // raise one.
+            return null;
+        }
+
+        if ($progressPercent >= 100) {
             // Nothing to complete — this project can no longer produce a
             // delivery risk.
             return null;

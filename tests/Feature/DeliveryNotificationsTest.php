@@ -141,6 +141,23 @@ class DeliveryNotificationsTest extends TestCase
             ->assertSee('No delivery deadlines approaching');
     }
 
+    public function test_bell_ignores_projects_with_no_items(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity, [
+            'title' => 'Empty pharma placeholder',
+            'delivery_due_date' => now()->addDays(1)->toDateString(),
+        ]);
+        // No project items at all — nothing to deliver, so no alert.
+
+        $this->actingAs($user)
+            ->get(route('projects'))
+            ->assertOk()
+            ->assertDontSee('Delivery due in 1 day')
+            ->assertSee('No delivery deadlines approaching');
+    }
+
     public function test_bell_flags_never_started_projects_due_within_two_weeks(): void
     {
         $user = $this->admin();

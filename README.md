@@ -703,8 +703,8 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 240 passing (1411 assertions)
-- [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
+- [x] **Tests** — 250 passing (1436 assertions)
+- [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days — or ≤ 14 with nothing fulfilled yet); clears when the risk resolves; empty projects never alert
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
 - [x] **Unique junction indexes** — composite unique constraints on `preplist_items` / `quotation_items` / `purchase_order_items`; duplicate key violations surface as validation errors
@@ -718,7 +718,6 @@ Legend: ✅ done · 🚧 in progress / not started.
 
 
 ### Not yet done
-- [ ] **Notifications** are computed on every page view; there's no persisted notification log or read state
 - [ ] **PhpSpreadsheet migration** — if `ext-gd` is enabled later, the manual workbook generator can be replaced
 
 ### Known fragility worth addressing
@@ -739,6 +738,8 @@ Accepted trade-offs in the current build — worth knowing before relying on the
 - **Supplier colour is not persisted.** Colours are assigned by sorted supplier order, so adding or removing a supplier can reassign chart colours.
 - **Soft-deleted suppliers keep their historical priced lines visible** because the index reads submitted quotation rows. If a supplier's history must remain, restore it under Entities rather than deleting it.
 - **Ties count as a win for every tied supplier** in the competitiveness scorecard.
+
+- **Notifications are live by design.** The bell badge shows current delivery risks only, and it clears when the risk is resolved (all lines fulfilled or covered by stock) — there is deliberately no persisted notification log or read state; projects with no items never raise an alert.
 
 ---
 
