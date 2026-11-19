@@ -199,9 +199,6 @@
     </form>
     </div>
 
-    {{-- Bottom spacer so dropdowns on the last rows have room and are not clipped --}}
-    <div class="pb-12"></div>
-
     {{-- Back to settings — pinned to the very bottom of the content area --}}
     <div class="mt-auto flex shrink-0 items-center justify-start pt-4">
         <a href="{{ route('settings') }}"
@@ -221,10 +218,34 @@
         (function () {
             'use strict';
 
+            // Menus are position:fixed and anchored to the trigger by JS, so they
+            // escape the table's overflow container and the card's overflow-hidden.
+            function positionMenu(trigger, menu) {
+                var rect = trigger.getBoundingClientRect();
+                var menuWidth = menu.offsetWidth || 160;
+                var menuHeight = menu.offsetHeight || 132;
+                var top = rect.bottom + 8;
+
+                if (top + menuHeight > window.innerHeight - 8) {
+                    top = rect.top - menuHeight - 8;
+                }
+                if (top < 8) {
+                    top = 8;
+                }
+
+                var left = rect.right - menuWidth;
+                if (left < 8) {
+                    left = 8;
+                }
+
+                menu.style.top = top + 'px';
+                menu.style.left = left + 'px';
+            }
+
             function resetDropdown(menu) {
                 menu.classList.add('hidden');
-                menu.classList.remove('bottom-full', 'mb-2');
-                menu.classList.add('top-full', 'mt-2');
+                menu.style.top = '';
+                menu.style.left = '';
             }
 
             function resetDropdowns(exceptMenu) {
@@ -234,6 +255,16 @@
                     }
                 });
             }
+
+            // Fixed menus don't follow the button on scroll/resize, so close them.
+            var closeMenus = function () { resetDropdowns(); };
+            document.addEventListener('scroll', closeMenus, true);
+            window.addEventListener('resize', closeMenus);
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    closeMenus();
+                }
+            });
 
             document.addEventListener('click', function (e) {
                 var trigger = e.target.closest('.dropdown-trigger');
@@ -246,16 +277,10 @@
 
                     if (!isOpen) {
                         menu.classList.remove('hidden');
-                        // Open upward when the menu would be clipped by the
-                        // viewport or the table's overflow container.
-                        var rect = menu.getBoundingClientRect();
-                        var scrollBox = menu.closest('.overflow-x-auto');
-                        var clipBottom = Math.min(window.innerHeight, scrollBox ? scrollBox.getBoundingClientRect().bottom : Infinity);
-                        var opensUp = rect.bottom + 8 > clipBottom;
-                        menu.classList.toggle('bottom-full', opensUp);
-                        menu.classList.toggle('mb-2', opensUp);
-                        menu.classList.toggle('top-full', !opensUp);
-                        menu.classList.toggle('mt-2', !opensUp);
+                        // Anchor to the trigger; flip upward only when there is
+                        // no room below (viewport is the only boundary that matters
+                        // for position:fixed menus).
+                        positionMenu(trigger, menu);
                     }
 
                     return;

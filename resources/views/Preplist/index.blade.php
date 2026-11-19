@@ -206,7 +206,7 @@
                                             <path d="M12 8a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4zm0 6a2 2 0 100-4 2 2 0 000 4z"/>
                                         </svg>
                                     </button>
-                                    <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1">
+                                    <div class="dropdown-menu hidden fixed w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-[70] py-1">
                                         <a href="{{ route('preplist.edit', ['preplist' => $preplist->id]) }}"
                                            class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                            title="Edit">
@@ -290,6 +290,31 @@
             });
         }
 
+        // Menus are position:fixed and anchored to the trigger by JS, so the
+        // table's overflow clipping cannot cut them off. Flip above only when
+        // there is no room below (the viewport is the only boundary that matters).
+        function positionMenu(trigger, menu) {
+            var rect = trigger.getBoundingClientRect();
+            var menuWidth = menu.offsetWidth || 144;
+            var menuHeight = menu.offsetHeight || 120;
+            var top = rect.bottom + 8;
+
+            if (top + menuHeight > window.innerHeight - 8) {
+                top = rect.top - menuHeight - 8;
+            }
+            if (top < 8) {
+                top = 8;
+            }
+
+            var left = rect.right - menuWidth;
+            if (left < 8) {
+                left = 8;
+            }
+
+            menu.style.top = top + 'px';
+            menu.style.left = left + 'px';
+        }
+
         // Three-dots action dropdown toggling
         document.querySelectorAll('.dropdown-trigger').forEach(function (trigger) {
             trigger.addEventListener('click', function (e) {
@@ -300,22 +325,13 @@
                 // Close all open dropdowns first
                 document.querySelectorAll('.dropdown-menu').forEach(function (m) {
                     m.classList.add('hidden');
+                    m.style.top = '';
+                    m.style.left = '';
                 });
 
                 if (!isOpen) {
                     menu.classList.remove('hidden');
-                    // Open the menu upward when it would otherwise overflow the
-                    // bottom of the viewport OR the table's overflow-x-auto box
-                    // (overflow-x-auto implicitly clips overflow-y too), so a
-                    // last-row dropdown is never cut off.
-                    const rect = menu.getBoundingClientRect();
-                    const scrollBox = menu.closest('.overflow-x-auto');
-                    const clipBottom = Math.min(window.innerHeight, scrollBox ? scrollBox.getBoundingClientRect().bottom : Infinity);
-                    const opensUp = rect.bottom + 8 > clipBottom;
-                    menu.classList.toggle('bottom-full', opensUp);
-                    menu.classList.toggle('mb-2', opensUp);
-                    menu.classList.toggle('top-full', !opensUp);
-                    menu.classList.toggle('mt-2', !opensUp);
+                    positionMenu(trigger, menu);
                 }
             });
         });
@@ -326,6 +342,23 @@
                 document.querySelectorAll('.dropdown-menu').forEach(function (m) {
                     m.classList.add('hidden');
                 });
+            }
+        });
+
+        // Menus are fixed-position: close them on scroll (capture, so the
+        // inner <main> scroller is seen) and on resize.
+        var closeMenus = function () {
+            document.querySelectorAll('.dropdown-menu').forEach(function (m) {
+                m.classList.add('hidden');
+                m.style.top = '';
+                m.style.left = '';
+            });
+        };
+        document.addEventListener('scroll', closeMenus, true);
+        window.addEventListener('resize', closeMenus);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeMenus();
             }
         });
 

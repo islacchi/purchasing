@@ -96,7 +96,7 @@
                                             <circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>
                                         </svg>
                                     </button>
-                                    <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
+                                    <div class="dropdown-menu hidden fixed w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-[70] py-1">
                                         @if (auth()->user()?->canModule('entities', 'manage'))
                                             <a href="{{ route('entities.edit', ['type' => 'procuring_entity', 'id' => $entity['id']]) }}"
                                                class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
@@ -211,7 +211,7 @@
                                             <circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>
                                         </svg>
                                     </button>
-                                    <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
+                                    <div class="dropdown-menu hidden fixed w-36 bg-white rounded-lg border border-gray-200 shadow-lg z-[70] py-1">
                                         @if (auth()->user()?->canModule('entities', 'manage'))
                                             <a href="{{ route('entities.edit', ['type' => 'supplier', 'id' => $supplier['id']]) }}"
                                                class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
@@ -300,13 +300,8 @@
 
             function resetDropdown(menu) {
                 menu.classList.add('hidden');
-                menu.classList.remove('bottom-full', 'mb-2');
-                menu.classList.add('top-full', 'mt-2');
-                menu.style.position = '';
                 menu.style.left = '';
                 menu.style.top = '';
-                menu.style.right = '';
-                menu.style.width = '';
             }
 
             document.querySelectorAll('.dropdown-trigger').forEach(function (trigger) {
@@ -352,6 +347,11 @@
             }, true);
             window.addEventListener('resize', function () {
                 document.querySelectorAll('.dropdown-menu').forEach(resetDropdown);
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('.dropdown-menu').forEach(resetDropdown);
+                }
             });
 
             document.addEventListener('click', function (e) {

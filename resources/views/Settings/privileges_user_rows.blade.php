@@ -55,7 +55,7 @@
                         <circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>
                     </svg>
                 </button>
-                <div class="dropdown-menu hidden absolute right-0 top-full mt-2 w-40 bg-white rounded-lg border border-gray-200 shadow-lg z-10 py-1">
+                <div class="dropdown-menu hidden fixed w-40 bg-white rounded-lg border border-gray-200 shadow-lg z-[70] py-1">
                     <a href="{{ route('settings.privileges.edit', $user->id) }}"
                        class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" title="Edit">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

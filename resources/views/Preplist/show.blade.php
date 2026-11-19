@@ -135,7 +135,7 @@
         @endif
 
         {{-- Main two-column layout --}}
-        <div class="grid min-h-0 flex-1 grid-cols-1 items-start gap-4 lg:grid-cols-[300px_1fr]">
+        <div class="grid min-h-0 flex-1 auto-rows-[minmax(0,1fr)] grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
 
             {{-- LEFT COLUMN --}}
             <div class="min-h-0 space-y-3">
