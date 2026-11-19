@@ -1,8 +1,8 @@
-﻿# Purchasing â€” Procurement Management System
+# Purchasing — Procurement Management System
 
-A Laravel 12 application that runs the procurement cycle end to end: **Projects â†’ Prep Lists â†’ Request for Quotation â†’ Quotation tracking â†’ Purchase Orders â†’ Receiving**, plus the supplier / procuring-entity directory, Excel export, back-up tooling, and settings & privileges. Built for Philippine government-style procurement but works for any institution.
+A Laravel 12 application that runs the procurement cycle end to end: **Projects → Prep Lists → Request for Quotation → Quotation tracking → Purchase Orders → Receiving**, plus the supplier / procuring-entity directory, Excel export, back-up tooling, and settings & privileges. Built for Philippine government-style procurement but works for any institution.
 
-> **Status:** actively developed and proven in a small-team deployment. The procurement chain is functional and database-backed, with role-based access control (None / View / Manage) enforced server-side and reflected in the UI, and activity logging wired across modules. Role Ã— module matrix, settings, and the admin area are Administrator-only. Settings â†’ Backup works. See [Project status](#project-status) for an exact, honest breakdown.
+> **Status:** actively developed and proven in a small-team deployment. The procurement chain is functional and database-backed, with role-based access control (None / View / Manage) enforced server-side and reflected in the UI, and activity logging wired across modules. Role × module matrix, settings, and the admin area are Administrator-only. Settings → Backup works. See [Project status](#project-status) for an exact, honest breakdown.
 
 ---
 
@@ -34,19 +34,19 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 | Module | What it does | Status |
 |--------|--------------|--------|
-| **Projects** | List / search / create / edit / delete projects; award amount, delivery period, per-item fulfillment tracking; soft-delete; worksheet export (`.xlsx`) and print-ready sheet | âœ… Database-backed |
-| **Prep Lists** | Compile one or more Project items into a prep list with minimum shelf-life requirements | âœ… Database-backed |
-| **Generate RFQ** | Pick quoted/unquoted items per supplier, generate RFQ `.xlsx` files from a letterhead template (single file or ZIP for multiple suppliers) | âœ… Database-backed, tested |
-| **Quotation** | Track supplier quotations grouped by prep list; upload the supplier's returned `.xlsx`; extract prices/brand/expiry per item; short-dated expiry flag; hands off to PO when complete | âœ… Database-backed |
-| **Purchase Order** | Create a PO from an awarded quotation (draft); send it; receive lines (full qty per line); cancel with reason; admin-only delete of draft/cancelled; PO moves Draft â†’ Sent â†’ Partially received â†’ Completed automatically | âœ… Database-backed |
-| **Entities** | Directory of procuring entities (DOH offices, PGH, â€¦) and suppliers with contact details | âœ… Database-backed |
-| **Notifications (bell)** | Delivery-deadline alerts derived from due dates + project fulfillment progress | âœ… Real, data-driven |
-| **Role-based access control** | Role Ã— module matrix (None / View / Manage) enforced server-side on every module route; admin bypass; greyed/hidden write affordances for view-only roles; shared access-restricted dialog; friendly 403 page | âœ… Working |
-| **Item Catalog** | One row per item on a fully-received PO line: order counts, qty, total spend, best/latest price, last supplier; item detail page with per-supplier comparison, price-over-time chart and full purchase history | âœ… Database-backed |
-| **Settings â†’ Privileges** | Administrator-only user management **and** the role Ã— module access matrix (None/View/Manage); Administrator rows are locked full access | âœ… Working |
-| **Settings â†’ Logs** | Activity/log viewer â€” real rows from `ActivityLogger` on every module create/edit/delete, plus user/matrix changes; paginated at 50 rows per page; 365-day retention via scheduled `activity:prune` | âœ… Working |
-| **Settings â†’ Backup** | Full database backup (schema **and** contents) via `App\Support\DatabaseDumper` (through the app's own DB connection â€” no external `mysqldump`); one-click restore selected from the history list (`DatabaseRestorer`), with an automatic safety snapshot before every replay; download or delete any backup | âœ… Working |
-| **Excel export** | Project summary export (`.xlsx`) produced by `ProjectSummaryWorkbook`, paired with a print-ready folio view | âœ… Working |
+| **Projects** | List / search / create / edit / delete projects; award amount, delivery period, per-item fulfillment tracking; soft-delete; worksheet export (`.xlsx`) and print-ready sheet | ✅ Database-backed |
+| **Prep Lists** | Compile one or more Project items into a prep list with minimum shelf-life requirements | ✅ Database-backed |
+| **Generate RFQ** | Pick quoted/unquoted items per supplier, generate RFQ `.xlsx` files from a letterhead template (single file or ZIP for multiple suppliers) | ✅ Database-backed, tested |
+| **Quotation** | Track supplier quotations grouped by prep list; upload the supplier's returned `.xlsx`; extract prices/brand/expiry per item; short-dated expiry flag; hands off to PO when complete | ✅ Database-backed |
+| **Purchase Order** | Create a PO from an awarded quotation (draft); send it; receive lines (full qty per line); cancel with reason; admin-only delete of draft/cancelled; PO moves Draft → Sent → Partially received → Completed automatically | ✅ Database-backed |
+| **Entities** | Directory of procuring entities (DOH offices, PGH, …) and suppliers with contact details | ✅ Database-backed |
+| **Notifications (bell)** | Delivery-deadline alerts derived from due dates + project fulfillment progress | ✅ Real, data-driven |
+| **Role-based access control** | Role × module matrix (None / View / Manage) enforced server-side on every module route; admin bypass; greyed/hidden write affordances for view-only roles; shared access-restricted dialog; friendly 403 page | ✅ Working |
+| **Item Catalog** | One row per item on a fully-received PO line: order counts, qty, total spend, best/latest price, last supplier; item detail page with per-supplier comparison, price-over-time chart and full purchase history | ✅ Database-backed |
+| **Settings → Privileges** | Administrator-only user management **and** the role × module access matrix (None/View/Manage); Administrator rows are locked full access | ✅ Working |
+| **Settings → Logs** | Activity/log viewer — real rows from `ActivityLogger` on every module create/edit/delete, plus user/matrix changes; paginated at 50 rows per page; 365-day retention via scheduled `activity:prune` | ✅ Working |
+| **Settings → Backup** | Full database backup (schema **and** contents) via `App\Support\DatabaseDumper` (through the app's own DB connection — no external `mysqldump`); one-click restore selected from the history list (`DatabaseRestorer`), with an automatic safety snapshot before every replay; download or delete any backup | ✅ Working |
+| **Excel export** | Project summary export (`.xlsx`) produced by `ProjectSummaryWorkbook`, paired with a print-ready folio view | ✅ Working |
 
 ---
 
@@ -56,26 +56,26 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 - Username/email + password.
 - Accounts must be **active** (`is_active = 1`) and have a role assigned.
-- Login is throttled (`throttle:6,1` â€” 6 attempts per minute per IP).
+- Login is throttled (`throttle:6,1` — 6 attempts per minute per IP).
 - Expired/inactive sessions are dropped by `EnsureSessionIsActive` middleware.
 - Logout via a sidebar button; a confirmation modal prevents accidental logouts.
-- Login page reports precisely which field was wrong on failure (no vague â€œinvalid credentialsâ€ for known-good accounts).
+- Login page reports precisely which field was wrong on failure (no vague “invalid credentials” for known-good accounts).
 
 ### Projects (`/projects`)
 
-- One project record per procurement job: title, reference number (`RF-YYYY-NNNN`), procuring entity, mode of procurement (small value, competitive bidding, shopping, â€¦), amount awarded, date awarded, delivery days, optional delivery due date, notes.
+- One project record per procurement job: title, reference number (`RF-YYYY-NNNN`), procuring entity, mode of procurement (small value, competitive bidding, shopping, …), amount awarded, date awarded, delivery days, optional delivery due date, notes.
 - Per-item fulfillment: each project line has quantity, unit cost, awarded unit price, on-hand stock, and `fulfillment_status` (`pending` / `fulfilled`).
 - Progress bar shows `fulfilled / total items` with a percentage.
 - Search bar filters by title, reference no., or procuring entity (server-side `q`); pagination shows 10 projects per page with the selection persisted across pages.
 - A display-filter row sits between the search bar and the View dropdown; it combines three optional filters that narrow the list server-side:
-  - **Entity** â€” shows only projects assigned to the selected procuring entity.
-  - **Mode** â€” shows only projects in the selected mode (Shopping, Small value, Competitive bidding, Direct contracting).
-  - **Fulfillment status** â€” `Open (unfulfilled items)` shows projects with at least one unfulfilled line; `Completed (all fulfilled)` shows projects with no unfulfilled lines.
-- Empty with filters returns â€œNo projects match the current filtersâ€ with the Add button hidden so it doesn't mislead.
-- View modes: **Content** (card list), **Details** (metadata columns), **List** (dense table) â€” all paged from the same paginated slice (`?page=`).
-- A hidden, folio-sized print sheet renders in print preview (8.5 Ã— 13 in officio, landscape) via a modal; clicking Print calls `window.print()` with the correct `@page` size. The same content streams from `/projects/{project}/download` (`projects.download`) as an `.xlsx` workbook built by `ProjectSummaryWorkbook`.
-- Item lines already compiled into a prep list are **locked** in the form (read-only, greyed, lock icon, tooltip naming the prep list). Saving around locked lines works as usual; a locked line cannot be changed or removed here â€” do it in the prep list first. Removing a sourced line from the form is refused with a friendly message; nothing is saved until the prep list stops referencing the line.
-- A prep list with **only unprogressed linked quotations** (no priced lines, no uploaded file, no PO) deletes cascade-style along with them: the confirmation modal lists the supplier RFQs that will also be removed. If any linked quotation is progressed, the delete is refused with per-supplier reasons â€” the same all-or-nothing pattern as the project edit lock.
+  - **Entity** — shows only projects assigned to the selected procuring entity.
+  - **Mode** — shows only projects in the selected mode (Shopping, Small value, Competitive bidding, Direct contracting).
+  - **Fulfillment status** — `Open (unfulfilled items)` shows projects with at least one unfulfilled line; `Completed (all fulfilled)` shows projects with no unfulfilled lines.
+- Empty with filters returns “No projects match the current filters” with the Add button hidden so it doesn't mislead.
+- View modes: **Content** (card list), **Details** (metadata columns), **List** (dense table) — all paged from the same paginated slice (`?page=`).
+- A hidden, folio-sized print sheet renders in print preview (8.5 × 13 in officio, landscape) via a modal; clicking Print calls `window.print()` with the correct `@page` size. The same content streams from `/projects/{project}/download` (`projects.download`) as an `.xlsx` workbook built by `ProjectSummaryWorkbook`.
+- Item lines already compiled into a prep list are **locked** in the form (read-only, greyed, lock icon, tooltip naming the prep list). Saving around locked lines works as usual; a locked line cannot be changed or removed here — do it in the prep list first. Removing a sourced line from the form is refused with a friendly message; nothing is saved until the prep list stops referencing the line.
+- A prep list with **only unprogressed linked quotations** (no priced lines, no uploaded file, no PO) deletes cascade-style along with them: the confirmation modal lists the supplier RFQs that will also be removed. If any linked quotation is progressed, the delete is refused with per-supplier reasons — the same all-or-nothing pattern as the project edit lock.
 - Soft-deleted (`deleted_at`) rather than hard-deleted, so links from prep lists survive; cascade rules prevent deleting a sourced project.
 - The line-level field `project_items.fulfillment_status` is what progress counts; there is no project-level status enum.
 
@@ -83,27 +83,27 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 - Compile one or more project items across projects into a single prep list.
 - Each line carries a per-project **minimum remaining shelf life** (months), set at compile time and clamped against the item's `default_min_shelf_life_months`.
-- A submitted prep list can only be deleted along with **all** linked quotations; it refuses (with per-supplier reasons) when any linked quotation is progressed â€” has priced lines, an uploaded file, or a PO reference. All-or-nothing, like the project edit lock.
-- Sources are recorded in `preplist_item_sources` (quantity sourced per project line) â€” the provenance chain from project â†’ prep list is intact.
-- Generating the RFQ from a prep list (`/preplist/{preplist}/generate-rfq`) validates that supplier candidates are chosen and that every item is either quoted or unquoted â€” nothing partial.
-- A display-filter dropdown (next to the search bar) narrows by **created by** (users who have compiled preplists), **item category** (drugs and medicines / supplies and equipments), and **quotation status** (Quoted / Awaiting quote); selection auto-submits and shows a badge count of active filters; empty filtered results say â€œNo prep lists match the current filtersâ€.
+- A submitted prep list can only be deleted along with **all** linked quotations; it refuses (with per-supplier reasons) when any linked quotation is progressed — has priced lines, an uploaded file, or a PO reference. All-or-nothing, like the project edit lock.
+- Sources are recorded in `preplist_item_sources` (quantity sourced per project line) — the provenance chain from project → prep list is intact.
+- Generating the RFQ from a prep list (`/preplist/{preplist}/generate-rfq`) validates that supplier candidates are chosen and that every item is either quoted or unquoted — nothing partial.
+- A display-filter dropdown (next to the search bar) narrows by **created by** (users who have compiled preplists), **item category** (drugs and medicines / supplies and equipments), and **quotation status** (Quoted / Awaiting quote); selection auto-submits and shows a badge count of active filters; empty filtered results say “No prep lists match the current filters”.
 
 ### Generate RFQ (`/preplist/{preplist}/generate-rfq`)
 
 - Choose the suppliers to invite and mark which items are inquoted vs. unquoted.
 - Produces one `.xlsx` file per selected supplier from `resources/templates/RFQ-Template.xlsx`;
-  - Single supplier â†’ direct download.
-  - Multiple â†’ a ZIP containing one `.xlsx` per supplier.
-- Per item, the file shows: item number, description, unit, **Min. Shelf Life**, **Brand**, **Unit Price**, **Expiry**, **Remarks** â€” all blanked for the supplier to fill in.
+  - Single supplier → direct download.
+  - Multiple → a ZIP containing one `.xlsx` per supplier.
+- Per item, the file shows: item number, description, unit, **Min. Shelf Life**, **Brand**, **Unit Price**, **Expiry**, **Remarks** — all blanked for the supplier to fill in.
 - Files are named `RFQ-YYYY-NNNN-<SUPPLIER>.xlsx` and stored in `storage/app/private/quotations/` on generation.
-- The template explicitly contains **no available-quantity column** â€” suppliers are never asked for available stock.
-- **Service-time** â€” Excel generation is pure OOXML via `ZipArchive` (no PhpSpreadsheet dependency).
+- The template explicitly contains **no available-quantity column** — suppliers are never asked for available stock.
+- **Service-time** — Excel generation is pure OOXML via `ZipArchive` (no PhpSpreadsheet dependency).
 
 ### Quotation tracker (`/quotation`)
 
 - Quotations are grouped by prep list; each quotation row shows the supplier, attached RFQ number, per-item response status, and upload status.
 - A search bar (supplier / prep list name / reference no. / RFQ number) narrows the tracker server-side; a matching prep list group keeps its matching quotations.
-- A display-filter dropdown (next to the search bar) narrows by **supplier**, **created by** (users who generated quotations), and **quotation status** (Quoted / Awaiting quote, matched on priced lines); selection auto-submits and shows a badge count of active filters; empty filtered results say â€œNo quotations match the current filters.â€ The prep-list-groups-per-page choice moved inside it.
+- A display-filter dropdown (next to the search bar) narrows by **supplier**, **created by** (users who generated quotations), and **quotation status** (Quoted / Awaiting quote, matched on priced lines); selection auto-submits and shows a badge count of active filters; empty filtered results say “No quotations match the current filters.” The prep-list-groups-per-page choice moved inside it.
 - Upload the supplier's returned `.xlsx` (`POST /quotation/{quotation}/document`, `quotation.store-document`):
   - The file is validated against the RFQ template **before** parsing (header layout + column mapping), so garbage files are rejected with a clear message.
   - The parser reads prices, brand, and expiry per item via `App\Support\QuotationWorkbookParser`; expiry values in any format (`MM/YYYY`, month names, ISO) are normalized by `App\Support\ExpiryParser`.
@@ -111,18 +111,18 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Per-quotation status is computed from priced lines:
   - `Quoted` when at least one priced line exists; `Awaiting quote` otherwise.
   - Short-dated lines (expired or expiring within 30 days) are highlighted in the item breakdown; per-project colour coding compares supplier expiry vs the project's delivery date + minimum shelf life.
-- The document can be replaced (`POST /quotation/{quotation}/document`, `quotation.store-document`) â€” a second file **replaces** the first. **Refusing when a PO already references these quoted lines** (same guard as the remove-document path): the file and its prices become immutable once a PO exists.
-- Delete the document only (`DELETE /quotation/{quotation}/document`, `quotation.destroy-document`) â€” keeps the quotation row but removes the priced lines; blocked once a PO is generated from it.
+- The document can be replaced (`POST /quotation/{quotation}/document`, `quotation.store-document`) — a second file **replaces** the first. **Refusing when a PO already references these quoted lines** (same guard as the remove-document path): the file and its prices become immutable once a PO exists.
+- Delete the document only (`DELETE /quotation/{quotation}/document`, `quotation.destroy-document`) — keeps the quotation row but removes the priced lines; blocked once a PO is generated from it.
 - **View-only roles see a disabled "Submit quotation" affordance** (inert button, access-restricted modal on click).
-- Re-uploading a document is guarded by a state fingerprint â€” re-submitting the page against a file another user already replaced is rejected (see [Concurrency](#concurrency-multiple-users-on-one-box)).
+- Re-uploading a document is guarded by a state fingerprint — re-submitting the page against a file another user already replaced is rejected (see [Concurrency](#concurrency-multiple-users-on-one-box)).
 
 ### Purchase Order (`/purchase-order`)
 
 - A PO can only be created **from** a quotation, never from nothing; evidence of winning the business lives on the quotation (priced lines), not on the PO itself.
-- Allocation across project sources is **proportional** â€” the PO splits down to the project lines so you know exactly which project it fulfils â€” recorded in `purchase_order_item_allocations`.
+- Allocation across project sources is **proportional** — the PO splits down to the project lines so you know exactly which project it fulfils — recorded in `purchase_order_item_allocations`.
 - PO numbers come from the shared `number_sequences` table as `PO-YYYY-NNNN`.
-- Status flow: `draft â†’ sent â†’ partially_received â†’ completed` (cancel any time before completion; admin-only delete of draft/cancelled POs).
-- Receiving: each line has a **Mark as received** checkbox with a confirmation modal â€” confirming records the full line qty as received and moves the PO to `partially_received` / `completed`. Once a line is received it is locked in the UI and un-marking is refused server-side; `expected_received` guards against stale pages and races.
+- Status flow: `draft → sent → partially_received → completed` (cancel any time before completion; admin-only delete of draft/cancelled POs).
+- Receiving: each line has a **Mark as received** checkbox with a confirmation modal — confirming records the full line qty as received and moves the PO to `partially_received` / `completed`. Once a line is received it is locked in the UI and un-marking is refused server-side; `expected_received` guards against stale pages and races.
 - Single-file Excel download at creation; no re-download in this build (see [Not yet done](#not-yet-done)).
 - People with view-only roles get the receive checkboxes disabled (greyed, access-restricted modal on click). Unauthorized modification attempts are still blocked server-side by the `module:purchase-order` middleware.
 
@@ -140,45 +140,45 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Item detail (`/item-catalog/{item}`): full purchase history (every completed line, linked to the PO), per-supplier comparison (orders/avg/best/latest/spend/share), weighted avg / best-price / last-purchase tiles, and an inline SVG price-over-time chart.
 - Supplier profile page (`/entities/supplier/{id}`) gains a **PURCHASE HISTORY** section listing every item bought from that supplier with the same aggregates.
 
-### Settings â†’ Privileges (`/settings/privileges`)
+### Settings → Privileges (`/settings/privileges`)
 
 - Administrator-only user management: list / search / create / edit / toggle status / delete.
 - The delete and toggle operations are protected from self-targeting (you cannot deactivate or delete your own account).
-- Separate **Role Ã— Module** matrix (`role_module_access`) with `None / View / Manage` for every seeded role. Administrator is bypassed everywhere â€” its grants are not editable.
+- Separate **Role × Module** matrix (`role_module_access`) with `None / View / Manage` for every seeded role. Administrator is bypassed everywhere — its grants are not editable.
 - Changing grants is logged to `activity_logs`.
 - Ability to search users live (`GET /settings/privileges/search`).
 
-### Settings â†’ Logs (`/settings/logs`)
+### Settings → Logs (`/settings/logs`)
 
 - Every module write (create/edit/delete) writes an `activity_logs` row: `user_name`, `role_name`, `action`, `module`, `record_label`, `subject_type`, `subject_id`.
 - Filters: module, user, action, from-date, to-date; results paginated 50 per page by default, selectable between 10 / 25 / 50 / 100.
-- Nothing is written without an action â€” the `logs` page is read-only.
+- Nothing is written without an action — the `logs` page is read-only.
 - **Retention (pruning):** `php artisan activity:prune` deletes entries older than a retention window (default **365 days**). `--days=N` sets a custom window; `--dry-run` prints how many entries would be deleted without deleting anything. The command is registered on the weekly schedule, but the server still needs a cron/task entry that runs `php artisan schedule:run` for it to fire:
   ```
   * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
   ```
-  Without cron, run `activity:prune --days=365` manually (e.g., weekly, from a task scheduler or as part of the backup routine). There is no archival â€” pruned entries are deleted, not exported first â€” so adopters who need a longer audit trail should pass a larger `--days` or export before pruning.
+  Without cron, run `activity:prune --days=365` manually (e.g., weekly, from a task scheduler or as part of the backup routine). There is no archival — pruned entries are deleted, not exported first — so adopters who need a longer audit trail should pass a larger `--days` or export before pruning.
 
-### Settings â†’ Backup (`/settings/backup`)
+### Settings → Backup (`/settings/backup`)
 
 - Back-up page gated by `access-settings` (administrator-only).
 - One-click **full** database dump (schema **and** contents) produced through the application's own DB connection (no external `mysqldump` binary required).
-- **One-click restore** â€” pick a back-up from the history list, type `RESTORE` to confirm. Before any statement is replayed, the system takes a safety back-up of the **current** state automatically; the sessions table is left untouched so operators stay logged in.
+- **One-click restore** — pick a back-up from the history list, type `RESTORE` to confirm. Before any statement is replayed, the system takes a safety back-up of the **current** state automatically; the sessions table is left untouched so operators stay logged in.
 - Back-ups stored in `storage/app/private/backups/` with timestamped names; the **15 newest** are kept automatically.
 - Download or delete any backup from the page.
 - Comprehensive in-page restore instructions for a **non-technical** admin remain as the manual fallback.
-- No transactional guarantees â€” the safety snapshot is the recovery path if a restore fails mid-way.
+- No transactional guarantees — the safety snapshot is the recovery path if a restore fails mid-way.
 
-### Settings â†’ Configuration (`/settings/configuration`)
+### Settings → Configuration (`/settings/configuration`)
 
-- Static placeholder â€” not wired (front-end buttons don't mutate anything).
+- Static placeholder — not wired (front-end buttons don't mutate anything).
 
 ### Notifications (bell icon)
 
 - Red: due within 2 days / already overdue.
 - Amber: due within 7 days with 0 items fulfilled.
 - Fuelled entirely by `projects.delivery_due_date` and `project_items.fulfillment_status`; no stored notification rows.
-- The bell badge counts projects that are at risk â€” not â€œnotifications you haven't readâ€.
+- The bell badge counts projects that are at risk — not “notifications you haven't read”.
 
 ---
 
@@ -428,9 +428,9 @@ erDiagram
 
 | Table | Purpose |
 |-------|---------|
-| `item_categories` | Groups items (`drugs and medicines`, `supplies and equipments`, â€¦). |
+| `item_categories` | Groups items (`drugs and medicines`, `supplies and equipments`, …). |
 | `items` | The catalogue of orderable goods with `default_min_shelf_life_months` and nullable `box_size` (units per box). |
-| `procuring_entities` | The buying institutions (DOH Region VII, PGH Manila, â€¦). |
+| `procuring_entities` | The buying institutions (DOH Region VII, PGH Manila, …). |
 | `suppliers` | External suppliers with contact details. Soft-deleted. |
 
 **Projects / prep lists (5)**
@@ -440,14 +440,14 @@ erDiagram
 | `projects` | The procurement job. `reference_no` is indexed. |
 | `project_items` | Lines inside a project: item, quantity, on-hand stock, awarded unit price. |
 | `preplists` | Compiled prep lists (`PL-YYYY-NNNN`). |
-| `preplist_items` | Unique `(preplist_id, item_id)` â€” an item appears at most once per prep list. |
+| `preplist_items` | Unique `(preplist_id, item_id)` — an item appears at most once per prep list. |
 | `preplist_item_sources` | Which project lines each prep-list line is sourced from; preserves provenance. |
 
 **Quotation tracker (3)**
 
 | Table | Purpose |
 |-------|---------|
-| `quotations` | One row per `(prep list, supplier)` pair â€” `rfq_number` unique. |
+| `quotations` | One row per `(prep list, supplier)` pair — `rfq_number` unique. |
 | `quotation_items` | The supplier's prices for each `preplist_item`; unique `(quotation_id, preplist_item_id)`. Nullable `supplier_box_size` / `available_qty` capture the supplier's packaging and offered quantities. |
 | `po_cart_items` | Per-user cart staged for checkout — `quotation_item_id` unique per user; a pre-checkout line from an awarded quotation. |
 
@@ -464,7 +464,7 @@ erDiagram
 
 | Table | Purpose |
 |-------|---------|
-| `activity_logs` | Append-only audit trail, pruned by `activity:prune` (default 365 days); subject_type + subject_id identifies the affected record; used for the Settings â†’ Logs viewer and role-matrix changes. |
+| `activity_logs` | Append-only audit trail, pruned by `activity:prune` (default 365 days); subject_type + subject_id identifies the affected record; used for the Settings → Logs viewer and role-matrix changes. |
 
 ---
 
@@ -472,33 +472,33 @@ erDiagram
 
 ```
 Projects (items + quantities)
-        â”‚
-        â–¼
+        │
+        ▼
 Prep Lists (compile items across projects, set min. shelf life)
-        â”‚
-        â–¼
+        │
+        ▼
 Generate RFQ (per supplier; .xlsx letterhead template)
-        â”‚
-        â–¼
-Supplier returns the completed file â†’ Quotation tracker â†’ prices read in
-        â”‚
-        â–¼
-Proceed to PO â†’ PO created (draft, PO-YYYY-NNNN) â†’ Excel PO downloaded
-        â”‚
-        â–¼
-Send to supplier â†’ lines received per line item â†’ PO auto-moves Sent â†’ Partially received â†’ Completed
+        │
+        ▼
+Supplier returns the completed file → Quotation tracker → prices read in
+        │
+        ▼
+Proceed to PO → PO created (draft, PO-YYYY-NNNN) → Excel PO downloaded
+        │
+        ▼
+Send to supplier → lines received per line item → PO auto-moves Sent → Partially received → Completed
 ```
 
 ### Detailed flow notes
 
-1. **Create a project** â€” pick a procuring entity, items, per-item quantity and data. The project has no status enum; progress reads `project_items.fulfillment_status`.
-2. **Compile a prep list** â€” select project items across projects and set a **minimum shelf life** per line (clamped to the item default).
-3. **Generate the RFQ** â€” select the suppliers to solicit and click Generate. Single supplier â†’ one `.xlsx`; multiple â†’ a `.zip`. The template hides available quantities and price columns from the supplier.
-4. **Upload the supplier's returned file** â€” the tracker auto-matches each row by item description (case-insensitive, normalized). Unit price â‰¤ 0 is rejected. Expiry is parsed crash-proof (`09/2026`, `Sep 2026`, ISOâ€¦).
-5. **Create the PO** â€” one click from the Quotation screen (manager-only, viewers get the access-restriction modal). The PO is created in `draft` and split proportionally across the projects' lines.
-6. **Send the PO** â€” moves it to `sent`.
-7. **Receive lines** â€” tick the line's checkbox and confirm the modal; the status auto-moves to `partially_received` or `completed`. Once received, the line is locked and cannot be unmarked.
-8. **Delete / cancel** â€” delete only in `draft` / `cancelled` (admin-only); cancel allowed anytime.
+1. **Create a project** — pick a procuring entity, items, per-item quantity and data. The project has no status enum; progress reads `project_items.fulfillment_status`.
+2. **Compile a prep list** — select project items across projects and set a **minimum shelf life** per line (clamped to the item default).
+3. **Generate the RFQ** — select the suppliers to solicit and click Generate. Single supplier → one `.xlsx`; multiple → a `.zip`. The template hides available quantities and price columns from the supplier.
+4. **Upload the supplier's returned file** — the tracker auto-matches each row by item description (case-insensitive, normalized). Unit price ≤ 0 is rejected. Expiry is parsed crash-proof (`09/2026`, `Sep 2026`, ISO…).
+5. **Create the PO** — one click from the Quotation screen (manager-only, viewers get the access-restriction modal). The PO is created in `draft` and split proportionally across the projects' lines.
+6. **Send the PO** — moves it to `sent`.
+7. **Receive lines** — tick the line's checkbox and confirm the modal; the status auto-moves to `partially_received` or `completed`. Once received, the line is locked and cannot be unmarked.
+8. **Delete / cancel** — delete only in `draft` / `cancelled` (admin-only); cancel allowed anytime.
 
 ---
 
@@ -561,9 +561,9 @@ Then visit `http://127.0.0.1:8000`. Log in as `admin` / `admin` and **change the
 - **`APP_URL`** in multi-PC use should be the LAN hostname or IP of the box hosting the app (e.g. `http://192.168.x.y:8000`).
 - Sessions, cache, and queues all use the `database` driver in this build (see `.env.example`).
 - **File uploads** (supplier-returned quotations, RFQs) are stored under `storage/app/private/`.
-- **Back-up** files, if produced, land under `storage/app/private/backups/` â€” see the [Back-ups and restore](#back-ups-and-restore) section.
+- **Back-up** files, if produced, land under `storage/app/private/backups/` — see the [Back-ups and restore](#back-ups-and-restore) section.
 
-Seeded module grants: **Procurement Officer â†’ Manage** on all six modules, **Viewer â†’ View** on all six modules, **Administrator** bypasses the matrix entirely (no grant rows). Grants are editable under Settings â†’ Privileges and every change is logged to the activity trail.
+Seeded module grants: **Procurement Officer → Manage** on all six modules, **Viewer → View** on all six modules, **Administrator** bypasses the matrix entirely (no grant rows). Grants are editable under Settings → Privileges and every change is logged to the activity trail.
 
 ---
 
@@ -574,13 +574,13 @@ Seeded module grants: **Procurement Officer â†’ Manage** on all six modules
 | Question | Answer |
 |----------|--------|
 | Who can log in? | Any active account with a role. Inactive users are refused at login. `admin` password must be changed on first deploy. |
-| How do roles map? | `Administrator` â†’ full access including Settings and PO delete (locked in the matrix, not editable). `Procurement Officer` / `Viewer` â†’ access per module configured in Settings â†’ Privileges. |
-| How is module access configured? | Settings â†’ Privileges â†’ the **Role module access** matrix. None / View / Manage for each of the six modules. Officer defaults to Manage everywhere, Viewer to View everywhere. |
+| How do roles map? | `Administrator` → full access including Settings and PO delete (locked in the matrix, not editable). `Procurement Officer` / `Viewer` → access per module configured in Settings → Privileges. |
+| How is module access configured? | Settings → Privileges → the **Role module access** matrix. None / View / Manage for each of the six modules. Officer defaults to Manage everywhere, Viewer to View everywhere. |
 | How is the matrix enforced server-side? | `module:{module}` middleware (`App\Http\Middleware\EnsureModuleAccess`) wraps the six module route groups: `GET`/`HEAD`/`OPTIONS` require **View**, any other verb requires **Manage**. Administrator bypasses. |
-| What if a URL is blocked? | Direct URL hits without access get the friendly **403 â€” Access restricted** page. |
+| What if a URL is blocked? | Direct URL hits without access get the friendly **403 — Access restricted** page. |
 | How is the matrix reflected in the UI? | View-only roles see inert greyed buttons (cursor-not-allowed); modules they cannot view are hidden from the sidebar; blocked actions open a shared amber access-restricted modal. |
 | What does Settings gate? | `access-settings` gate (administrator only). |
-| Settings â†’ Logs | Real activity rows: module writes and matrix/user changes; browsable with module/user filters. |
+| Settings → Logs | Real activity rows: module writes and matrix/user changes; browsable with module/user filters. |
 | Session lifetime | Inactivity + absolute lifetime enforced by custom middleware. |
 | Login throttling | `throttle:6,1` on the login POST route. |
 | PO deletion | Restricted to Administrator; only `draft` and `cancelled` orders may be deleted. |
@@ -590,7 +590,7 @@ Seeded module grants: **Procurement Officer â†’ Manage** on all six modules
 
 ### Notes on the amber dialog
 
-The shared amber dialog (`components/access-restricted-modal.blade.php`) appears for view-only roles on blocked actions. It is decorative â€” the actual enforcement is server-side regardless. The dialog exists so the button can still be explored without taking the action.
+The shared amber dialog (`components/access-restricted-modal.blade.php`) appears for view-only roles on blocked actions. It is decorative — the actual enforcement is server-side regardless. The dialog exists so the button can still be explored without taking the action.
 
 ---
 
@@ -604,7 +604,7 @@ Every list that could contain more than a page of data is paginated server-side;
 | Prep Lists (`/preplist`) | 10 | 10 / 25 / 50 / 100 |
 | Quotation tracker (`/quotation`) | 10 | 10 / 25 / 50 / 100 |
 | Purchase Orders (`/purchase-order`) | 10 | 10 / 25 / 50 / 100 |
-| Settings â†’ Logs (`/settings/logs`) | 50 | 10 / 25 / 50 / 100 |
+| Settings → Logs (`/settings/logs`) | 50 | 10 / 25 / 50 / 100 |
 
 Selection persists via the query string (`?page=` preserves `q` and `sort`).
 
@@ -612,25 +612,25 @@ Selection persists via the query string (`?page=` preserves `q` and `sort`).
 
 ## Concurrency: multiple users on one box
 
-This is a single-box, multi-user deployment (a LAN box accessed by several staff at once). There is deliberately **no** real-time sync / live push â€” every page reads fresh from MySQL on load, which is the correct model for this scale.
+This is a single-box, multi-user deployment (a LAN box accessed by several staff at once). There is deliberately **no** real-time sync / live push — every page reads fresh from MySQL on load, which is the correct model for this scale.
 
 ### What is handled
 
 - **No silent overwrites on hot shared writes.** Three flows carry an optimistic checkpoint:
-  - **Receiving a PO line** â€” opening a line's confirmation modal and posting `expected_received` against a receipt that already changed on the server is refused with a refresh-page prompt, and an already-received line stays marked.
-  - **Editing a project** â€” the form posts `expected_project_fingerprint` (md5 over all editable fields and line rows); a stale submit is refused with a clear message.
-  - **Uploading a replacement quotation file** â€” posts `expected_document_fingerprint` (md5 of path/name/size); if another user already replaced the file, the upload is refused.
+  - **Receiving a PO line** — opening a line's confirmation modal and posting `expected_received` against a receipt that already changed on the server is refused with a refresh-page prompt, and an already-received line stays marked.
+  - **Editing a project** — the form posts `expected_project_fingerprint` (md5 over all editable fields and line rows); a stale submit is refused with a clear message.
+  - **Uploading a replacement quotation file** — posts `expected_document_fingerprint` (md5 of path/name/size); if another user already replaced the file, the upload is refused.
 - **Every page reads fresh from MySQL on load.** Reloading (browser refresh) always shows the latest state; the stale-fingerprint guards refuse edits against out-of-date data instead of overwriting silently.
 - **Receiving + tracking are transactional** behind the scenes (`DB::transaction()`), so a half-saved toggle cannot corrupt the PO state.
-- **Number sequences** (`number_sequences`) use `lockForUpdate()` when allocating `RFQ-`, `PL-`, `PO-` numbers â€” two concurrent allocations cannot collide.
+- **Number sequences** (`number_sequences`) use `lockForUpdate()` when allocating `RFQ-`, `PL-`, `PO-` numbers — two concurrent allocations cannot collide.
 - **Unique constraints** on junction tables enforce no-duplicate-rows at the database level.
-- **View-only roles** are blocked from writes both at the middleware and the controller layer â€” a read-only role cannot mutate state even by guessing the route.
+- **View-only roles** are blocked from writes both at the middleware and the controller layer — a read-only role cannot mutate state even by guessing the route.
 
 ### What to watch
 
-- **Last writer wins on edit forms** â€” only edit forms with no optimistic checkpoint behave this way (Prep Lists, Entities, RFQ regeneration). Two users editing the same prep list simultaneously will see only one's changes after save; the lose is silent but recoverable via the other tab's refresh.
+- **Last writer wins on edit forms** — only edit forms with no optimistic checkpoint behave this way (Prep Lists, Entities, RFQ regeneration). Two users editing the same prep list simultaneously will see only one's changes after save; the lose is silent but recoverable via the other tab's refresh.
 - **Sessions are per-user and persisted in the database.** Logging out actually clears the session entry, not just the cookie.
-- **Print + export** regenerate from live data at request time â€” never read stale snapshots.
+- **Print + export** regenerate from live data at request time — never read stale snapshots.
 
 ---
 
@@ -638,7 +638,7 @@ This is a single-box, multi-user deployment (a LAN box accessed by several staff
 
 ### What gets backed up
 
-One-click, full-database **schema + contents** â€” no external mysqldump binary required; the dump goes through the app's own connection.
+One-click, full-database **schema + contents** — no external mysqldump binary required; the dump goes through the app's own connection.
 
 ### Where back-ups live
 
@@ -649,22 +649,22 @@ One-click, full-database **schema + contents** â€” no external mysqldump bi
 - **Create**: click **Create back-up** on `/settings/backup`.
 - **Download**: click the Download icon next to a backup file in the history table.
 - **Delete**: click the Delete button; accept the confirmation prompt.
-- **Restore**: pick a backup and click the **Restore** pill in its row â€” the modal asks for the confirmation phrase `RESTORE` (safety snapshot of the current state is taken automatically before the replay starts).
+- **Restore**: pick a backup and click the **Restore** pill in its row — the modal asks for the confirmation phrase `RESTORE` (safety snapshot of the current state is taken automatically before the replay starts).
 
-### Restore â€” in-app
+### Restore — in-app
 
 Administrators can restore the database from any back-up in the history list, without touching the command line.
 
 1. On `/settings/backup`, pick the back-up you want and click **Restore** on that row.
 2. Type `RESTORE` exactly, then confirm. A **safety back-up of the current state is created first**, and a failed restore leaves it available for rollback. The MySQL `sessions` table is not replayed, so acting administrators stay logged in.
 3. The back-up file itself is validated (must end with `-- Dump completed` marker) before the replay starts; a truncated or foreign file is rejected.
-4. After the restore, verify counts in the panel on `/settings/backup` â€” all logs and modules show the restored counts.
+4. After the restore, verify counts in the panel on `/settings/backup` — all logs and modules show the restored counts.
 
 The command-line path below stays valid as an alternate restore route, and remains necessary for installations whose DB driver cannot replay the statement list directly.
 
 ### Restore (command line, fallback for any future admin)
 
-The restore is a one-way door: it **replaces** the current database with the backed-up one. Even so, the in-app flow takes a safety back-up of the current database automatically before anything is replayed, so the pre-restore state is always recoverable as a new back-up in the history list â€” restored with one more click.
+The restore is a one-way door: it **replaces** the current database with the backed-up one. Even so, the in-app flow takes a safety back-up of the current database automatically before anything is replayed, so the pre-restore state is always recoverable as a new back-up in the history list — restored with one more click.
 
 ### Verifying a restore (either path)
 
@@ -690,40 +690,40 @@ Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side midd
 
 ## Project status
 
-Legend: âœ… done Â· ðŸš§ in progress / not started.
+Legend: ✅ done · 🚧 in progress / not started.
 
 ### Done
-- [x] **Authentication** â€” username/email + password, account activation, session inactivity & absolute lifetime enforcement, throttled login, clear login-error messages
-- [x] **Entities** â€” procuring entities and suppliers: list/search/create/edit/delete, soft-delete, stored contact details
-- [x] **Projects** â€” list/search/create/edit/delete, delivery due-date tracking, per-item fulfillment status, progress bar, soft-delete, Excel export & print-ready folio sheet
-- [x] **Prep Lists** â€” list/search/create/edit/delete, item compilation with source quantities, per-project expiry/shelf-life rules, grouped by source project
-- [x] **RFQ Excel generation** â€” letterhead template, dynamic item rows, `.xlsx` download, ZIP for multiple suppliers, expiry/brand/unit price/shelf-life fields pre-labelled
-- [x] **Quotation** â€” database-backed tracker (grouped by prep list), supplier-file upload with strict template validation, per-item price/brand/expiry extraction, per-project expiry-vs-delivery colour coding, short-dated warning, delete/replace the uploaded file (doesn't delete the entry) â€” **blocked end-to-end once a PO references those quoted lines**, optimistic fingerprint guard on re-uploads
-- [x] **Purchase Order** â€” create from awarded quotation (proportional allocation across project sources), draft â†’ Sent â†’ Partially received â†’ Completed, cancel with reason, admin-only delete of draft/cancelled POs, Excel download on generation
-- [x] **Pagination** â€” every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings â†’ Logs)
-- [x] **Optimistic concurrency** â€” three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
-- [x] **Project edit lock** â€” `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** â€” 240 passing (1411 assertions)
-- [x] **Delivery notifications** â€” header bell feed from due dates + fulfillment progress (red: due â‰¤ 2 days or overdue, amber: due â‰¤ 7 days with zero items fulfilled)
-- [x] **Excel export** â€” project summary as `.xlsx` (plus printable folio view)
-- [x] **Data-integrity guards** â€” a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
-- [x] **Unique junction indexes** â€” composite unique constraints on `preplist_items` / `quotation_items` / `purchase_order_items`; duplicate key violations surface as validation errors
-- [x] **Expiry normalization** â€” supplier `.xlsx` expiry cells (`MM/YYYY`, month names, ISO dates) parsed crash-proof by `App\Support\ExpiryParser`; expiry columns are real `DATE` columns
-- [x] **Role-based access control** â€” `role_module_access` matrix (None / View / Manage) configured from Settings â†’ Privileges; enforced by the `module:{module}` middleware
-- [x] **Role-aware UI affordances** â€” view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
-- [x] **Activity logging** â€” module writes recorded; Settings â†’ Logs viewer is live (filterable, paginated)
-- [x] **Activity log retention** â€” automatic pruning: `php artisan activity:prune` deletes entries older than 365 days (`--days=N` custom window, `--dry-run` previews, refuses `--days < 1`); registered on the weekly schedule (runs with cron/task `php artisan schedule:run`)
-- [x] **Settings â†’ Backup** â€” administrator-only full-database backup with one-click in-app restore (automatic pre-restore safety snapshot, confirmation phrase, session preservation) plus plain-language restore instructions
-- [x] **Item Catalog** â€” `/item-catalog`: one row per item on a fully-received PO line, aggregated server-side (order counts, total qty/spend, weighted avg, best/latest price, last supplier); KPIs (items tracked / spend / suppliers used / lines bought); filters (search, category, supplier, from/to date range); item detail page (`/item-catalog/{item}`) with full purchase history, per-supplier comparison table, weighted avg / best-price / last-purchase tiles, and an inline SVG price-over-time chart; nav sidebar, `role_module_access` key, sidebar icon, README docs, and feature tests updated.
+- [x] **Authentication** — username/email + password, account activation, session inactivity & absolute lifetime enforcement, throttled login, clear login-error messages
+- [x] **Entities** — procuring entities and suppliers: list/search/create/edit/delete, soft-delete, stored contact details
+- [x] **Projects** — list/search/create/edit/delete, delivery due-date tracking, per-item fulfillment status, progress bar, soft-delete, Excel export & print-ready folio sheet
+- [x] **Prep Lists** — list/search/create/edit/delete, item compilation with source quantities, per-project expiry/shelf-life rules, grouped by source project
+- [x] **RFQ Excel generation** — letterhead template, dynamic item rows, `.xlsx` download, ZIP for multiple suppliers, expiry/brand/unit price/shelf-life fields pre-labelled
+- [x] **Quotation** — database-backed tracker (grouped by prep list), supplier-file upload with strict template validation, per-item price/brand/expiry extraction, per-project expiry-vs-delivery colour coding, short-dated warning, delete/replace the uploaded file (doesn't delete the entry) — **blocked end-to-end once a PO references those quoted lines**, optimistic fingerprint guard on re-uploads
+- [x] **Purchase Order** — create from awarded quotation (proportional allocation across project sources), draft → Sent → Partially received → Completed, cancel with reason, admin-only delete of draft/cancelled POs, Excel download on generation
+- [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
+- [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
+- [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
+- [x] **Tests** — 240 passing (1411 assertions)
+- [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days with zero items fulfilled)
+- [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
+- [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
+- [x] **Unique junction indexes** — composite unique constraints on `preplist_items` / `quotation_items` / `purchase_order_items`; duplicate key violations surface as validation errors
+- [x] **Expiry normalization** — supplier `.xlsx` expiry cells (`MM/YYYY`, month names, ISO dates) parsed crash-proof by `App\Support\ExpiryParser`; expiry columns are real `DATE` columns
+- [x] **Role-based access control** — `role_module_access` matrix (None / View / Manage) configured from Settings → Privileges; enforced by the `module:{module}` middleware
+- [x] **Role-aware UI affordances** — view-only roles see inert greyed buttons and access-restricted dialogs; sidebar hides modules a role cannot view
+- [x] **Activity logging** — module writes recorded; Settings → Logs viewer is live (filterable, paginated)
+- [x] **Activity log retention** — automatic pruning: `php artisan activity:prune` deletes entries older than 365 days (`--days=N` custom window, `--dry-run` previews, refuses `--days < 1`); registered on the weekly schedule (runs with cron/task `php artisan schedule:run`)
+- [x] **Settings → Backup** — administrator-only full-database backup with one-click in-app restore (automatic pre-restore safety snapshot, confirmation phrase, session preservation) plus plain-language restore instructions
+- [x] **Item Catalog** — `/item-catalog`: one row per item on a fully-received PO line, aggregated server-side (order counts, total qty/spend, weighted avg, best/latest price, last supplier); KPIs (items tracked / spend / suppliers used / lines bought); filters (search, category, supplier, from/to date range); item detail page (`/item-catalog/{item}`) with full purchase history, per-supplier comparison table, weighted avg / best-price / last-purchase tiles, and an inline SVG price-over-time chart; nav sidebar, `role_module_access` key, sidebar icon, README docs, and feature tests updated.
 
 
 ### Not yet done
-- [ ] **PDF export** â€” both PO and RFQ have a â€œDownload PDFâ€ button but it is not wired (no PDF library in the project yet)
-- [ ] **Partial receipts** â€” receiving is all-or-nothing per line: the checkbox always records the full line qty; `lot_no` / `expiry_date` are never populated. The `partially_received` PO status means *some lines fully received*, not *partial quantities delivered*.
-- [ ] **PO re-download** â€” the PO Excel is produced once at creation; there's no way to re-download it from the detail page
-- [ ] **PO tracking reference numbers** â€” PO only references the quotation; POâ†’project links via allocations are not yet surfaced on the PO detail page
+- [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
+- [ ] **Partial receipts** — receiving is all-or-nothing per line: the checkbox always records the full line qty; `lot_no` / `expiry_date` are never populated. The `partially_received` PO status means *some lines fully received*, not *partial quantities delivered*.
+- [ ] **PO re-download** — the PO Excel is produced once at creation; there's no way to re-download it from the detail page
+- [ ] **PO tracking reference numbers** — PO only references the quotation; PO→project links via allocations are not yet surfaced on the PO detail page
 - [ ] **Notifications** are computed on every page view; there's no persisted notification log or read state
-- [ ] **PhpSpreadsheet migration** â€” if `ext-gd` is enabled later, the manual workbook generator can be replaced
+- [ ] **PhpSpreadsheet migration** — if `ext-gd` is enabled later, the manual workbook generator can be replaced
 
 ### Known fragility worth addressing
 
@@ -734,10 +734,10 @@ Legend: âœ… done Â· ðŸš§ in progress / not started.
 
 ## Known limitations
 
-Accepted trade-offs in the current build â€” worth knowing before relying on the numbers:
+Accepted trade-offs in the current build — worth knowing before relying on the numbers:
 
 - **Requested quantity is an upper bound.** It is the sum of quantities in non-deleted projects; it is not reduced by received PO quantities, stock on hand, or fulfillment status.
-- **Savings estimates exclude real-world costs.** They use the requested quantity Ã— (average âˆ’ best) from current quotes and ignore freight, taxes, lead time, minimum order quantities, unit conversions, and delivery windows. Supplier-stated brand/expiry are shown but not enforced against a project's delivery date.
+- **Savings estimates exclude real-world costs.** They use the requested quantity × (average − best) from current quotes and ignore freight, taxes, lead time, minimum order quantities, unit conversions, and delivery windows. Supplier-stated brand/expiry are shown but not enforced against a project's delivery date.
 - **Deleting an uploaded quotation file deletes its priced lines.** The price history derived from those lines cannot be rebuilt from the file afterwards.
 
 - **Supplier colour is not persisted.** Colours are assigned by sorted supplier order, so adding or removing a supplier can reassign chart colours.
@@ -750,44 +750,44 @@ Accepted trade-offs in the current build â€” worth knowing before relying o
 
 ```
 purchasing/
-â”œâ”€â”€ app/
-â”‚   â”œâ”€â”€ Console/Commands/       # activity:prune â€” retention prune (weekly schedule; --days / --dry-run); db:dump â€” dev snapshot helper
-â”‚   â”œâ”€â”€ Http/Controllers/       # Auth, Entity, Entities, Projects, Preplist, ItemCatalog, PurchaseOrder, Quotation, Settings
-â”‚   â”œâ”€â”€ Http/Middleware/        # EnsureSessionIsActive, EnsureModuleAccess (module:{module})
-â”‚   â”œâ”€â”€ Models/                 # 21 models + casts, scopes, relationships
-â”‚   â”œâ”€â”€ Support/                # RfqQuotationWorkbook, PurchaseOrderWorkbook, QuotationWorkbookParser,
-â”‚   â”‚                           #   ExpiryParser, DeliveryNotifications, ActivityLogger, ModuleAccess,
-â”‚   â”‚                           #   ProjectSummaryWorkbook, DatabaseDumper, DatabaseRestorer, BackupStorage, Pagination
-â”‚   â””â”€â”€ Providers/              # access-settings gate; view composer feeds the bell icon
-â”œâ”€â”€ database/
-â”‚   â”œâ”€â”€ migrations/             # 34 migrations covering the whole domain (seeded role grants, activity logs,
-â”‚   â”‚                           #   unique junction indexes, expiry â†’ DATE columns)
-â”‚   â”œâ”€â”€ seeders/                # AdminUserSeeder (admin / user1 / user2 + seeded module grants)
-â”‚   â””â”€â”€ purchasing_db.sql       # committed dump for the dev snapshot
-â”œâ”€â”€ resources/
-â”‚   â”œâ”€â”€ css/                    # compiled CSS entry (Tailwind v4 via Vite)
-â”‚   â”œâ”€â”€ js/                     # compiled JS entry (chart.js, Alpine alternative none â€” vanilla)
-â”‚   â”œâ”€â”€ templates/              # RFQ-Template.xlsx and PO-Template.xlsx (letterhead documents)
-â”‚   â””â”€â”€ views/                  # Blade modules mirroring the sidebar; role-aware affordances via canModule()
-â”‚       â”œâ”€â”€ components/         # access-restricted-modal (shared amber dialog)
-â”‚       â””â”€â”€ errors/             # 403 â€” friendly module-access page
-â”œâ”€â”€ docs/                       # Procurement-flow PDFs; sample RFQ/PO artifacts
-â”œâ”€â”€ routes/
-â”‚   â””â”€â”€ web.php                 # All routes (login/logout public; rest behind auth + session.active;
-â”‚                               #   six module groups additionally behind module:{module})
-â”œâ”€â”€ storage/app/private/        # Uploaded supplier files and back-ups live here
-â”œâ”€â”€ tests/Feature/              # Feature suites per module (incl. ModuleAccessTest, PreplistTest, QuotationTest, â€¦)
-â””â”€â”€ public/                     # Vite build, favicon, robots.txt, .htaccess
+├── app/
+│   ├── Console/Commands/       # activity:prune — retention prune (weekly schedule; --days / --dry-run); db:dump — dev snapshot helper
+│   ├── Http/Controllers/       # Auth, Entity, Entities, Projects, Preplist, ItemCatalog, PurchaseOrder, Quotation, Settings
+│   ├── Http/Middleware/        # EnsureSessionIsActive, EnsureModuleAccess (module:{module})
+│   ├── Models/                 # 21 models + casts, scopes, relationships
+│   ├── Support/                # RfqQuotationWorkbook, PurchaseOrderWorkbook, QuotationWorkbookParser,
+│   │                           #   ExpiryParser, DeliveryNotifications, ActivityLogger, ModuleAccess,
+│   │                           #   ProjectSummaryWorkbook, DatabaseDumper, DatabaseRestorer, BackupStorage, Pagination
+│   └── Providers/              # access-settings gate; view composer feeds the bell icon
+├── database/
+│   ├── migrations/             # 34 migrations covering the whole domain (seeded role grants, activity logs,
+│   │                           #   unique junction indexes, expiry → DATE columns)
+│   ├── seeders/                # AdminUserSeeder (admin / user1 / user2 + seeded module grants)
+│   └── purchasing_db.sql       # committed dump for the dev snapshot
+├── resources/
+│   ├── css/                    # compiled CSS entry (Tailwind v4 via Vite)
+│   ├── js/                     # compiled JS entry (chart.js, Alpine alternative none — vanilla)
+│   ├── templates/              # RFQ-Template.xlsx and PO-Template.xlsx (letterhead documents)
+│   └── views/                  # Blade modules mirroring the sidebar; role-aware affordances via canModule()
+│       ├── components/         # access-restricted-modal (shared amber dialog)
+│       └── errors/             # 403 — friendly module-access page
+├── docs/                       # Procurement-flow PDFs; sample RFQ/PO artifacts
+├── routes/
+│   └── web.php                 # All routes (login/logout public; rest behind auth + session.active;
+│                               #   six module groups additionally behind module:{module})
+├── storage/app/private/        # Uploaded supplier files and back-ups live here
+├── tests/Feature/              # Feature suites per module (incl. ModuleAccessTest, PreplistTest, QuotationTest, …)
+└── public/                     # Vite build, favicon, robots.txt, .htaccess
 ```
 
 ---
 
 ## Documentation
 
-- `docs/Procurement-Flow-Project-A.pdf` â€” end-to-end flow for a sample project
+- `docs/Procurement-Flow-Project-A.pdf` — end-to-end flow for a sample project
 - `docs/Sample-Request-for-Quotation-RFQ-2026-0042.pdf|.xlsx`
 - `docs/Sample-Purchase-Order-PO-2026-0117.pdf|.xlsx`
-- `docs/Teaching-Guide-Purchasing-System.md` â€” onboarding guide for new users (this README extends it)
+- `docs/Teaching-Guide-Purchasing-System.md` — onboarding guide for new users (this README extends it)
 
 These describe the intended workflow; historical PDFs may reference earlier UI iterations.
 
