@@ -92,7 +92,7 @@ PS;
             'TOAST_MESSAGE' => $message,
         ]);
 
-        $process = new Process(['powershell.exe', '-NoProfile', '-File', $path], null, $env, null, 15);
+        $process = new Process(['powershell.exe', '-NoProfile', '-WindowStyle', 'Hidden', '-NonInteractive', '-File', $path], null, $env, null, 15);
         $process->run();
         @unlink($path);
 

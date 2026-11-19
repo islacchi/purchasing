@@ -45,10 +45,14 @@ class SchedulerInstaller
 
     /**
      * The command string registered with Task Scheduler.
+     *
+     * Wrapped in a hidden PowerShell so the scheduled run never flashes a
+     * console window. The wrapper hides its own console, and the PHP child
+     * shares it — the toast still pops up in the interactive session.
      */
     public static function taskCommand(): string
     {
-        return '"' . static::phpCli() . '" "' . static::artisanPath() . '" schedule:run';
+        return '"powershell.exe" -NoProfile -WindowStyle Hidden -Command "& \'' . static::phpCli() . '\' \'' . static::artisanPath() . '\' schedule:run"';
     }
 
     /**
