@@ -70,9 +70,9 @@
     @endphp
 
     <div class="flex min-h-full flex-col lg:h-full lg:min-h-0">
-    <div class="mb-4 shrink-0">
+    <div class="mb-2 shrink-0">
         <h2 class="text-2xl font-bold text-gray-900">{{ $isEdit ? 'Edit project' : 'Add project' }}</h2>
-        <p class="mt-1 text-xs text-gray-500">Fill in the project details, then add its item lines.</p>
+        <p class="mt-0.5 text-xs text-gray-500">Fill in the project details, then add its item lines.</p>
     </div>
 
     @if ($errors->any())
@@ -106,13 +106,13 @@
             <div class="grid items-stretch gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
 
                 {{-- LEFT RAIL --}}
-                <div class="flex flex-col gap-4 lg:h-full lg:min-h-0">
+                <div class="flex flex-col gap-3 lg:h-full lg:min-h-0">
 
                     {{-- Project details --}}
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <p class="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Project details</p>
+                    <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+                        <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Project details</p>
 
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <label for="title" class="mb-1 block text-[11px] font-semibold text-gray-600">Title</label>
                             <input id="title" type="text" name="title" value="{{ $title }}"
                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
@@ -121,7 +121,7 @@
                             @enderror
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <label for="reference_no" class="mb-1 block text-[11px] font-semibold text-gray-600">Reference no.</label>
                             <input id="reference_no" type="text" name="reference_no" value="{{ $referenceNo }}"
                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
@@ -154,16 +154,16 @@
                     </div>
 
                     {{-- Award & delivery --}}
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                        <p class="mb-3 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Award &amp; delivery</p>
+                    <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+                        <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Award &amp; delivery</p>
 
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <label for="amount_awarded" class="mb-1 block text-[11px] font-semibold text-gray-600">Amount awarded</label>
                             <input id="amount_awarded" type="number" min="0" step="0.01" name="amount_awarded" value="{{ $amountAwarded }}"
                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <label for="delivery_days" class="mb-1 block text-[11px] font-semibold text-gray-600">Delivery period</label>
                             <div class="flex gap-2">
                                 <select id="delivery_days" name="delivery_days"
@@ -183,7 +183,7 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <label for="date_awarded" class="mb-1 block text-[11px] font-semibold text-gray-600">Date awarded</label>
                             <input id="date_awarded" type="date" name="date_awarded" value="{{ $dateAwarded }}"
                                    class="h-9 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300">
@@ -202,11 +202,11 @@
                         </div>
                     </div>
 
-                    {{-- Notes — flex-grows to fill the rail height; shrinks with a floor, textarea scrolls internally --}}
-                    <div class="flex min-h-[110px] flex-col rounded-lg border border-gray-200 bg-white p-4 shadow-sm lg:min-h-[110px] lg:flex-1">
-                        <p class="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Notes</p>
+                    {{-- Notes — flex-grows to fill the rail height; shrinks with a floor, textarea handles its own height --}}
+                    <div class="flex min-h-[96px] flex-col rounded-lg border border-gray-200 bg-white p-3 shadow-sm lg:min-h-[96px] lg:flex-1">
+                        <p class="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Notes</p>
                         <textarea name="notes" rows="4"
-                                  class="w-full min-h-[80px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 lg:min-h-0">{{ $notes }}</textarea>
+                                  class="w-full min-h-[60px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 lg:min-h-0">{{ $notes }}</textarea>
                     </div>
                 </div>
 
@@ -223,15 +223,6 @@
                                     title="Add many items by pasting rows copied from Excel or Google Sheets">
                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 13l2 2 4-4"/></svg>
                                 Paste items
-                            </button>
-                            <button type="button" id="deleteItemBtn"
-                                    class="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
-                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                Delete<span id="deleteItemCount"></span>
-                            </button>
-                            <button type="button" id="cancelSelectBtn"
-                                    class="hidden flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50">
-                                Cancel
                             </button>
                         </div>
                     </div>
@@ -438,7 +429,7 @@
         </div>
 
         {{-- Footer — pinned, unboxed (same placement and design as the other detail pages) --}}
-        <div class="no-print mt-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div class="no-print mt-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
             <a href="{{ route('projects') }}"
                class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -447,6 +438,19 @@
                 Cancel
             </a>
             <div class="flex items-center gap-3">
+                <button type="button" id="deleteItemBtn"
+                        class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Delete<span id="deleteItemCount"></span>
+                </button>
+                <button type="button" id="cancelSelectBtn"
+                        class="hidden flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                        title="Exit item selection">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Cancel
+                </button>
                 <button type="submit"
                         class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
