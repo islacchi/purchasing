@@ -10,7 +10,7 @@
     <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}">
     <title>Access restricted - Purchasing</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ asset('js/tailwind-play-cdn.js') }}"></script>
 </head>
 <body class="bg-gray-100">
     <main class="min-h-screen flex items-center justify-center px-4">

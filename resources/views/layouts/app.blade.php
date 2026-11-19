@@ -12,7 +12,7 @@
     }
 </script>
     <title>@yield('title', 'Purchasing')</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ asset('js/tailwind-play-cdn.js') }}"></script>
 <style>
         html, body { overflow: hidden; height: 100%; }
 
