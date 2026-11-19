@@ -225,7 +225,21 @@
                             <tbody class="{{ $loop->odd ? 'bg-white' : 'bg-[#f2f7f8]' }}">
                                 <tr class="transition-colors hover:bg-[#e4edf0]">
                                     <td class="px-4 py-2.5 align-top">
-                                        <p class="break-words text-sm font-medium leading-snug text-gray-900">{{ $row['name'] }}</p>
+                                        <div class="flex items-start gap-1.5">
+                                            @if ($row['source_count'] > 0)
+                                                <button type="button"
+                                                        data-toggle-sources="{{ $row['id'] }}"
+                                                        aria-expanded="false"
+                                                        aria-label="Toggle {{ $row['source_count'] }} source line{{ $row['source_count'] === 1 ? '' : 's' }}"
+                                                        title="Toggle source lines"
+                                                        class="mt-0.5 shrink-0 rounded p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                                    <svg class="source-chevron h-4 w-4 -rotate-90 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </button>
+                                            @endif
+                                            <p class="break-words text-sm font-medium leading-snug text-gray-900">{{ $row['name'] }}</p>
+                                        </div>
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-2.5 text-center align-top">
                                         <span class="text-sm font-semibold text-gray-900">{{ number_format($row['requested']) }}</span>
@@ -254,7 +268,7 @@
                                     </td>
                                 </tr>
                                 @foreach ($row['sources'] as $source)
-                                    <tr class="transition-colors hover:bg-[#e4edf0]">
+                                    <tr class="source-row hidden transition-colors hover:bg-[#e4edf0]" data-source-of="{{ $row['id'] }}">
                                         <td colspan="5" class="border-t border-dashed border-gray-200 py-1.5 pl-10 pr-4 text-xs text-gray-500">
                                             <span class="mr-1 text-gray-400">↳</span>Contributes <span class="font-semibold text-gray-800">{{ number_format($source['qty']) }} {{ $source['unit'] }}</span> · <span class="text-gray-700">{{ $source['name'] }}</span> · <span class="text-gray-500">{{ $source['reference'] }}</span>
                                         </td>
@@ -424,6 +438,30 @@
             if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
                 closeModal();
             }
+        });
+    })();
+</script>
+@endpush
+
+@push('scripts')
+<script>
+    // Collapsible source lines under each item row.
+    (function () {
+        document.querySelectorAll('[data-toggle-sources]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var itemId = button.getAttribute('data-toggle-sources');
+                var chevron = button.querySelector('.source-chevron');
+                var expanded = button.getAttribute('aria-expanded') === 'true';
+
+                document.querySelectorAll('.source-row[data-source-of="' + itemId + '"]').forEach(function (row) {
+                    row.classList.toggle('hidden', expanded);
+                });
+
+                button.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                if (chevron) {
+                    chevron.classList.toggle('-rotate-90', expanded);
+                }
+            });
         });
     })();
 </script>
