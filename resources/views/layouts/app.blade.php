@@ -58,6 +58,19 @@
         }
         html.sidebar-expanded .flash-success-overlay { left: calc(16rem + 2rem); }
         .flash-success-overlay.is-hiding { opacity: 0; transform: translateY(-4px); }
+
+        /* Admin-only "deadline notifications not set up" reminder: same geometry
+         * as the success flash, but interactive (links/buttons) so it must
+         * receive pointer events. */
+        .toast-setup-reminder-overlay {
+            position: fixed;
+            top: 7rem;
+            left: calc(5rem + 2rem);
+            right: 2rem;
+            z-index: 60;
+            pointer-events: auto;
+        }
+        html.sidebar-expanded .toast-setup-reminder-overlay { left: calc(16rem + 2rem); }
     </style>
 </head>
 
@@ -345,6 +358,7 @@
             {{-- Content --}}
             <main class="flex-1 overflow-y-auto bg-gray-100 p-8">
                 @include('partials.flash-success')
+                @include('partials.toast-setup-reminder')
                 @yield('content')
             </main>
         </div>

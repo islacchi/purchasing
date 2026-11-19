@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\RoleModuleAccess;
 use App\Models\User;
 use App\Support\ActivityLogger;
+use App\Support\SchedulerInstaller;
 use App\Support\BackupStorage;
 use App\Support\DatabaseDumper;
 use App\Support\DatabaseRestorer;
@@ -14,6 +15,7 @@ use App\Support\ModuleAccess;
 use App\Support\Pagination;
 use DateTime;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -580,5 +582,42 @@ class SettingsController extends Controller
         return redirect()
             ->route('settings.backup')
             ->with('status', 'Database back-up deleted.');
+    }
+
+    /**
+     * Dismiss the admin-only "deadline notifications not set up" reminder.
+     * Stored per signed-in administrator so each of them decides for themselves.
+     */
+    public function dismissToastReminder()
+    {
+        if (auth()->check()) {
+            Cache::forever('toast_setup_reminder.dismissed.' . auth()->id(), true);
+            ActivityLogger::log('Dismissed', 'Settings', 'Deadline-notification setup reminder dismissed');
+        }
+
+        return back();
+    }
+
+    /**
+     * Register the Windows Task Scheduler entry that keeps the Laravel
+     * scheduler ticking, which is what lets the deadline toast fire
+     * automatically. Windows only; overwrites an existing task if present.
+     */
+    public function installToast()
+    {
+        abort_unless(auth()->user()?->isAdministrator(), 403, 'Administrator only.');
+
+        $result = SchedulerInstaller::install();
+        Cache::forget('toast_setup_reminder.task_present');
+
+        if (! $result['ok']) {
+            ActivityLogger::log('Failed to install', 'Settings', 'Windows task scheduler entry for deadline notifications could not be installed');
+
+            return back()->withErrors(['toast_setup' => 'The automatic notification could not be installed: ' . ($result['output'] ?: 'unknown error')]);
+        }
+
+        ActivityLogger::log('Installed', 'Settings', 'Windows task scheduler entry for deadline notifications');
+
+        return back()->with('status', 'Windows notifications installed. The purchasing toast will fire from now on, every 4 hours.');
     }
 }

@@ -165,6 +165,8 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::get('/settings/backup/download/{file}', [SettingsController::class, 'downloadBackup'])->name('settings.backup.download');
         Route::post('/settings/backup/restore', [SettingsController::class, 'restoreBackup'])->name('settings.backup.restore');
         Route::delete('/settings/backup/{file}', [SettingsController::class, 'destroyBackup'])->name('settings.backup.destroy');
+        Route::post('/settings/toast-reminder/dismiss', [SettingsController::class, 'dismissToastReminder'])->name('settings.toast-reminder.dismiss');
+        Route::post('/settings/toast-reminder/install', [SettingsController::class, 'installToast'])->name('settings.toast-reminder.install');
 
         // Dummy configuration page (front end only; back-end TODOs live in the view).
         Route::get('/settings/configuration', [PageController::class, 'show'])->defaults('page', 'Settings.configuration')->name('settings.configuration');
