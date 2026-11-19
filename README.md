@@ -59,7 +59,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Login is throttled (`throttle:6,1` — 6 attempts per minute per IP).
 - Expired/inactive sessions are dropped by `EnsureSessionIsActive` middleware.
 - Logout via a sidebar button; a confirmation modal prevents accidental logouts.
-- Login page reports precisely which field was wrong on failure (no vague “invalid credentials” for known-good accounts).
+- Login page reports precisely which field was wrong on failure (no vague “invalid credentials” for known-good accounts).
 
 ### Projects (`/projects`)
 
@@ -71,7 +71,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
   - **Entity** — shows only projects assigned to the selected procuring entity.
   - **Mode** — shows only projects in the selected mode (Shopping, Small value, Competitive bidding, Direct contracting).
   - **Fulfillment status** — `Open (unfulfilled items)` shows projects with at least one unfulfilled line; `Completed (all fulfilled)` shows projects with no unfulfilled lines.
-- Empty with filters returns “No projects match the current filters” with the Add button hidden so it doesn't mislead.
+- Empty with filters returns “No projects match the current filters” with the Add button hidden so it doesn't mislead.
 - View modes: **Content** (card list), **Details** (metadata columns), **List** (dense table) — all paged from the same paginated slice (`?page=`).
 - A hidden, folio-sized print sheet renders in print preview (8.5 × 13 in officio, landscape) via a modal; clicking Print calls `window.print()` with the correct `@page` size. The same content streams from `/projects/{project}/download` (`projects.download`) as an `.xlsx` workbook built by `ProjectSummaryWorkbook`.
 - Item lines already compiled into a prep list are **locked** in the form (read-only, greyed, lock icon, tooltip naming the prep list). Saving around locked lines works as usual; a locked line cannot be changed or removed here — do it in the prep list first. Removing a sourced line from the form is refused with a friendly message; nothing is saved until the prep list stops referencing the line.
@@ -86,7 +86,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - A submitted prep list can only be deleted along with **all** linked quotations; it refuses (with per-supplier reasons) when any linked quotation is progressed — has priced lines, an uploaded file, or a PO reference. All-or-nothing, like the project edit lock.
 - Sources are recorded in `preplist_item_sources` (quantity sourced per project line) — the provenance chain from project → prep list is intact.
 - Generating the RFQ from a prep list (`/preplist/{preplist}/generate-rfq`) validates that supplier candidates are chosen and that every item is either quoted or unquoted — nothing partial.
-- A display-filter dropdown (next to the search bar) narrows by **created by** (users who have compiled preplists), **item category** (drugs and medicines / supplies and equipments), and **quotation status** (Quoted / Awaiting quote); selection auto-submits and shows a badge count of active filters; empty filtered results say “No prep lists match the current filters”.
+- A display-filter dropdown (next to the search bar) narrows by **created by** (users who have compiled preplists), **item category** (drugs and medicines / supplies and equipments), and **quotation status** (Quoted / Awaiting quote); selection auto-submits and shows a badge count of active filters; empty filtered results say “No prep lists match the current filters”.
 
 ### Generate RFQ (`/preplist/{preplist}/generate-rfq`)
 
@@ -103,7 +103,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 - Quotations are grouped by prep list; each quotation row shows the supplier, attached RFQ number, per-item response status, and upload status.
 - A search bar (supplier / prep list name / reference no. / RFQ number) narrows the tracker server-side; a matching prep list group keeps its matching quotations.
-- A display-filter dropdown (next to the search bar) narrows by **supplier**, **created by** (users who generated quotations), and **quotation status** (Quoted / Awaiting quote, matched on priced lines); selection auto-submits and shows a badge count of active filters; empty filtered results say “No quotations match the current filters.” The prep-list-groups-per-page choice moved inside it.
+- A display-filter dropdown (next to the search bar) narrows by **supplier**, **created by** (users who generated quotations), and **quotation status** (Quoted / Awaiting quote, matched on priced lines); selection auto-submits and shows a badge count of active filters; empty filtered results say “No quotations match the current filters.” The prep-list-groups-per-page choice moved inside it.
 - Upload the supplier's returned `.xlsx` (`POST /quotation/{quotation}/document`, `quotation.store-document`):
   - The file is validated against the RFQ template **before** parsing (header layout + column mapping), so garbage files are rejected with a clear message.
   - The parser reads prices, brand, and expiry per item via `App\Support\QuotationWorkbookParser`; expiry values in any format (`MM/YYYY`, month names, ISO) are normalized by `App\Support\ExpiryParser`.
@@ -123,7 +123,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - PO numbers come from the shared `number_sequences` table as `PO-YYYY-NNNN`.
 - Status flow: `draft → sent → partially_received → completed` (cancel any time before completion; admin-only delete of draft/cancelled POs).
 - Receiving: each line has a **Mark as received** checkbox with a confirmation modal — confirming records the full line qty as received and moves the PO to `partially_received` / `completed`. Once a line is received it is locked in the UI and un-marking is refused server-side; `expected_received` guards against stale pages and races.
-- Single-file Excel download at creation; no re-download in this build (see [Not yet done](#not-yet-done)).
+- Single-file Excel download at creation; no re-download in this build.
 - People with view-only roles get the receive checkboxes disabled (greyed, access-restricted modal on click). Unauthorized modification attempts are still blocked server-side by the `module:purchase-order` middleware.
 
 ### Entities (`/entities`)
@@ -178,7 +178,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Red: due within 2 days / already overdue.
 - Amber: due within 7 days with 0 items fulfilled.
 - Fuelled entirely by `projects.delivery_due_date` and `project_items.fulfillment_status`; no stored notification rows.
-- The bell badge counts projects that are at risk — not “notifications you haven't read”.
+- The bell badge counts projects that are at risk — not “notifications you haven't read”.
 
 ---
 
@@ -718,10 +718,6 @@ Legend: ✅ done · 🚧 in progress / not started.
 
 
 ### Not yet done
-- [ ] **PDF export** — both PO and RFQ have a “Download PDF” button but it is not wired (no PDF library in the project yet)
-- [ ] **Partial receipts** — receiving is all-or-nothing per line: the checkbox always records the full line qty; `lot_no` / `expiry_date` are never populated. The `partially_received` PO status means *some lines fully received*, not *partial quantities delivered*.
-- [ ] **PO re-download** — the PO Excel is produced once at creation; there's no way to re-download it from the detail page
-- [ ] **PO tracking reference numbers** — PO only references the quotation; PO→project links via allocations are not yet surfaced on the PO detail page
 - [ ] **Notifications** are computed on every page view; there's no persisted notification log or read state
 - [ ] **PhpSpreadsheet migration** — if `ext-gd` is enabled later, the manual workbook generator can be replaced
 
