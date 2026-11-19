@@ -138,7 +138,7 @@
         <div class="grid min-h-0 flex-1 auto-rows-[minmax(0,1fr)] grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
 
             {{-- LEFT COLUMN --}}
-            <div class="min-h-0 space-y-3">
+            <div class="h-full min-h-0 space-y-3 overflow-y-auto">
                 {{-- Prep list info --}}
                 <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
                     <p class="px-4 pt-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Prep list info</p>
@@ -196,14 +196,14 @@
             </div>
 
             {{-- RIGHT COLUMN — Items table --}}
-            <div class="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
                     <div>
                         <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Items · {{ $itemRows->count() }} {{ $itemRows->count() === 1 ? 'line' : 'lines' }} · across {{ $sourceProjects->count() }} {{ $sourceProjects->count() === 1 ? 'project' : 'projects' }}</h3>
                         <p class="mt-0.5 text-xs text-gray-500">Total to procure: {{ number_format($totalRequested) }} units</p>
                     </div>
                 </div>
-                <div class="min-h-[180px] overflow-auto">
+                <div class="min-h-0 flex-1 overflow-auto">
                     <table class="w-full table-fixed">
                         <colgroup>
                             <col class="w-[32%]">
