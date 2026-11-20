@@ -7,7 +7,6 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\PurchaseOrderCreator;
-use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -470,61 +469,11 @@ class PoCartController extends Controller
         $numbers = collect($created)->pluck('po_number')->implode(', ');
         $message = 'Created '.count($created).' purchase order'.(count($created) === 1 ? '' : 's').': '.$numbers.'. The draft POs are ready to review and send.';
 
-        try {
-            $files = [];
-            foreach ($created as $po) {
-                $po->load(['items.item', 'items.allocations']);
-                $files[$po->po_number.'.xlsx'] = PurchaseOrderWorkbook::build($po, $po->items);
-            }
+        session()->flash('status', $message);
 
-            session()->flash('status', $message);
-
-            if (count($files) === 1) {
-                $name = array_key_first($files);
-
-                return response($files[$name], 200, [
-                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'Content-Disposition' => 'attachment; filename="'.$name.'"',
-                    'Cache-Control' => 'no-store, no-cache, must-revalidate',
-                    'Pragma' => 'no-cache',
-                ]);
-            }
-
-            // Multiple awarded quotations on one checkout: one ZIP with every workbook.
-            $temporaryPath = tempnam(sys_get_temp_dir(), 'po_batch_').'.zip';
-            $zip = new \ZipArchive;
-
-            if ($zip->open($temporaryPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-                throw new \RuntimeException('Unable to create the purchase order batch archive.');
-            }
-
-            foreach ($files as $name => $content) {
-                $zip->addFromString($name, $content);
-            }
-
-            $zip->close();
-
-            $contents = file_get_contents($temporaryPath);
-            unlink($temporaryPath);
-
-            if ($contents === false) {
-                throw new \RuntimeException('Unable to read the purchase order batch archive.');
-            }
-
-            return response($contents, 200, [
-                'Content-Type' => 'application/zip',
-                'Content-Disposition' => 'attachment; filename="PurchaseOrders-'.count($files).'-'.now()->format('Ymd-His').'.zip"',
-                'Cache-Control' => 'no-store, no-cache, must-revalidate',
-                'Pragma' => 'no-cache',
-            ]);
-        } catch (\Throwable $exception) {
-            // The POs already exist and the cart is already emptied; never strand the user.
-            report($exception);
-
-            return redirect()
-                ->route('purchase-order')
-                ->with('status', $message.' (the file download failed — open each draft from the list)');
-        }
+        // Return to the cart blade after creating the draft POs — the checkout
+        // modal is left behind with the now-empty cart instead of staying open.
+        return $this->redirectBack($request, $message);
     }
 
     /**

@@ -281,14 +281,9 @@ class CartTest extends TestCase
                 'deliver_to' => 'Central Warehouse',
             ]);
 
-        $response->assertOk();
-        $this->assertSame(
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            $response->headers->get('Content-Type'),
-        );
-        $disposition = (string) $response->headers->get('Content-Disposition');
-        $this->assertStringContainsString('attachment; filename="PO-', $disposition);
-        $this->assertStringContainsString('.xlsx', $disposition);
+        // Checkout now returns to the cart blade instead of streaming a file.
+        $response->assertRedirect(route('po-cart'));
+
         $this->assertDatabaseCount('po_cart_items', 0);
 
         $quotationItemId = $item->id;
@@ -305,7 +300,7 @@ class CartTest extends TestCase
         $this->assertSame('305.00', (string) $line->unit_price);
     }
 
-    public function test_bulk_checkout_creates_multiple_purchase_orders_and_downloads_a_zip(): void
+    public function test_bulk_checkout_creates_multiple_purchase_orders_and_redirects_back_to_the_cart(): void
     {
         $user = $this->admin();
         $entity = $this->entity();
@@ -356,25 +351,8 @@ class CartTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('po-cart.checkout'));
 
-        $response->assertOk();
-        $this->assertSame('application/zip', $response->headers->get('Content-Type'));
-        $disposition = (string) $response->headers->get('Content-Disposition');
-        $this->assertStringContainsString('.zip', $disposition);
+        $response->assertRedirect(route('po-cart'));
 
-        $zipPath = tempnam(sys_get_temp_dir(), 'po_zip_').'.zip';
-        file_put_contents($zipPath, $response->getContent());
-
-        $zip = new \ZipArchive;
-        $this->assertTrue($zip->open($zipPath) === true);
-        $this->assertSame(2, $zip->numFiles);
-        $names = [];
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $names[] = $zip->getNameIndex($i);
-        }
-        $zip->close();
-        unlink($zipPath);
-
-        $this->assertEqualsCanonicalizing(['PO-2026-0001.xlsx', 'PO-2026-0002.xlsx'], $names);
         $this->assertDatabaseCount('purchase_orders', 2);
         $this->assertDatabaseCount('po_cart_items', 0);
     }
