@@ -7,28 +7,7 @@
 @endsection
 
 @section('content')
-    <style>
-        /* Selected supplier chips use a dedicated state class instead of
-           dynamically added Tailwind utilities. This prevents the base
-           bg-white / text-gray-700 classes from winning based on CSS order. */
-        .supplier-token.is-selected {
-            background-color: #2a7a94;
-            border-color: #2a7a94;
-            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        }
-        .supplier-token.is-selected:hover {
-            background-color: #236b80; /* darker teal */
-        }
-        .supplier-token.is-selected .supplier-chip-label {
-            color: #fff;
-        }
-        .supplier-token.is-selected .chip-box {
-            display: none;
-        }
-        .supplier-token.is-selected .chip-check {
-            display: block;
-        }
-    </style>
+
 
 
     {{-- The prep list, its item totals, suppliers, and initial selection state
@@ -63,87 +42,76 @@
     </div>
 
     {{-- Quick select — one chip per supplier; toggling one checks that supplier on every item --}}
-    <div class="shrink-0 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-        <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            Quick select - request the whole prep list from a supplier
-        </p>
-        <div class="flex flex-wrap gap-2">
-            @foreach($suppliers as $supplier)
-                <label class="supplier-token flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white cursor-pointer select-none transition-all hover:border-[#2a7a94] hover:bg-gray-50 focus-within:ring-2 focus-within:ring-teal-200">
-                    <input type="checkbox" class="quick-supplier-check sr-only" data-supplier="{{ $supplier['name'] }}"
-                           title="Request the whole prep list from {{ $supplier['name'] }}">
-                    <svg class="chip-box w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2"/>
-                    </svg>
-                    <svg class="chip-check w-4 h-4 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2"/>
-                        <path d="M9 12l2 2 4-4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="supplier-chip-label text-sm font-medium text-gray-700">{{ $supplier['name'] }} - All Items</span>
-                </label>
-            @endforeach
-        </div>
         @if($suppliers->isEmpty())
-            <p class="text-sm text-gray-500">No suppliers found. Add suppliers from the Entities module first.</p>
-        @endif
-    </div>
+        <div class="shrink-0 mb-4 rounded-lg border border-gray-200 bg-white p-5 text-sm text-gray-500 shadow-sm">
+            No suppliers found. Add suppliers from the Entities module first.
+        </div>
+    @endif
 
-    {{-- Divider --}}
-    <div class="flex shrink-0 items-center gap-4 my-6">
-        <div class="flex-1 border-t border-gray-200"></div>
-        <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">or choose per item</span>
-        <div class="flex-1 border-t border-gray-200"></div>
-    </div>
-    {{-- Per-item sections (item list scrolls here) — one box per prep list item --}}
-    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 overscroll-contain">
-        @forelse($items as $item)
-            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-colors hover:border-gray-300">
-                <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-gray-100">
-                    <div class="min-w-0">
-                        <p class="font-bold text-gray-900 break-words">{{ $item['name'] }}</p>
-                        <p class="mt-1 text-xs text-gray-500">
-                            @if(!empty($item['shelf_life']))
-                                Shelf life required:
-                                <span class="font-medium text-gray-700">&ge; {{ $item['shelf_life'] }} months remaining at delivery</span>
-                            @else
-                                Non-perishable &mdash; no shelf-life requirement
-                            @endif
-                        </p>
-                    </div>
-                    <div class="shrink-0 text-right">
-                        <span class="inline-flex items-baseline rounded-full bg-[#e4edf0] px-3 py-1 text-xs font-bold text-[#0e5266] whitespace-nowrap">{{ $item['total'] }} {{ $item['unit'] }} to procure</span>
-                    </div>
-                </div>
-                <div class="px-5 py-4">
-                    <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Suppliers</p>
-                    <div class="flex flex-wrap gap-2">
-                        @foreach($suppliers as $supplier)
-                            <label class="supplier-token flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white cursor-pointer select-none transition-all hover:border-[#2a7a94] hover:bg-gray-50 focus-within:ring-2 focus-within:ring-teal-200">
-                                <input type="checkbox"
-                                       class="item-supplier-check sr-only"
-                                       data-supplier="{{ $supplier['name'] }}"
-                                       data-item-key="{{ $item['key'] }}"
-                                       {{ ($initialItemSelections[$item['key']][$supplier['name']] ?? false) ? 'checked' : '' }}
-                                       title="Ask {{ $supplier['name'] }} for {{ $item['name'] }}">
-                                <svg class="chip-box w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2"/>
-                                </svg>
-                                <svg class="chip-check w-4 h-4 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                    <rect x="3" y="3" width="18" height="18" rx="3" stroke-width="2"/>
-                                    <path d="M9 12l2 2 4-4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span class="supplier-chip-label text-sm font-medium text-gray-700">{{ $supplier['name'] }}</span>
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+    <p class="shrink-0 mb-2 text-xs text-gray-500">
+        Tick a supplier's header box to request every item from them, or tick individual cells.
+    </p>
+
+    {{-- Selection grid: rows = items, columns = suppliers --}}
+    <div class="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-gray-200 bg-white shadow-sm">
+        @if($items->isEmpty())
+            <div class="px-6 py-12 text-center">
                 <h3 class="text-base font-semibold text-gray-900">No items to request</h3>
                 <p class="mt-1 text-sm text-gray-500">This prep list has no compiled items yet. Edit the prep list to add project items first.</p>
             </div>
-        @endforelse
+        @else
+            <table class="w-full border-separate border-spacing-0 text-sm">
+                <thead>
+                    <tr>
+                        <th class="sticky left-0 top-0 z-30 min-w-[280px] border-b border-r border-gray-200 bg-gray-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                            Item
+                        </th>
+                        @foreach($suppliers as $supplier)
+                            <th class="sticky top-0 z-20 min-w-[132px] border-b border-gray-200 bg-gray-50 px-3 py-3 text-center font-normal">
+                                <label class="flex cursor-pointer flex-col items-center gap-1">
+                                    <input type="checkbox"
+                                           class="supplier-all-check h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
+                                           data-supplier="{{ $supplier['name'] }}"
+                                           title="Request every item from {{ $supplier['name'] }}">
+                                    <span class="text-xs font-semibold leading-tight text-gray-800">{{ $supplier['name'] }}</span>
+                                    <span class="supplier-count text-[11px] text-gray-400" data-supplier="{{ $supplier['name'] }}">0 / {{ $items->count() }}</span>
+                                </label>
+                            </th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($items as $item)
+                        <tr class="group">
+                            <th scope="row" class="sticky left-0 z-10 border-b border-r border-gray-100 bg-white px-4 py-3 text-left font-normal group-hover:bg-gray-50">
+                                <p class="break-words font-semibold text-gray-900">{{ $item['name'] }}</p>
+                                <p class="mt-0.5 text-xs text-gray-500">
+                                    @if(!empty($item['shelf_life']))
+                                        &ge; {{ $item['shelf_life'] }} mo shelf life
+                                    @else
+                                        Non-perishable
+                                    @endif
+                                    <span class="mx-1 text-gray-300">&middot;</span>
+                                    {{ $item['total'] }} {{ $item['unit'] }} to procure
+                                </p>
+                            </th>
+                            @foreach($suppliers as $supplier)
+                                <td class="border-b border-gray-100 p-0 text-center group-hover:bg-gray-50">
+                                    <label class="flex h-full w-full cursor-pointer items-center justify-center px-3 py-3">
+                                        <input type="checkbox"
+                                               class="item-supplier-check h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
+                                               data-supplier="{{ $supplier['name'] }}"
+                                               data-item-key="{{ $item['key'] }}"
+                                               aria-label="Ask {{ $supplier['name'] }} for {{ $item['name'] }}"
+                                               {{ ($initialItemSelections[$item['key']][$supplier['name']] ?? false) ? 'checked' : '' }}>
+                                    </label>
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
     </div>
 
     {{-- RFQ files to generate — one row per supplier with at least one checked item.
@@ -241,40 +209,6 @@
             const ITEM_DATA_BY_KEY = {};
             @json($items).forEach(function (item) {
                 ITEM_DATA_BY_KEY[item.key] = { name: item.name, total: item.total, unit: item.unit, shelf_life: item.shelf_life };
-            });
-
-            // ------------------------------------------------------------------
-            // Chip visuals — reflect each hidden checkbox state on its token.
-            // The selected styling lives in the .is-selected CSS rules above,
-            // so it always wins over the chip's base white/gray classes.
-            // ------------------------------------------------------------------
-            function applyChipState(input) {
-                const token = input.closest('.supplier-token');
-                if (token) {
-                    token.classList.toggle('is-selected', input.checked);
-                }
-            }
-
-            document.querySelectorAll('.supplier-token input[type="checkbox"]').forEach(function (input) {
-                applyChipState(input);
-                input.addEventListener('change', function () {
-                    applyChipState(this);
-                });
-            });
-
-            // ------------------------------------------------------------------
-            // Quick select — ticking a chip checks that supplier on every item.
-            // Each per-item chip afterwards stays independent of Quick Select.
-            // ------------------------------------------------------------------
-            document.querySelectorAll('.quick-supplier-check').forEach(function (cb) {
-                cb.addEventListener('change', function () {
-                    const supplier = cb.dataset.supplier;
-                    document.querySelectorAll('.item-supplier-check[data-supplier="' + CSS.escape(supplier) + '"]').forEach(function (itemCb) {
-                        itemCb.checked = cb.checked;
-                        applyChipState(itemCb);
-                    });
-                    syncGenerateList();
-                });
             });
 
             // ------------------------------------------------------------------
@@ -511,6 +445,44 @@
             });
 
             // Initial render.
+
+                        // ------------------------------------------------------------------
+            // Grid header: select-all per supplier, with a dash when partial.
+            // ------------------------------------------------------------------
+            function columnBoxes(supplier) {
+                return document.querySelectorAll('.item-supplier-check[data-supplier="' + CSS.escape(supplier) + '"]');
+            }
+
+            function syncColumn(supplier) {
+                const boxes = columnBoxes(supplier);
+                const checked = Array.prototype.filter.call(boxes, function (b) { return b.checked; }).length;
+                const all = document.querySelector('.supplier-all-check[data-supplier="' + CSS.escape(supplier) + '"]');
+                const label = document.querySelector('.supplier-count[data-supplier="' + CSS.escape(supplier) + '"]');
+
+                if (all) {
+                    all.checked = boxes.length > 0 && checked === boxes.length;
+                    all.indeterminate = checked > 0 && checked < boxes.length;
+                }
+                if (label) {
+                    label.textContent = checked + ' / ' + boxes.length;
+                }
+            }
+
+            document.querySelectorAll('.supplier-all-check').forEach(function (all) {
+                all.addEventListener('change', function () {
+                    columnBoxes(all.dataset.supplier).forEach(function (b) { b.checked = all.checked; });
+                    syncColumn(all.dataset.supplier);
+                    syncGenerateList();
+                });
+            });
+
+            document.querySelectorAll('.item-supplier-check').forEach(function (cb) {
+                cb.addEventListener('change', function () { syncColumn(cb.dataset.supplier); });
+            });
+
+            document.querySelectorAll('.supplier-all-check').forEach(function (all) {
+                syncColumn(all.dataset.supplier);
+            });
             syncGenerateList();
         })();
     </script>
