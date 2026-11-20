@@ -587,9 +587,12 @@ class LocalPurchaseTest extends TestCase
         $this->assertStringContainsString('Mefenamic Capsule - 500mg', $sheetXml);
         $this->assertStringContainsString('PURCHASE ORDER', $sheetXml);
 
-        // Local purchases keep the amount column blank — the price is only
-        // recorded once the purchase is marked as bought.
+        // Local purchases keep the unit price and amount columns blank — the
+        // price is only recorded once the purchase is marked as bought. The
+        // quoted price (from the project award) is still surfaced as a column.
+        $this->assertStringContainsString('<c r="F17" s="4"/>', $sheetXml);
         $this->assertStringContainsString('<c r="G17" s="4"/>', $sheetXml);
+        $this->assertStringContainsString('<c r="I17" s="4" t="inlineStr"><is><t xml:space="preserve">₱ 305.00</t></is></c>', $sheetXml);
         $this->assertStringContainsString('<c r="G18" s="10"/>', $sheetXml);
         $this->assertStringContainsString('<c r="G20" s="12"/>', $sheetXml);
     }

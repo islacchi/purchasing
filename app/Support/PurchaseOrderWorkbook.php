@@ -77,7 +77,7 @@ class PurchaseOrderWorkbook
      */
     private static function sheetXml(PurchaseOrder $purchaseOrder, Collection $items): string
     {
-        $purchaseOrder->loadMissing(['quotation.preplist', 'supplier']);
+        $purchaseOrder->loadMissing(['quotation.preplist', 'supplier', 'items.preplistItem']);
 
         $quotation = $purchaseOrder->quotation;
         $supplier = $purchaseOrder->supplier;
@@ -231,7 +231,8 @@ class PurchaseOrderWorkbook
             self::cell('F'.$headerRow, 2, 'Unit Price (PHP)'),
             self::cell('G'.$headerRow, 2, 'Amount (PHP)'),
             self::cell('H'.$headerRow, 2, 'Remarks'),
-        ], 30);
+            self::cell('I'.$headerRow, 2, 'Quoted price (based on the project)'),
+        ], 30, '1:9');
 
         $peso = fn (float $amount) => '₱ '.number_format($amount, 2);
         $priceCell = fn ($unitPrice) => $unitPrice === null ? 'TBD' : $peso((float) $unitPrice);
@@ -249,16 +250,23 @@ class PurchaseOrderWorkbook
 
             $amountCellValue = $isLocal ? null : ($extended === null ? 'TBD' : $peso($extended));
 
+            $quotedPrice = collect($purchaseOrderItem->preplistItem?->sources ?? [])
+                ->map(fn ($source) => $source->projectItem?->awarded_unit_price)
+                ->filter()
+                ->max();
+            $quotedPriceValue = $quotedPrice === null ? null : $peso((float) $quotedPrice);
+
             $rows[] = self::row($itemRow, [
                 self::cell('A'.$itemRow, 4, (string) ($index + 1)),
                 self::cell('B'.$itemRow, 3, $itemName),
                 self::cell('C'.$itemRow, 4, $unit !== '' ? $unit : null),
                 self::cell('D'.$itemRow, 4, (string) $purchaseOrderItem->qty),
                 self::cell('E'.$itemRow, 4, $requirement),
-                self::cell('F'.$itemRow, 4, $priceCell($purchaseOrderItem->unit_price)),
+                self::cell('F'.$itemRow, 4, $isLocal ? null : $priceCell($purchaseOrderItem->unit_price)),
                 self::cell('G'.$itemRow, 4, $amountCellValue),
                 self::cell('H'.$itemRow, 4, null),
-            ], 18);
+                self::cell('I'.$itemRow, 4, $quotedPriceValue),
+            ], 18, '1:9');
         }
 
         $totalRow = $headerRow + $items->count() + 1;
@@ -424,7 +432,7 @@ class PurchaseOrderWorkbook
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac">'
             .'<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
-            .'<dimension ref="A1:H'.$finalRow.'"/>'
+            .'<dimension ref="A1:I'.$finalRow.'"/>'
             .'<sheetViews><sheetView tabSelected="1" view="pageLayout" zoomScaleNormal="100" workbookViewId="0"><selection activeCell="A6" sqref="A6:H6"/></sheetView></sheetViews>'
             .'<sheetFormatPr defaultRowHeight="15" x14ac:dyDescent="0.25"/>'
             .'<cols>'
@@ -435,6 +443,7 @@ class PurchaseOrderWorkbook
             .'<col min="6" max="6" width="22" customWidth="1"/>'
             .'<col min="7" max="7" width="19.28515625" customWidth="1"/>'
             .'<col min="8" max="8" width="15.85546875" customWidth="1"/>'
+            .'<col min="9" max="9" width="20" customWidth="1"/>'
             .'</cols>'
             .'<sheetData>'.implode('', $rows).'</sheetData>'
             .$mergeCells
@@ -447,9 +456,9 @@ class PurchaseOrderWorkbook
     /**
      * @param  array<int, string>  $cells
      */
-    private static function row(int $number, array $cells, ?float $height = null): string
+    private static function row(int $number, array $cells, ?float $height = null, string $spans = '1:8'): string
     {
-        $attributes = 'r="'.$number.'" spans="1:8" x14ac:dyDescent="0.25"';
+        $attributes = 'r="'.$number.'" spans="'.$spans.'" x14ac:dyDescent="0.25"';
 
         if ($height !== null) {
             $attributes .= ' ht="'.self::number($height).'" customHeight="1"';
