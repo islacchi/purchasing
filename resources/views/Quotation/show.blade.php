@@ -306,8 +306,21 @@
                                 @endphp
                                 <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }} transition-colors hover:bg-[#e4edf0]">
                                     <td class="px-4 py-2.5 align-top">
-                                        <p class="break-words text-[13px] font-semibold leading-snug text-gray-900">{{ $item['name'] }}</p>
-                                        <p class="mt-0.5 text-[10px] text-gray-500">{{ $item['unit'] }}</p>
+                                        <div class="flex items-start gap-1.5">
+                                            @if ($isQuoted || $item['allocations'])
+                                                <button type="button"
+                                                        data-toggle-sources="{{ $item['key'] }}"
+                                                        aria-expanded="false"
+                                                        aria-label="Toggle breakdown for {{ $item['name'] }}"
+                                                        title="Toggle breakdown"
+                                                        class="mt-0.5 shrink-0 rounded p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                                    <svg class="source-chevron h-4 w-4 -rotate-90 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </button>
+                                            @endif
+                                            <p class="break-words text-[13px] font-semibold leading-snug text-gray-900">{{ $item['name'] }}</p>
+                                        </div>
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-2.5 text-center align-top text-xs font-semibold text-gray-900">{{ number_format($item['requested']) }} {{ $item['unit'] }}</td>
                                     <td class="px-4 py-2.5 align-top text-xs text-gray-700">
@@ -334,7 +347,7 @@
                                     </td>
                                 </tr>
                                 @if ($isQuoted)
-                                    <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }}">
+                                    <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }} source-row hidden transition-colors hover:bg-[#e4edf0]" data-source-of="{{ $item['key'] }}">
                                         <td colspan="5" class="border-t border-dashed border-gray-200 px-4 py-2">
                                             <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-500">
                                                 <span>Brand: <span class="font-medium text-gray-700">{{ $brand ?: 'Not stated' }}</span></span>
@@ -390,7 +403,7 @@
                                         };
                                     @endphp
 
-                                    <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }}">
+                                    <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }} source-row hidden transition-colors hover:bg-[#e4edf0]" data-source-of="{{ $item['key'] }}">
                                         <td colspan="5" class="border-t border-dashed border-gray-200 py-1.5 pl-10 pr-4 text-[10px] text-gray-500">
                                             Contributes <span class="font-semibold text-gray-800">{{ number_format($allocation['qty']) }} {{ $allocation['unit'] }}</span> · <span class="text-gray-700">{{ $allocation['project'] }}</span> · <span class="text-gray-500">{{ $allocation['reference'] }}</span>
                                             @if ($isQuoted)
@@ -590,6 +603,31 @@
                     form.submit();
                 });
             }
+        })();
+    </script>
+    @endpush
+
+    @push('scripts')
+    <script>
+        // Collapsible item breakdown rows under each item row (mirrors the
+        // prep list source-line collapse behaviour).
+        (function () {
+            document.querySelectorAll('[data-toggle-sources]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var itemId = button.getAttribute('data-toggle-sources');
+                    var chevron = button.querySelector('.source-chevron');
+                    var expanded = button.getAttribute('aria-expanded') === 'true';
+
+                    document.querySelectorAll('.source-row[data-source-of="' + itemId + '"]').forEach(function (row) {
+                        row.classList.toggle('hidden', expanded);
+                    });
+
+                    button.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+                    if (chevron) {
+                        chevron.classList.toggle('-rotate-90', expanded);
+                    }
+                });
+            });
         })();
     </script>
     @endpush
