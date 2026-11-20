@@ -285,7 +285,7 @@
                             <th scope="col" class="px-3 py-2.5 text-left">Item</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Qty</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Shelf life req.</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">{{ $purchaseOrder->isLocalPurchase() ? 'Quoted price' : 'Unit price' }}</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">{{ $purchaseOrder->isLocalPurchase() ? 'Local price' : 'Unit price' }}</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Total unit price</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">{{ $purchaseOrder->isLocalPurchase() ? 'Bought' : 'Received' }}</th>
                         </tr>
