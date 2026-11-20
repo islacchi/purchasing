@@ -242,9 +242,12 @@ class PurchaseOrderWorkbook
             $unit = $purchaseOrderItem->item?->unit ?? '';
             $minShelf = (int) ($purchaseOrderItem->min_remaining_months ?? 0);
             $requirement = $minShelf > 0 ? '≥ '.$minShelf.' months' : 'Non-perishable';
-            $extended = $purchaseOrderItem->unit_price === null
-                ? null
-                : $purchaseOrderItem->qty * (float) $purchaseOrderItem->unit_price;
+            $isLocal = $purchaseOrder->source === PurchaseOrder::SOURCE_LOCAL;
+            $extended = ! $isLocal && $purchaseOrderItem->unit_price !== null
+                ? $purchaseOrderItem->qty * (float) $purchaseOrderItem->unit_price
+                : null;
+
+            $amountCellValue = $isLocal ? null : ($extended === null ? 'TBD' : $peso($extended));
 
             $rows[] = self::row($itemRow, [
                 self::cell('A'.$itemRow, 4, (string) ($index + 1)),
@@ -253,7 +256,7 @@ class PurchaseOrderWorkbook
                 self::cell('D'.$itemRow, 4, (string) $purchaseOrderItem->qty),
                 self::cell('E'.$itemRow, 4, $requirement),
                 self::cell('F'.$itemRow, 4, $priceCell($purchaseOrderItem->unit_price)),
-                self::cell('G'.$itemRow, 4, $extended === null ? 'TBD' : $peso($extended)),
+                self::cell('G'.$itemRow, 4, $amountCellValue),
                 self::cell('H'.$itemRow, 4, null),
             ], 18);
         }
@@ -263,6 +266,7 @@ class PurchaseOrderWorkbook
         $subtotal = (float) $items->sum(fn (PurchaseOrderItem $purchaseOrderItem) => ($purchaseOrderItem->unit_price === null ? 0 : $purchaseOrderItem->qty * (float) $purchaseOrderItem->unit_price));
         $freight = (float) $purchaseOrder->delivery_fee;
         $total = $subtotal + $freight;
+        $isLocal = $purchaseOrder->source === PurchaseOrder::SOURCE_LOCAL;
 
         $rows[] = self::row($totalRow, [
             self::cell('A'.$totalRow, 15, 'Subtotal'),
@@ -271,7 +275,7 @@ class PurchaseOrderWorkbook
             self::cell('D'.$totalRow, 15, null),
             self::cell('E'.$totalRow, 15, null),
             self::cell('F'.$totalRow, 15, null),
-            self::cell('G'.$totalRow, 10, $hasTbd ? 'TBD' : $peso($subtotal)),
+            self::cell('G'.$totalRow, 10, $isLocal ? null : ($hasTbd ? 'TBD' : $peso($subtotal))),
             self::cell('H'.$totalRow, 10, null),
         ], 18);
 
@@ -295,7 +299,7 @@ class PurchaseOrderWorkbook
             self::cell('D'.$grandTotalRow, 13, null),
             self::cell('E'.$grandTotalRow, 13, null),
             self::cell('F'.$grandTotalRow, 13, null),
-            self::cell('G'.$grandTotalRow, 12, $hasTbd ? 'TBD' : $peso($total)),
+            self::cell('G'.$grandTotalRow, 12, $isLocal ? null : ($hasTbd ? 'TBD' : $peso($total))),
             self::cell('H'.$grandTotalRow, 12, null),
         ], 24);
 

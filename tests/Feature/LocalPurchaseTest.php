@@ -556,6 +556,44 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame('fulfilled', $first->fresh()->fulfillment_status);
     }
 
+    public function test_local_purchase_excel_leaves_amounts_blank(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $response = $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ]);
+
+        // Creating the draft local purchase order also returns the Excel document.
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'po_workbook_local_');
+        file_put_contents($temporaryPath, $response->getContent());
+
+        $zip = new \ZipArchive;
+        $zip->open($temporaryPath);
+        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        unlink($temporaryPath);
+
+        $this->assertIsString($sheetXml);
+        $this->assertStringContainsString('Mefenamic Capsule - 500mg', $sheetXml);
+        $this->assertStringContainsString('PURCHASE ORDER', $sheetXml);
+
+        // Local purchases keep the amount column blank — the price is only
+        // recorded once the purchase is marked as bought.
+        $this->assertStringContainsString('<c r="G17" s="4"/>', $sheetXml);
+        $this->assertStringContainsString('<c r="G18" s="10"/>', $sheetXml);
+        $this->assertStringContainsString('<c r="G20" s="12"/>', $sheetXml);
+    }
+
     public function test_viewer_cannot_create_a_local_purchase_order(): void
     {
         $admin = $this->admin();
