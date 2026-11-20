@@ -64,11 +64,11 @@
                         <table class="w-full table-fixed">
                             <colgroup>
                                 <col class="w-[3rem]">
-                                <col class="w-[28%]">
+                                <col class="w-[36%]">
+                                <col class="w-[11%]">
+                                <col class="w-[7%]">
                                 <col class="w-[13%]">
-                                <col class="w-[9%]">
-                                <col class="w-[17%]">
-                                <col class="w-[33%]">
+                                <col class="w-[20%]">
                             </colgroup>
                             <thead class="sticky top-0 z-10 bg-[#0e5266]">
                                 <tr class="text-left text-[11px] font-semibold uppercase tracking-wider text-white">
