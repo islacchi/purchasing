@@ -289,7 +289,7 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame('draft', $po->status);
     }
 
-    public function test_bought_now_at_creation_bumps_stock_and_completes_the_order(): void
+    public function test_local_purchase_creates_a_draft_order_without_receipts(): void
     {
         $user = $this->admin();
         $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
@@ -300,35 +300,18 @@ class LocalPurchaseTest extends TestCase
             ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
                 'supplier_id' => $supplier->id,
                 'selected' => [$preplistItem->id],
-                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '305.00', 'bought' => 1]],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '305.00']],
             ])
             ->assertSessionHasNoErrors();
 
         $po = PurchaseOrder::query()->latest('id')->firstOrFail();
-        $this->assertSame('completed', $po->status);
-        $this->assertSame(1, $po->items()->first()->receipts()->count());
-        $this->assertSame(10, (int) $po->items()->first()->qty);
-        $this->assertSame(10, $f['projectItem']->fresh()->in_stock);
-        // Partially covered: stock arrived but the awarded quantity is not met yet.
-        $this->assertSame('partial', $f['projectItem']->fresh()->fulfillment_status);
-    }
+        $this->assertSame('draft', $po->status);
 
-    public function test_fully_bought_line_becomes_fulfilled(): void
-    {
-        $user = $this->admin();
-        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
-        $f = $this->fixture($user);
-        $preplistItem = $f['preplistItem'];
-
-        $this->actingAs($user)
-            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
-                'supplier_id' => $supplier->id,
-                'selected' => [$preplistItem->id],
-                'lines' => [$preplistItem->id => ['qty' => 50, 'unit_price' => '305.00', 'bought' => 1]],
-            ])
-            ->assertSessionHasNoErrors();
-
-        $this->assertSame('fulfilled', $f['projectItem']->fresh()->fulfillment_status);
+        $poItem = $po->items()->firstOrFail();
+        $this->assertSame(10, (int) $poItem->qty);
+        $this->assertEquals(305.00, (float) $poItem->unit_price);
+        $this->assertSame(0, \App\Models\PurchaseOrderReceipt::query()->count());
+        $this->assertSame(0, (int) $f['projectItem']->fresh()->in_stock);
     }
 
     public function test_partial_bought_quantity_keeps_the_line_open_until_fully_covered(): void

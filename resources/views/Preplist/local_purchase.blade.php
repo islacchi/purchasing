@@ -52,7 +52,7 @@
                     <div class="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
                         <div>
                             <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Lines to buy · {{ $lines->count() }}</h3>
-                            <p class="mt-0.5 text-xs text-gray-500">Set <span class="font-medium">Qty</span> to how many units you are buying on this order \u2014 anything left over stays pending on the prep list. Lines ticked <span class="font-medium">Bought now</span> are received immediately (stock updates on create).</p>
+                            <p class="mt-0.5 text-xs text-gray-500">Set <span class="font-medium">Qty</span> to how many units you are buying on this order \u2014 anything left over stays pending on the prep list. <span class="font-medium">Local Price</span> stays blank by default; it is only recorded once the purchase is marked as bought.</p>
                         </div>
                         <button type="button" id="lpToggleAll"
                                 class="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-300">
@@ -68,8 +68,7 @@
                                 <col class="w-[13%]">
                                 <col class="w-[9%]">
                                 <col class="w-[17%]">
-                                <col class="w-[17%]">
-                                <col class="w-[11%]">
+                                <col class="w-[33%]">
                             </colgroup>
                             <thead class="sticky top-0 z-10 bg-[#0e5266]">
                                 <tr class="text-left text-[11px] font-semibold uppercase tracking-wider text-white">
@@ -78,8 +77,7 @@
                                     <th scope="col" class="px-3 py-2.5 text-center">Remaining</th>
                                     <th scope="col" class="px-3 py-2.5 text-center">Shelf life</th>
                                     <th scope="col" class="px-3 py-2.5 text-right">Qty</th>
-                                    <th scope="col" class="px-3 py-2.5 text-right">Quoted price</th>
-                                    <th scope="col" class="px-3 py-2.5 text-center" title="Tick if this line was already bought — stock is recorded now">Bought now</th>
+                                    <th scope="col" class="px-3 py-2.5 text-right">Local Price</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
@@ -119,19 +117,12 @@
                                                 <span class="text-xs text-gray-400">₱</span>
                                                 <input type="number" min="0" step="0.01"
                                                        name="lines[{{ $line['id'] }}][unit_price]"
-                                                       value="{{ $line['suggested_price'] !== null ? number_format($line['suggested_price'], 2, '.', '') : '' }}"
+                                                       value=""
                                                        placeholder="TBD"
                                                        data-lp-price
                                                        class="w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300"
-                                                       aria-label="Quoted price; leave blank to record it later">
+                                                       aria-label="Local price; leave blank to record it when the purchase is bought">
                                             </div>
-                                        </td>
-                                        <td class="px-3 py-2.5 align-top text-center">
-                                            <input type="checkbox"
-                                                   name="lines[{{ $line['id'] }}][bought]"
-                                                   value="1"
-                                                   class="teal-check mt-2 h-4 w-4 rounded border-gray-300 focus:ring-teal-400"
-                                                   aria-label="Mark {{ $line['name'] }} as already bought">
                                         </td>
                                     </tr>
                                 @endforeach

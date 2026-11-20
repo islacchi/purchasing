@@ -308,7 +308,6 @@ class PreplistController extends Controller
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.qty' => ['required', 'integer', 'min:1'],
             'lines.*.unit_price' => ['nullable', 'numeric', 'min:0'],
-            'lines.*.bought' => ['nullable', 'boolean'],
         ], [
             'selected.required' => 'Select at least one line to buy locally.',
             'selected.min' => 'Select at least one line to buy locally.',
@@ -326,7 +325,6 @@ class PreplistController extends Controller
             $preplistItem = $preplistItemById->get((int) $preplistItemId);
             $qty = (int) ($validated['lines'][$preplistItemId]['qty'] ?? 0);
             $priceStr = trim((string) ($validated['lines'][$preplistItemId]['unit_price'] ?? ''));
-            $boughtNow = filter_var($validated['lines'][$preplistItemId]['bought'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $name = $preplistItem?->item?->name ?? 'Item #'.$preplistItemId;
 
             if (! $preplistItem) {
@@ -354,7 +352,7 @@ class PreplistController extends Controller
                 'qty' => $qty,
                 'unit_price' => $priceStr === '' ? null : $priceStr,
                 'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,
-                'bought_now' => $boughtNow,
+                'bought_now' => false,
             ];
         }
 
