@@ -36,9 +36,30 @@
 
     <div class="flex h-full min-h-0 flex-col">
     {{-- Page heading --}}
+    @php
+        $rfqUnitTotal = $items->sum('total');
+    @endphp
     <div class="shrink-0 mb-6">
         <h2 class="text-2xl font-bold text-gray-900">Generate RFQ - {{ $prepList->name }}</h2>
         <p class="text-sm text-gray-500 mt-1">Choose which suppliers to ask for each item</p>
+        <div class="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-gray-600">
+            <span class="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 shadow-sm">
+                <span class="font-bold text-gray-900">{{ $items->count() }}</span>
+                <span class="ml-1">{{ $items->count() === 1 ? 'item' : 'items' }}</span>
+            </span>
+            <span class="text-gray-400" aria-hidden="true">&middot;</span>
+            <span class="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 shadow-sm">
+                <span class="font-bold text-gray-900">{{ number_format($rfqUnitTotal) }}</span>
+                <span class="ml-1">{{ $rfqUnitTotal === 1 ? 'unit' : 'units' }} to procure</span>
+            </span>
+            <span class="text-gray-400" aria-hidden="true">&middot;</span>
+            <span class="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 shadow-sm">
+                <span class="font-bold text-gray-900">{{ $suppliers->count() }}</span>
+                <span class="ml-1">{{ $suppliers->count() === 1 ? 'supplier' : 'suppliers' }}</span>
+            </span>
+            <span class="text-gray-400" aria-hidden="true">&middot;</span>
+            <span class="text-gray-500">Ref {{ $prepList->reference_no }}</span>
+        </div>
     </div>
 
     {{-- Quick select — one chip per supplier; toggling one checks that supplier on every item --}}
@@ -74,10 +95,10 @@
         <div class="flex-1 border-t border-gray-200"></div>
     </div>
     {{-- Per-item sections (item list scrolls here) — one box per prep list item --}}
-    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1 overscroll-contain">
         @forelse($items as $item)
-            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                <div class="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-100">
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-colors hover:border-gray-300">
+                <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-gray-100">
                     <div class="min-w-0">
                         <p class="font-bold text-gray-900 break-words">{{ $item['name'] }}</p>
                         <p class="mt-1 text-xs text-gray-500">
@@ -89,7 +110,9 @@
                             @endif
                         </p>
                     </div>
-                    <span class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ $item['total'] }} {{ $item['unit'] }} to procure</span>
+                    <div class="shrink-0 text-right">
+                        <span class="inline-flex items-baseline rounded-full bg-[#e4edf0] px-3 py-1 text-xs font-bold text-[#0e5266] whitespace-nowrap">{{ $item['total'] }} {{ $item['unit'] }} to procure</span>
+                    </div>
                 </div>
                 <div class="px-5 py-4">
                     <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Suppliers</p>
@@ -143,6 +166,7 @@
                             title="Preview the items selected for {{ $supplier['name'] }}">
                         {{ $supplier['name'] }}
                     </button>
+                    <span class="gen-count text-xs text-gray-400"></span>
                 </div>
             @endforeach
         </div>
@@ -155,7 +179,7 @@
     <div id="supplierModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="supplierModalTitle">
         <div id="supplierModalOverlay" class="absolute inset-0 bg-gray-900/50"></div>
 
-        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+        <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <h3 id="supplierModalTitle" class="text-lg font-bold text-gray-900">Supplier</h3>
                 <button type="button" id="supplierModalClose" class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer" title="Close" aria-label="Close">
@@ -276,6 +300,12 @@
                     checkbox.checked = Object.prototype.hasOwnProperty.call(genState, supplier)
                         ? genState[supplier]
                         : true;
+
+                    const checkedCount = document.querySelectorAll('.item-supplier-check[data-supplier="' + CSS.escape(supplier) + '"]:checked').length;
+                    const countLabel = row.querySelector('.gen-count');
+                    if (countLabel) {
+                        countLabel.textContent = checkedCount + (checkedCount === 1 ? ' item selected' : ' items selected');
+                    }
                 });
             }
 
