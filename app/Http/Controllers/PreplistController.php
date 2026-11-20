@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Support\ActivityLogger;
 use App\Support\Pagination;
 use App\Support\PurchaseOrderCreator;
+use App\Support\PurchaseOrderWorkbook;
 use App\Support\RfqQuotationWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -380,15 +381,18 @@ class PreplistController extends Controller
             ]
         );
 
-        $statusMessage = match ($purchaseOrder->status) {
-            \App\Models\PurchaseOrder::STATUS_COMPLETED => 'Local purchase order '.$purchaseOrder->po_number.' created and completed — receipts and stock are recorded.',
-            \App\Models\PurchaseOrder::STATUS_PARTIALLY_RECEIVED => 'Local purchase order '.$purchaseOrder->po_number.' created — lines marked bought now are received; the rest can be bought later.',
-            default => 'Local purchase order '.$purchaseOrder->po_number.' created as a draft — press Mark as bought after the store trip.',
-        };
+        $purchaseOrder->load(['items.item', 'items.allocations']);
 
-        return redirect()
-            ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
-            ->with('status', $statusMessage);
+        // Mirror the quotation path: the draft local purchase order is exported
+        // to the supplier-facing Excel workbook right after it is generated.
+        $content = PurchaseOrderWorkbook::build($purchaseOrder, $purchaseOrder->items);
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$purchaseOrder->po_number.'.xlsx"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**
