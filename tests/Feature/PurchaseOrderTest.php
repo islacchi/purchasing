@@ -608,6 +608,51 @@ class PurchaseOrderTest extends TestCase
             ->assertSee('No purchase orders match the current filters.');
     }
 
+    public function test_partial_receipt_keeps_the_order_partially_received_until_fully_covered(): void
+    {
+        $user = $this->admin();
+        $purchaseOrder = $this->makePurchaseOrder($user, PurchaseOrder::STATUS_SENT);
+        $line = $purchaseOrder->items->first();
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $line->id]), [
+                'received_qty' => 4,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $line->refresh();
+        $this->assertSame(4, (int) $line->receipts()->sum('received_qty'));
+        $this->assertSame(6, $line->remainingQty());
+        $this->assertFalse($line->isReceived());
+        $this->assertSame(PurchaseOrder::STATUS_PARTIALLY_RECEIVED, $purchaseOrder->fresh()->status);
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $line->id]), [
+                'received_qty' => 6,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $line->refresh();
+        $this->assertSame(10, (int) $line->receipts()->sum('received_qty'));
+        $this->assertTrue($line->isReceived());
+    }
+
+    public function test_receipt_quantity_cannot_exceed_the_outstanding_quantity(): void
+    {
+        $user = $this->admin();
+        $purchaseOrder = $this->makePurchaseOrder($user, PurchaseOrder::STATUS_SENT);
+        $line = $purchaseOrder->items->first();
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $line->id]), [
+                'received_qty' => 11,
+            ])
+            ->assertSessionHasErrors('purchase_order');
+
+        $this->assertSame(0, $purchaseOrder->items()->first()->receipts()->sum('received_qty'));
+        $this->assertSame(PurchaseOrder::STATUS_SENT, $purchaseOrder->fresh()->status);
+    }
+
     public function test_receive_toggle_rejects_stale_expected_state(): void
     {
         $user = $this->admin();

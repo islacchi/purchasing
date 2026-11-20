@@ -7,11 +7,13 @@ use App\Models\PreplistItem;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderItemAllocation;
+use App\Models\PurchaseOrderReceipt;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Creates a draft purchase order — header, lines, and project allocations —
- * from a set of awarded quotation lines.
+ * from a set of awarded quotation lines or from lines raised directly
+ * against a local store (no quotation at all).
  *
  * Quantities that each source project still needs are allocated
  * proportionally; the last positive-weight source absorbs any rounding,
@@ -28,33 +30,19 @@ final class PurchaseOrderCreator
         return DB::transaction(function () use ($createdBy, $lines, $details) {
             $quotation = $lines[0]['quotation_item']->quotation;
 
-            $purchaseOrder = PurchaseOrder::create([
-                'quotation_id' => $quotation->id,
-                'supplier_id' => $quotation->supplier_id,
-                'created_by' => $createdBy,
-                'po_number' => self::nextPoNumber(),
-                'status' => PurchaseOrder::STATUS_DRAFT,
-                'expected_delivery_on' => $details['expected_delivery'] ?? null,
-                'payment_terms' => $details['payment_terms'] ?? null,
-                'deliver_to' => $details['deliver_to'] ?? null,
-                'delivery_fee' => 0,
-                'notes' => $details['notes'] ?? null,
-            ]);
+            $purchaseOrder = self::createDraftHeader(
+                $createdBy,
+                $quotation->id,
+                (int) $quotation->supplier_id,
+                PurchaseOrder::SOURCE_QUOTATION,
+                $details
+            );
 
             foreach ($lines as $line) {
                 /** @var PreplistItem $preplistItem */
                 $preplistItem = $line['preplist_item'];
 
-                $purchaseOrderItem = PurchaseOrderItem::create([
-                    'purchase_order_id' => $purchaseOrder->id,
-                    'quotation_item_id' => $line['quotation_item']->id,
-                    'item_id' => $preplistItem->item_id,
-                    'qty' => $line['qty'],
-                    'unit_price' => $line['unit_price'],
-                    'min_remaining_months' => $line['min_remaining_months'],
-                ]);
-
-                self::allocateLine($purchaseOrderItem, $preplistItem, $line['qty']);
+                self::writeLine($purchaseOrder, $line['quotation_item']->id, $preplistItem, $line);
             }
 
             ActivityLogger::log('Created', 'Purchase Order', $purchaseOrder->po_number, $purchaseOrder);
@@ -63,7 +51,98 @@ final class PurchaseOrderCreator
         });
     }
 
-    private static function allocateLine(PurchaseOrderItem $purchaseOrderItem, PreplistItem $preplistItem, int $qty): void
+    /**
+     * Raise a draft purchase order against a local store with no quotation at
+     * all. Allocations and numbering behave exactly like the awarded-quotation
+     * path.
+     *
+     * @param  array<int, array{preplist_item: PreplistItem, qty: int, unit_price: float|string|null, min_remaining_months?: ?int}>  $lines
+     * @param  array{supplier_id: int|string, expected_delivery?: ?string, payment_terms?: ?string, deliver_to?: ?string, notes?: ?string}  $details
+     */
+    public static function createForLocalPurchase(int $createdBy, array $lines, array $details): PurchaseOrder
+    {
+        if ($lines === []) {
+            throw new \InvalidArgumentException('Select at least one line to raise a local purchase order.');
+        }
+
+        $supplierId = (int) ($details['supplier_id'] ?? 0);
+
+        if ($supplierId <= 0) {
+            throw new \InvalidArgumentException('A supplier is required to raise a local purchase order.');
+        }
+
+        $anyBought = (bool) collect($lines)->contains(fn (array $line) => ! empty($line['bought_now']));
+        $allBought = $anyBought && ! collect($lines)->contains(fn (array $line) => empty($line['bought_now']));
+
+        $status = $allBought ? PurchaseOrder::STATUS_COMPLETED : ($anyBought ? PurchaseOrder::STATUS_PARTIALLY_RECEIVED : PurchaseOrder::STATUS_DRAFT);
+        $issuedOn = $anyBought ? today()->toDateString() : null;
+
+        return DB::transaction(function () use ($createdBy, $lines, $details, $supplierId, $status, $issuedOn, $anyBought) {
+            $purchaseOrder = self::createDraftHeader(
+                $createdBy,
+                null,
+                $supplierId,
+                PurchaseOrder::SOURCE_LOCAL,
+                $details,
+                $status,
+                $issuedOn
+            );
+
+            foreach ($lines as $line) {
+                /** @var PreplistItem $preplistItem */
+                $preplistItem = $line['preplist_item'];
+
+                $poItem = self::writeLine($purchaseOrder, null, $preplistItem, array_merge([
+                    'min_remaining_months' => $preplistItem->min_shelf_life_months,
+                ], $line));
+
+                if (! empty($line['bought_now'])) {
+                    PurchaseReceipts::finalize($poItem, $createdBy, (int) $line['qty']);
+                }
+            }
+
+            ActivityLogger::log('Created', 'Purchase Order', $purchaseOrder->po_number.($anyBought ? ' (local purchase, partially bought)' : ' (local purchase)'), $purchaseOrder);
+
+            return $purchaseOrder;
+        });
+    }
+
+    private static function createDraftHeader(int $createdBy, ?int $quotationId, int $supplierId, string $source, array $details, ?string $status = null, ?string $issuedOn = null): PurchaseOrder
+    {
+        return PurchaseOrder::create([
+            'quotation_id' => $quotationId,
+            'supplier_id' => $supplierId,
+            'created_by' => $createdBy,
+            'po_number' => self::nextPoNumber(),
+            'status' => $status ?? PurchaseOrder::STATUS_DRAFT,
+            'source' => $source,
+            'issued_on' => $issuedOn,
+            'expected_delivery_on' => $details['expected_delivery'] ?? null,
+            'payment_terms' => $details['payment_terms'] ?? null,
+            'deliver_to' => $details['deliver_to'] ?? null,
+            'delivery_fee' => 0,
+            'notes' => $details['notes'] ?? null,
+        ]);
+    }
+
+    private static function writeLine(PurchaseOrder $purchaseOrder, ?int $quotationItemId, PreplistItem $preplistItem, array $line): PurchaseOrderItem
+    {
+        $purchaseOrderItem = PurchaseOrderItem::create([
+            'purchase_order_id' => $purchaseOrder->id,
+            'quotation_item_id' => $quotationItemId,
+            'preplist_item_id' => $preplistItem->id,
+            'item_id' => $preplistItem->item_id,
+            'qty' => $line['qty'],
+            'unit_price' => $line['unit_price'],
+            'min_remaining_months' => $line['min_remaining_months'] ?? null,
+        ]);
+
+        self::allocateLine($purchaseOrderItem, $preplistItem, (int) $line['qty']);
+
+        return $purchaseOrderItem;
+    }
+
+    public static function allocateLine(PurchaseOrderItem $purchaseOrderItem, PreplistItem $preplistItem, int $qty): void
     {
         $sources = $preplistItem->sources->values();
         $shares = $sources->map(fn ($source) => $source->projectItem?->remainingQuantity() ?? 0);

@@ -23,6 +23,7 @@ class PurchaseOrderItem extends Model
     protected $fillable = [
         'purchase_order_id',
         'quotation_item_id',
+        'preplist_item_id',
         'item_id',
         'qty',
         'unit_price',
@@ -60,6 +61,14 @@ class PurchaseOrderItem extends Model
     }
 
     /**
+     * The demand line this order line satisfies (direct link for local purchases).
+     */
+    public function preplistItem(): BelongsTo
+    {
+        return $this->belongsTo(PreplistItem::class);
+    }
+
+    /**
      * The catalog item.
      */
     public function item(): BelongsTo
@@ -92,10 +101,36 @@ class PurchaseOrderItem extends Model
     }
 
     /**
+     * Units recorded as received/bought so far (receipts accumulate).
+     */
+    public function receivedQty(): int
+    {
+        return (int) $this->receipts->sum('received_qty');
+    }
+
+    /**
+     * Units still outstanding on this line.
+     */
+    public function remainingQty(): int
+    {
+        return max(0, (int) $this->qty - $this->receivedQty());
+    }
+
+    /**
+     * Whether part of (but not all) the ordered quantity has been received.
+     */
+    public function isPartiallyReceived(): bool
+    {
+        $received = $this->receivedQty();
+
+        return $received > 0 && $received < (int) $this->qty;
+    }
+
+    /**
      * Whether the full ordered quantity has been received.
      */
     public function isReceived(): bool
     {
-        return $this->receipts->sum('received_qty') >= $this->qty;
+        return $this->receivedQty() >= (int) $this->qty;
     }
 }

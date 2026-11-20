@@ -29,8 +29,17 @@
             'Cancelled' => 'bg-red-100 text-red-700',
         ];
 
-        $stages = \App\Models\PurchaseOrder::stages();
-        $currentStage = $purchaseOrder->currentStageIndex();
+        $isLocal = $purchaseOrder->isLocalPurchase();
+        $hasTbd = $isLocal && $items->contains(fn ($i) => $i->unit_price === null);
+
+        $stages = $isLocal ? ['Draft', 'Bought', 'Completed'] : \App\Models\PurchaseOrder::stages();
+        $currentStage = $isLocal
+            ? match ($purchaseOrder->status) {
+                \App\Models\PurchaseOrder::STATUS_DRAFT => 0,
+                \App\Models\PurchaseOrder::STATUS_PARTIALLY_RECEIVED => 1,
+                default => 2, // completed
+            }
+            : $purchaseOrder->currentStageIndex();
         $isCancelled = $purchaseOrder->status === \App\Models\PurchaseOrder::STATUS_CANCELLED;
 
         $subtotal = $purchaseOrder->lineTotal();
@@ -38,6 +47,8 @@
         $total = $subtotal + $freight;
 
         $receivedCount = $items->filter(fn ($item) => $item->isReceived())->count();
+        $receivedUnits = $items->sum(fn ($item) => $item->receivedQty());
+        $orderedUnits = $items->sum(fn ($item) => (int) $item->qty);
         $canReceive = $purchaseOrder->canReceive();
         $canManagePurchaseOrder = auth()->user()?->canModule('purchase-order', 'manage') ?? false;
 
@@ -67,6 +78,16 @@
             </div>
         @endif
 
+        @if ($hasTbd)
+            <div class="mb-4 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="status">
+                <p class="font-semibold">Price to be recorded</p>
+                <p class="mt-0.5 text-xs text-amber-700">
+                    Some lines have no price yet. After the store purchase, press
+                    <span class="font-medium">Mark as bought</span> — the system will ask for the price paid for each line and complete the order.
+                </p>
+            </div>
+        @endif
+
         {{-- Heading --}}
         <div class="mb-6 flex shrink-0 flex-wrap items-start justify-between gap-4">
             <div>
@@ -77,18 +98,32 @@
                     </span>
                 </div>
                 <p class="mt-1 text-xs text-gray-500">
-                    Issued from quotation
-                    @if ($quotationShow)
-                        <a href="{{ $quotationShow }}"
-                           class="font-medium text-[#2a7a94] hover:underline">{{ $quotation?->rfq_number }}</a>
+                    @if ($purchaseOrder->isLocalPurchase())
+                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 align-middle">Local purchase</span>
+                        <span class="text-gray-400">no quotation</span>
                     @else
-                        <span class="text-gray-400">Quotation removed</span>
+                        Issued from quotation
+                        @if ($quotationShow)
+                            <a href="{{ $quotationShow }}"
+                               class="font-medium text-[#2a7a94] hover:underline">{{ $quotation?->rfq_number }}</a>
+                        @else
+                            <span class="text-gray-400">Quotation removed</span>
+                        @endif
+                        &middot; {{ $prepList?->name ?? 'Prep list removed' }}
                     @endif
-                    &middot; {{ $prepList?->name ?? 'Prep list removed' }}
                 </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
+                @if ($isLocal)
+                    <button type="button" id="poBoughtBtn"
+                            class="inline-flex items-center gap-2 rounded-lg border border-amber-400 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 {{ $purchaseOrder->status === \App\Models\PurchaseOrder::STATUS_COMPLETED || $purchaseOrder->status === \App\Models\PurchaseOrder::STATUS_CANCELLED ? 'hidden' : '' }}">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 10a2 2 0 100 4m8-4a2 2 0 100 4M8 13h8"/>
+                        </svg>
+                        Mark as bought
+                    </button>
+                @else
                 <form method="POST" action="{{ route('purchase-order.send', ['purchaseOrder' => $purchaseOrder->id]) }}">
                     @csrf
                     <button type="submit" id="poSendBtn"
@@ -99,6 +134,7 @@
                         Send to supplier
                     </button>
                 </form>
+                @endif
 
                 <button type="button" id="poCancelBtn"
                         class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 {{ $purchaseOrder->isCancellable() ? '' : 'hidden' }}">
@@ -232,7 +268,7 @@
                     <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Items ordered</p>
                     <div class="flex flex-wrap items-center gap-2">
                         <span id="receiptSummary" class="inline-flex items-center rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-xs font-medium text-[#2a7a94]">
-                            {{ $receivedCount }} of {{ $items->count() }} received
+                            {{ $receivedUnits }} / {{ $orderedUnits }} {{ $isLocal ? 'bought' : 'received' }} &middot; {{ $receivedCount }}/{{ $items->count() }} lines
                         </span>
                         <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
                             {{ $items->count() }} items
@@ -257,9 +293,9 @@
                             <th scope="col" class="px-3 py-2.5 text-left">Item</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Qty</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Shelf life req.</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Unit price</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">{{ $purchaseOrder->isLocalPurchase() ? 'Quoted price' : 'Unit price' }}</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Total unit price</th>
-                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Received</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">{{ $purchaseOrder->isLocalPurchase() ? 'Bought' : 'Received' }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -282,38 +318,46 @@
                                         <span class="text-xs text-gray-400" title="Non-perishable">&mdash;</span>
                                     @endif
                                 </td>
-                                <td class="break-words px-3 py-2 text-right text-gray-700">{{ $peso($item->unit_price) }}</td>
-                                <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">
-                                    {{ $peso($item->extendedTotal()) }}
-                                </td>
-                                <td class="whitespace-nowrap px-3 py-2.5 text-center">
+                                <td class="break-words px-3 py-2 text-right text-gray-700">{{ $item->unit_price === null ? '—' : $peso($item->unit_price) }}</td>
+                                <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">{{ $item->unit_price === null ? '—' : $peso($item->extendedTotal()) }}</td>
+                                                                <td class="whitespace-nowrap px-3 py-2.5 text-center">
+                                    @php($receivedQty = $item->receivedQty())
+                                    @if ($receivedQty > 0)
+                                        <p class="text-[11px] font-semibold {{ $isReceived ? 'text-green-700' : 'text-amber-700' }}">
+                                            {{ $receivedQty }} / {{ $item->qty }}
+                                        </p>
+                                    @endif
+
                                     @if ($isReceived)
-                                        {{-- Locked: once received, the line cannot be unmarked from this screen --}}
-                                        <input type="checkbox" checked disabled
-                                               class="h-4 w-4 cursor-not-allowed rounded border-gray-200 bg-gray-100 accent-[#0e5266] opacity-70"
-                                               title="Recorded as received — locked"
-                                               aria-label="{{ $item->item?->name ?? 'Line' }} received and locked">
+                                        <span class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-green-700">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 12.75l6 6 9-13.5"/>
+                                            </svg>
+                                            {{ $isLocal ? 'Fully bought' : 'Fully received' }}
+                                        </span>
+                                    @elseif ($isLocal && $canManagePurchaseOrder)
+                                        <span class="text-[10px] uppercase tracking-wide text-gray-400">Pending</span>
                                     @elseif ($canManagePurchaseOrder && $canReceive)
-                                        <form method="POST" action="{{ route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]) }}">
-                                            @csrf
-                                            <input type="hidden" name="expected_received" value="0">
-                                            <input type="checkbox"
-                                                   class="po-receipt h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300"
-                                                   title="Tick when the full quantity for this line has arrived and passed the shelf-life check"
-                                                   data-po-receive
-                                                   data-po-label="{{ $item->item?->name ?? 'This line' }}"
-                                                   aria-label="Mark {{ $item->item?->name ?? 'line' }} as received">
-                                        </form>
+                                        <button type="button"
+                                                data-po-receive
+                                                data-po-action="{{ route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]) }}"
+                                                data-po-label="{{ $item->item?->name ?? 'This line' }}"
+                                                data-po-remaining="{{ $item->remainingQty() }}"
+                                                data-po-ordered="{{ $item->qty }}"
+                                                class="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[#2a7a94] bg-white px-2 py-1 text-[10px] font-semibold text-[#2a7a94] transition-colors hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                                                aria-label="Record a received quantity for {{ $item->item?->name ?? 'this line' }}">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15"/>
+                                            </svg>
+                                            Receive
+                                        </button>
                                     @elseif ($canManagePurchaseOrder)
                                         @php($title = 'Send the PO to the supplier before recording receipts')
-                                        <input type="checkbox" disabled
-                                               class="po-receipt h-4 w-4 cursor-not-allowed rounded border-gray-200 opacity-40"
-                                               title="{{ $title }}"
-                                               aria-label="{{ $title }}">
+                                        <span class="text-[10px] text-gray-400" title="{{ $title }}">{{ $isLocal ? 'Pending' : 'Not sent' }}</span>
                                     @else
                                         @php($title = 'Your role does not have access to that module.')
                                         <input type="checkbox" data-access-restricted-modal-toggle
-                                               class="po-receipt h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:opacity-40"
+                                               class="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:opacity-40"
                                                title="{{ $title }}"
                                                aria-label="{{ $title }}">
                                     @endif
@@ -328,15 +372,19 @@
             {{-- Fixed summary — visible no matter how many rows scroll --}}
             <div class="flex shrink-0 items-center justify-between gap-4 border-t border-gray-100 bg-gray-50/60 px-4 py-2.5">
                 <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Total &middot; {{ $items->count() }} {{ $items->count() === 1 ? 'line item' : 'line items' }}</p>
-                <p class="text-sm font-extrabold text-[#0e5266]">{{ $peso($total) }}</p>
+                <p class="text-sm font-extrabold text-[#0e5266]">{{ $hasTbd ? '—' : $peso($total) }}</p>
             </div>
 
             <div class="shrink-0 border-t border-gray-100 px-4 py-2.5">
                 <p class="text-xs text-gray-500">
-                    {{ $purchaseOrder->notes ?: 'No notes recorded for the supplier.' }}
+                    {{ $purchaseOrder->notes ?: ($isLocal ? 'Purchased locally — record the details with the store.' : 'No notes recorded for the supplier.') }}
                 </p>
                 <p class="mt-1 text-[11px] text-gray-400">
-                    Tick <span class="font-medium text-gray-500">Received</span> when the full quantity for a line has arrived and passed the shelf-life check. Batch/lot expiry is recorded at receiving.
+                    @if ($isLocal)
+                        For local purchases, press <span class="font-medium text-gray-500">Mark as bought</span> after each store trip — the system asks for the quantity bought and the price paid. The order completes once every line is fully bought.
+                    @else
+                        Use <span class="font-medium text-gray-500">Receive</span> to record how many units arrived and passed the shelf-life check. The order completes once every line’s full quantity is received.
+                    @endif
                 </p>
             </div>
             </div>
@@ -438,7 +486,7 @@
         </div>
     </div>
 
-        {{-- Mark as received confirmation modal --}}
+        {{-- Record receipt modal: asks how many units arrived this time --}}
         <div id="poReceiveModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="poReceiveTitle">
             <div id="poReceiveOverlay" class="absolute inset-0 bg-gray-900/50"></div>
 
@@ -451,15 +499,24 @@
                         </svg>
                     </span>
                     <div class="min-w-0">
-                        <h3 id="poReceiveTitle" class="text-base font-bold text-gray-900">Mark as received?</h3>
+                        <h3 id="poReceiveTitle" class="text-base font-bold text-gray-900">Record a receipt</h3>
                         <p class="mt-1 text-sm text-gray-500">
                             <span id="poReceiveItemName" class="font-medium text-gray-800">This line</span>
-                            will be recorded as fully received for this purchase order — the order will move to
-                            <span class="font-medium text-gray-800">Partially received</span> or
-                            <span class="font-medium text-gray-800">Completed</span>.
-                            This cannot be undone from this screen.
+                            &mdash; how many units arrived?
+                            <span id="poReceiveRemaining" class="text-gray-500"></span>
                         </p>
                     </div>
+                </div>
+
+                <div class="px-5 pb-4">
+                    <label for="poReceiveQty" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Quantity received</label>
+                    <div class="mt-1 flex items-center gap-2">
+                        <input id="poReceiveQty" name="received_qty" type="number" min="1" step="1" required
+                               class="w-28 rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+                               aria-label="Quantity received">
+                        <span id="poReceiveMax" class="text-xs text-gray-500"></span>
+                    </div>
+                    <p class="mt-2 text-[11px] text-gray-400">The order becomes Completed only when every line&rsquo;s full quantity is received. You can record the rest on another delivery.</p>
                 </div>
 
                 <input type="hidden" name="expected_received" value="0">
@@ -470,27 +527,111 @@
                     </button>
                     <button type="submit"
                             class="rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80] transition-colors cursor-pointer">
-                        Mark as received
+                        Record receipt
                     </button>
                 </div>
             </form>
         </div>
 
+        {{-- Record local purchase - quantity bought + price paid per outstanding line --}}
+        @php($poClosed = in_array($purchaseOrder->status, [\App\Models\PurchaseOrder::STATUS_COMPLETED, \App\Models\PurchaseOrder::STATUS_CANCELLED], true))
+        @if ($isLocal && ! $poClosed)
+        <div id="poBoughtModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="poBoughtTitle">
+            <div id="poBoughtOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+            <form id="poBoughtForm" method="POST" action="{{ route('purchase-order.bought', ['purchaseOrder' => $purchaseOrder->id]) }}"
+                  class="relative flex max-h-[85vh] w-full max-w-md flex-col rounded-lg bg-white shadow-xl">
+                @csrf
+                <div class="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
+                    <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-50">
+                        <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.225c-.668 0-1.189-.578-1.119-1.243l1.263-12A1.125 1.125 0 016.029 7.5h11.942a1.125 1.125 0 011.119 1.257z"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 id="poBoughtTitle" class="text-base font-bold text-gray-900">Record purchase</h3>
+                        <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid for each outstanding line. Use 0 when the store had none. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
+                    </div>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-y-auto divide-y divide-gray-100 px-5 py-2">
+                    @foreach ($items as $item)
+                        @php($boughtSoFar = $item->receivedQty())
+                        @php($lineDone = $item->isReceived())
+                        <div class="flex items-center justify-between gap-3 py-2">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-medium text-gray-900" title="{{ $item->item?->name }}">{{ $item->item?->name ?? 'Item removed' }}</p>
+                                <p class="text-[10px] text-gray-500">
+                                    Ordered {{ $item->qty }}{{ $boughtSoFar > 0 ? ' · bought '.$boughtSoFar : '' }}
+                                </p>
+                            </div>
+                            <div class="flex shrink-0 items-center gap-2">
+                                @if ($lineDone)
+                                    <span class="w-14 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Bought</span>
+                                    <span class="w-16 text-right text-sm text-gray-500">{{ $boughtSoFar }}</span>
+                                    <span class="w-24 text-right text-sm text-gray-500">&#8369;{{ number_format((float) $item->unit_price, 2) }}</span>
+                                @else
+                                    <input type="number" name="quantities[{{ $item->id }}]" min="0" max="{{ $item->remainingQty() }}" step="1"
+                                           value="{{ $item->remainingQty() }}"
+                                           class="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                           aria-label="Quantity bought for {{ $item->item?->name ?? 'line' }}">
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-xs text-gray-400">&#8369;</span>
+                                        @if ($item->unit_price !== null)
+                                            <input type="number" value="{{ number_format((float) $item->unit_price, 2, '.', '') }}" readonly disabled
+                                                   class="w-24 cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-right text-sm text-gray-500"
+                                                   aria-label="Price for {{ $item->item?->name ?? 'line' }} (locked)">
+                                        @else
+                                            <input type="number" name="prices[{{ $item->id }}]" min="0" step="0.01"
+                                                   placeholder="0.00"
+                                                   class="w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                                   aria-label="Price paid for {{ $item->item?->name ?? 'line' }}">
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
+                    <p class="text-[11px] text-gray-400">Outstanding lines stay open for the next trip.</p>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="poBoughtCancel"
+                                class="whitespace-nowrap rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                            Close
+                        </button>
+                        <button type="submit"
+                                class="whitespace-nowrap rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition-colors cursor-pointer">
+                            Record purchase
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        @endif
+
     <script>
-        // Mark as received: clicking the checkbox opens a confirmation modal
-        // instead of posting immediately. The line stays unreceived until the
-        // modal is confirmed.
+        // Record receipt: clicking Receive opens a modal that asks how many
+        // units arrived. Receipts accumulate; the line only closes once its
+        // full ordered quantity has been covered.
         (function () {
             const receiveModal = document.getElementById('poReceiveModal');
             const receiveForm = document.getElementById('poReceiveForm');
             const receiveOverlay = document.getElementById('poReceiveOverlay');
             const receiveCancel = document.getElementById('poReceiveCancel');
             const receiveItemName = document.getElementById('poReceiveItemName');
+            const receiveRemaining = document.getElementById('poReceiveRemaining');
+            const receiveQty = document.getElementById('poReceiveQty');
+            const receiveMax = document.getElementById('poReceiveMax');
 
             function openReceiveModal() {
                 receiveModal.classList.remove('hidden');
                 receiveModal.classList.add('flex');
-                receiveCancel.focus();
+                if (receiveQty) {
+                    receiveQty.focus();
+                    receiveQty.select();
+                }
             }
 
             function closeReceiveModal(focusBack) {
@@ -500,19 +641,33 @@
             }
 
             if (receiveModal && receiveForm) {
-                document.addEventListener('change', function (event) {
-                    if (! event.target.matches('input.po-receipt[data-po-receive]')) {
+                document.addEventListener('click', function (event) {
+                    const trigger = event.target.closest('[data-po-receive]');
+                    if (! trigger) {
                         return;
                     }
-                    const form = event.target.closest('form');
-                    if (! form) {
-                        return;
+
+                    event.preventDefault();
+
+                    const outstanding = parseInt(trigger.getAttribute('data-po-remaining') || '0', 10);
+                    const ordered = trigger.getAttribute('data-po-ordered') || '';
+
+                    receiveForm.setAttribute('action', trigger.getAttribute('data-po-action'));
+                    receiveItemName.textContent = trigger.getAttribute('data-po-label') || 'This line';
+
+                    if (receiveRemaining) {
+                        receiveRemaining.textContent = ordered !== ''
+                            ? outstanding + ' of ' + ordered + ' still outstanding.'
+                            : '';
                     }
-                    // Swap the checkbox's own form action onto the modal form and
-                    // keep the row unchecked until the modal is confirmed.
-                    receiveForm.setAttribute('action', form.getAttribute('action'));
-                    receiveItemName.textContent = event.target.getAttribute('data-po-label') || 'This line';
-                    event.target.checked = false;
+                    if (receiveQty) {
+                        receiveQty.max = String(Math.max(1, outstanding));
+                        receiveQty.value = String(Math.max(1, outstanding));
+                    }
+                    if (receiveMax) {
+                        receiveMax.textContent = outstanding > 0 ? 'of ' + outstanding + ' outstanding' : '';
+                    }
+
                     openReceiveModal();
                 });
 
@@ -529,6 +684,42 @@
                     }
                 });
             }
+        })();
+
+        // Mark as bought (local purchase): open the price-confirmation modal.
+        (function () {
+            const boughtBtn = document.getElementById('poBoughtBtn');
+            const boughtModal = document.getElementById('poBoughtModal');
+            const boughtOverlay = document.getElementById('poBoughtOverlay');
+            const boughtCancel = document.getElementById('poBoughtCancel');
+
+            function openBoughtModal() {
+                if (!boughtModal) return;
+                boughtModal.classList.remove('hidden');
+                boughtModal.classList.add('flex');
+                if (boughtCancel) boughtCancel.focus();
+            }
+            function closeBoughtModal(focusBack) {
+                if (!boughtModal) return;
+                boughtModal.classList.add('hidden');
+                boughtModal.classList.remove('flex');
+                if (focusBack) focusBack.focus();
+            }
+
+            if (boughtBtn) {
+                boughtBtn.addEventListener('click', openBoughtModal);
+            }
+            if (boughtOverlay) {
+                boughtOverlay.addEventListener('click', () => closeBoughtModal());
+            }
+            if (boughtCancel) {
+                boughtCancel.addEventListener('click', () => closeBoughtModal(boughtBtn));
+            }
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && boughtModal && ! boughtModal.classList.contains('hidden')) {
+                    closeBoughtModal(boughtBtn);
+                }
+            });
         })();
 
         // Cancel and delete purchase order confirmation modals.

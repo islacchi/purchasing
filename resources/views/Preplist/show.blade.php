@@ -343,6 +343,14 @@
                 @endif
 
                 @if (auth()->user()?->canModule('preplist', 'manage'))
+                    <a href="{{ route('preplist.local-purchase', ['preplist' => $preplist->id]) }}"
+                       class="flex items-center gap-2 rounded-lg border border-[#2a7a94] px-4 py-2 text-sm font-medium text-[#2a7a94] transition-colors hover:bg-[#2a7a94]/5"
+                       title="Buy these lines directly from a local store — no quotation needed">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.225c-.668 0-1.189-.578-1.119-1.243l1.263-12A1.125 1.125 0 016.029 7.5h11.942a1.125 1.125 0 011.119 1.257z"/>
+                        </svg>
+                        Local purchase
+                    </a>
                     <a href="{{ route('preplist.generate-rfq', ['preplist' => $preplist->id]) }}"
                        class="flex items-center gap-2 rounded-lg bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#236b80]">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

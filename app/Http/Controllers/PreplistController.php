@@ -14,6 +14,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Support\ActivityLogger;
 use App\Support\Pagination;
+use App\Support\PurchaseOrderCreator;
 use App\Support\RfqQuotationWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -239,6 +240,157 @@ class PreplistController extends Controller
         $quotationCount = $linkedQuotations->count();
 
         return view('Preplist.show', compact('preplist', 'quotationCount', 'linkedQuotations', 'blockedQuotations'));
+    }
+
+    /**
+     * Local purchase builder for lines that will not go through quotation.
+     * Shows only the remaining (To procure) lines with suggested prices
+     * taken from the awarded source prices.
+     */
+    public function localPurchaseForm(Preplist $preplist)
+    {
+        $preplist->load(['items.item', 'items.sources.projectItem']);
+
+        $lines = $preplist->items
+            ->map(function (PreplistItem $preplistItem) {
+                $sources = $preplistItem->sources;
+                $awardedPrices = $sources
+                    ->map(fn ($source) => $source->projectItem?->awarded_unit_price)
+                    ->filter();
+                $remaining = $preplistItem->remainingQuantity();
+
+                return [
+                    'id' => $preplistItem->id,
+                    'name' => $preplistItem->item?->name ?? 'Item',
+                    'unit' => $preplistItem->item?->unit ?? 'unit',
+                    'remaining' => $remaining,
+                    'shelf_life' => (int) $preplistItem->min_shelf_life_months,
+                    'suggested_price' => $awardedPrices->isNotEmpty() ? (float) $awardedPrices->max() : null,
+                    'source_count' => $sources->count(),
+                ];
+            })
+            ->filter(fn (array $line) => $line['remaining'] > 0)
+            ->values();
+
+        // Nothing to buy locally — the user only ever sees buyable lines.
+        if ($lines->isEmpty()) {
+            return redirect()
+                ->route('preplist.show', ['preplist' => $preplist->id])
+                ->with('status', 'Nothing left to procure on this prep list.');
+        }
+
+        $suppliers = Supplier::query()
+            ->orderBy('name')
+            ->get();
+
+        return view('Preplist.local_purchase', [
+            'prepList' => $preplist,
+            'lines' => $lines,
+            'suppliers' => $suppliers,
+        ]);
+    }
+
+    /**
+     * Raise a draft purchase order directly against a local store. No
+     * quotation is required; the order is flagged source=local and follows
+     * the same draft → send → receive flow as any other purchase order.
+     */
+    public function storeLocalPurchase(Request $request, Preplist $preplist)
+    {
+        $validated = $request->validate([
+            'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
+            'expected_delivery' => ['nullable', 'date'],
+            'payment_terms' => ['nullable', 'string', 'max:255'],
+            'deliver_to' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
+            'selected' => ['required', 'array', 'min:1'],
+            'selected.*' => ['integer'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.qty' => ['required', 'integer', 'min:1'],
+            'lines.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'lines.*.bought' => ['nullable', 'boolean'],
+        ], [
+            'selected.required' => 'Select at least one line to buy locally.',
+            'selected.min' => 'Select at least one line to buy locally.',
+        ]);
+
+        $preplistItemById = $preplist->items()
+            ->with('sources.projectItem')
+            ->get()
+            ->keyBy('id');
+
+        $lines = [];
+        $invalid = [];
+
+        foreach ($validated['selected'] as $preplistItemId) {
+            $preplistItem = $preplistItemById->get((int) $preplistItemId);
+            $qty = (int) ($validated['lines'][$preplistItemId]['qty'] ?? 0);
+            $priceStr = trim((string) ($validated['lines'][$preplistItemId]['unit_price'] ?? ''));
+            $boughtNow = filter_var($validated['lines'][$preplistItemId]['bought'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $name = $preplistItem?->item?->name ?? 'Item #'.$preplistItemId;
+
+            if (! $preplistItem) {
+                $invalid[] = $name.' (not on this prep list)';
+
+                continue;
+            }
+
+            $remaining = $preplistItem->remainingQuantity();
+
+            if ($remaining <= 0) {
+                $invalid[] = $name.' (covered by on-hand stock)';
+
+                continue;
+            }
+
+            if ($qty > $remaining) {
+                $invalid[] = $name.' (quantity '.$qty.' exceeds the remaining '.$remaining.' needed)';
+
+                continue;
+            }
+
+            $lines[] = [
+                'preplist_item' => $preplistItem,
+                'qty' => $qty,
+                'unit_price' => $priceStr === '' ? null : $priceStr,
+                'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,
+                'bought_now' => $boughtNow,
+            ];
+        }
+
+        if ($invalid) {
+            throw ValidationException::withMessages([
+                'local_purchase' => 'Cannot create the order — '.implode('; ', $invalid).'.',
+            ]);
+        }
+
+        if ($lines === []) {
+            throw ValidationException::withMessages([
+                'selected' => 'Select at least one line to buy locally.',
+            ]);
+        }
+
+        $purchaseOrder = PurchaseOrderCreator::createForLocalPurchase(
+            $request->user()->id,
+            $lines,
+            [
+                'supplier_id' => (int) $validated['supplier_id'],
+                'expected_delivery' => $validated['expected_delivery'] ?? null,
+                'payment_terms' => $validated['payment_terms'] ?? null,
+                'deliver_to' => $validated['deliver_to'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+            ]
+        );
+
+        $statusMessage = match ($purchaseOrder->status) {
+            \App\Models\PurchaseOrder::STATUS_COMPLETED => 'Local purchase order '.$purchaseOrder->po_number.' created and completed — receipts and stock are recorded.',
+            \App\Models\PurchaseOrder::STATUS_PARTIALLY_RECEIVED => 'Local purchase order '.$purchaseOrder->po_number.' created — lines marked bought now are received; the rest can be bought later.',
+            default => 'Local purchase order '.$purchaseOrder->po_number.' created as a draft — press Mark as bought after the store trip.',
+        };
+
+        return redirect()
+            ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
+            ->with('status', $statusMessage);
     }
 
     /**

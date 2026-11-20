@@ -25,6 +25,10 @@ class PurchaseOrder extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const SOURCE_QUOTATION = 'quotation';
+
+    public const SOURCE_LOCAL = 'local';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -36,6 +40,7 @@ class PurchaseOrder extends Model
         'created_by',
         'po_number',
         'status',
+        'source',
         'issued_on',
         'expected_delivery_on',
         'payment_terms',
@@ -62,11 +67,20 @@ class PurchaseOrder extends Model
     }
 
     /**
-     * The quotation this purchase order was generated from.
+     * The quotation this purchase order was generated from (null for local purchases).
      */
     public function quotation(): BelongsTo
     {
         return $this->belongsTo(Quotation::class);
+    }
+
+    /**
+     * Whether this order was raised directly against a local store with no
+     * supplier quotation (source = local).
+     */
+    public function isLocalPurchase(): bool
+    {
+        return $this->source === self::SOURCE_LOCAL;
     }
 
     /**

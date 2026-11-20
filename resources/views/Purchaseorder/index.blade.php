@@ -50,7 +50,7 @@
         {{-- Page heading --}}
         <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
             <p class="text-xs text-gray-500">
-                Orders generated from awarded supplier quotations.
+                Orders generated from awarded supplier quotations and direct local purchases.
             </p>
    
         </div>
@@ -179,19 +179,23 @@
                                 data-href="{{ route('purchase-order.show', ['purchaseOrder' => $po['id']]) }}">
                                 <td class="whitespace-nowrap px-3 py-4">
                                     <p class="font-semibold text-gray-900">{{ $po['number'] }}</p>
-                                    <p class="mt-0.5 text-xs text-gray-500">from quotation {{ $po['rfq_number'] }}</p>
+                                    @if ($po['local'])
+                                        <p class="mt-0.5 text-xs font-semibold text-amber-700">Local purchase</p>
+                                    @else
+                                        <p class="mt-0.5 text-xs text-gray-500">from quotation {{ $po['rfq_number'] ?? '—' }}</p>
+                                    @endif
                                 </td>
                                 <td class="px-3 py-4 text-gray-700">
                                     {{ $po['supplier'] }}
                                 </td>
                                 <td class="px-3 py-4 text-gray-700">
-                                    {{ $po['prep_list'] }}
+                                    {{ $po['prep_list'] ?? '—' }}
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-4 text-center text-gray-700">
                                     {{ $po['items'] }}
                                 </td>
                                 <td class="break-words px-3 py-4 text-right font-semibold text-gray-900">
-                                    {{ $peso($po['total']) }}
+                                    {{ $po['pricing_tbd'] ? '—' : $peso($po['total']) }}
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-4">
                                     <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $statusStyles[$po['status']] ?? 'bg-gray-100 text-gray-600' }}">

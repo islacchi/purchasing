@@ -88,6 +88,12 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::post('/preplist/{preplist}/generate-rfq', [PreplistController::class, 'generateRfqExcel'])
             ->whereNumber('preplist')
             ->name('preplist.generate-rfq.excel');
+        Route::get('/preplist/{preplist}/local-purchase', [PreplistController::class, 'localPurchaseForm'])
+            ->whereNumber('preplist')
+            ->name('preplist.local-purchase');
+        Route::post('/preplist/{preplist}/local-purchase', [PreplistController::class, 'storeLocalPurchase'])
+            ->whereNumber('preplist')
+            ->name('preplist.local-purchase.store');
     });
 
     Route::middleware('module:quotation')->group(function () {
@@ -204,6 +210,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::post('/purchase-order/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])
             ->whereNumber('purchaseOrder')
             ->name('purchase-order.send');
+        Route::post('/purchase-order/{purchaseOrder}/bought', [PurchaseOrderController::class, 'bought'])
+            ->whereNumber('purchaseOrder')
+            ->name('purchase-order.bought');
         Route::post('/purchase-order/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])
             ->whereNumber('purchaseOrder')
             ->name('purchase-order.cancel');

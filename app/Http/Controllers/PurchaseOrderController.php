@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\PreplistItem;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
-use App\Models\PurchaseOrderReceipt;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\ActivityLogger;
 use App\Support\Pagination;
 use App\Support\PurchaseOrderCreator;
+use App\Support\PurchaseReceipts;
 use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -67,8 +67,10 @@ class PurchaseOrderController extends Controller
                 'id' => $purchaseOrder->id,
                 'number' => $purchaseOrder->po_number,
                 'supplier' => $purchaseOrder->supplier?->name ?? 'Supplier removed',
-                'rfq_number' => $purchaseOrder->quotation?->rfq_number ?? '—',
-                'prep_list' => $purchaseOrder->quotation?->preplist?->name ?? 'Prep list removed',
+                'rfq_number' => $purchaseOrder->quotation?->rfq_number,
+                'prep_list' => $purchaseOrder->quotation?->preplist?->name,
+                'local' => $purchaseOrder->isLocalPurchase(),
+                'pricing_tbd' => $purchaseOrder->isLocalPurchase() && $purchaseOrder->items->contains(fn ($item) => $item->unit_price === null),
                 'items' => $purchaseOrder->items->count(),
                 'total' => $purchaseOrder->grandTotal(),
                 'status' => $purchaseOrder->statusLabel(),
@@ -310,6 +312,12 @@ class PurchaseOrderController extends Controller
      */
     public function send(Request $request, PurchaseOrder $purchaseOrder)
     {
+        if ($purchaseOrder->isLocalPurchase()) {
+            return redirect()
+                ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
+                ->withErrors(['purchase_order' => 'Local purchases are not sent to suppliers. Pick the goods at the store, then use Mark as bought.']);
+        }
+
         if ($purchaseOrder->status !== PurchaseOrder::STATUS_DRAFT) {
             return redirect()
                 ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
@@ -361,15 +369,23 @@ class PurchaseOrderController extends Controller
     }
 
     /**
-     * Mark a purchase order line as fully received.
+     * Record a receipt against a purchase order line.
      *
-     * Receiving is one-way: once a line is recorded as received it can no
-     * longer be unchecked from the UI or directly; it has to stay received.
+     * Receipts accumulate: each call records how many units arrived this
+     * time (defaulting to the full outstanding quantity). The order is only
+     * completed once every line is fully received; until then it stays
+     * partially received.
      */
     public function toggleReceipt(Request $request, PurchaseOrder $purchaseOrder, PurchaseOrderItem $purchaseOrderItem)
     {
         if ($purchaseOrderItem->purchase_order_id !== $purchaseOrder->id) {
             abort(404);
+        }
+
+        if ($purchaseOrder->isLocalPurchase()) {
+            return redirect()
+                ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
+                ->withErrors(['purchase_order' => 'Local purchases are recorded with Mark as bought.']);
         }
 
         if (! $purchaseOrder->canReceive()) {
@@ -384,7 +400,10 @@ class PurchaseOrderController extends Controller
                 ->withErrors(['purchase_order' => 'This line is already recorded as received and cannot be unmarked.']);
         }
 
-        $expected = $request->validate(['expected_received' => 'nullable|boolean']);
+        $expected = $request->validate([
+            'received_qty' => ['nullable', 'integer', 'min:1'],
+            'expected_received' => ['nullable', 'boolean'],
+        ]);
 
         if (isset($expected['expected_received']) && (bool) $expected['expected_received'] !== $purchaseOrderItem->isReceived()) {
             return redirect()
@@ -392,13 +411,17 @@ class PurchaseOrderController extends Controller
                 ->withErrors(['purchase_order' => 'Someone else already recorded this receipt since the page was loaded. Refresh the page and try again.']);
         }
 
-        DB::transaction(function () use ($request, $purchaseOrder, $purchaseOrderItem) {
-            PurchaseOrderReceipt::create([
-                'purchase_order_item_id' => $purchaseOrderItem->id,
-                'received_by' => $request->user()->id,
-                'received_qty' => $purchaseOrderItem->qty,
-                'received_on' => today(),
-            ]);
+        $remaining = $purchaseOrderItem->remainingQty();
+        $qty = (int) ($expected['received_qty'] ?? $remaining);
+
+        if ($qty < 1 || $qty > $remaining) {
+            return redirect()
+                ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
+                ->withErrors(['purchase_order' => 'Enter a received quantity between 1 and '.$remaining.' for this line.']);
+        }
+
+        DB::transaction(function () use ($request, $purchaseOrder, $purchaseOrderItem, $qty) {
+            PurchaseReceipts::finalize($purchaseOrderItem, $request->user()->id, $qty);
 
             $this->refreshReceiptStatus($purchaseOrder);
 
@@ -407,7 +430,117 @@ class PurchaseOrderController extends Controller
 
         return redirect()
             ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
-            ->with('status', 'Line marked as received.');
+            ->with('status', $qty === $remaining
+                ? 'Line marked as received.'
+                : 'Recorded '.$qty.' of '.$purchaseOrderItem->qty.' received.');
+    }
+
+    /**
+     * Record a local purchase trip.
+     *
+     * The modal asks for the quantity bought and the price paid on each
+     * outstanding line. Receipts accumulate across trips: the order becomes
+     * Completed only once every line has its full ordered quantity covered.
+     */
+    public function bought(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        if (! $purchaseOrder->isLocalPurchase()) {
+            abort(403, 'Only local purchase orders can be marked as bought.');
+        }
+
+        if (in_array($purchaseOrder->status, [PurchaseOrder::STATUS_COMPLETED, PurchaseOrder::STATUS_CANCELLED], true)) {
+            return redirect()
+                ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
+                ->withErrors(['bought' => 'This order is already completed or cancelled.']);
+        }
+
+        $purchaseOrder->load('items.item', 'items.receipts', 'items.preplistItem');
+
+        $validated = $request->validate([
+            'prices' => ['nullable', 'array'],
+            'prices.*' => ['nullable', 'numeric', 'min:0'],
+            'quantities' => ['nullable', 'array'],
+            'quantities.*' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $prices = $validated['prices'] ?? [];
+        $quantities = $validated['quantities'] ?? [];
+        $pending = $purchaseOrder->items->filter(fn (PurchaseOrderItem $item) => ! $item->isReceived());
+
+        $missing = [];
+        $boughtThisTrip = [];
+
+        foreach ($pending as $line) {
+            $remaining = $line->remainingQty();
+            $qty = (int) ($quantities[$line->id] ?? $remaining);
+
+            if ($qty < 0 || $qty > $remaining) {
+                throw ValidationException::withMessages([
+                    'quantities' => 'Quantity for '.($line->item?->name ?? 'a line').' must be between 0 and '.$remaining.'.',
+                ]);
+            }
+
+            $boughtThisTrip[$line->id] = $qty;
+
+            if ($qty === 0 || $line->unit_price !== null) {
+                continue;
+            }
+
+            $value = trim((string) ($prices[$line->id] ?? ''));
+
+            if ($value === '' || ! is_numeric($value)) {
+                $missing[] = $line->item?->name ?? 'Line #'.$line->id;
+            }
+        }
+
+        if ($missing !== []) {
+            throw ValidationException::withMessages([
+                'prices' => 'Enter the price paid for: '.implode(', ', $missing).'.',
+            ]);
+        }
+
+        if (array_sum($boughtThisTrip) === 0) {
+            throw ValidationException::withMessages([
+                'quantities' => 'Enter a quantity for at least one line.',
+            ]);
+        }
+
+        DB::transaction(function () use ($request, $purchaseOrder, $pending, $prices, $boughtThisTrip) {
+            foreach ($pending as $line) {
+                $qty = $boughtThisTrip[$line->id];
+
+                if ($qty === 0) {
+                    continue;
+                }
+
+                if ($line->unit_price === null) {
+                    $line->update(['unit_price' => $prices[$line->id]]);
+                }
+
+                PurchaseReceipts::finalize($line, $request->user()->id, $qty);
+            }
+
+            if ($purchaseOrder->issued_on === null) {
+                $purchaseOrder->update(['issued_on' => today()]);
+            }
+
+            $this->refreshReceiptStatus($purchaseOrder);
+
+            $completed = $purchaseOrder->status === PurchaseOrder::STATUS_COMPLETED;
+
+            ActivityLogger::log(
+                $completed ? 'Completed' : 'Edited',
+                'Purchase Order',
+                $purchaseOrder->po_number.($completed ? ' (local purchase bought)' : ' (local purchase, partially bought)'),
+                $purchaseOrder
+            );
+        });
+
+        return redirect()
+            ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
+            ->with('status', $purchaseOrder->fresh()->status === PurchaseOrder::STATUS_COMPLETED
+                ? 'Purchase order '.$purchaseOrder->po_number.' is fully bought and completed.'
+                : 'Purchase recorded. Outstanding lines stay open until their full quantity is bought.');
     }
 
     /**
@@ -424,12 +557,14 @@ class PurchaseOrderController extends Controller
 
         $total = $purchaseOrder->items->count();
         $received = $purchaseOrder->items->filter(fn (PurchaseOrderItem $item) => $item->isReceived())->count();
+        $hasAnyReceipt = $purchaseOrder->items->contains(fn (PurchaseOrderItem $item) => $item->receivedQty() > 0);
 
         $purchaseOrder->update([
             'status' => match (true) {
-                $received === 0 => PurchaseOrder::STATUS_SENT,
-                $received >= $total => PurchaseOrder::STATUS_COMPLETED,
-                default => PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+                $total > 0 && $received >= $total => PurchaseOrder::STATUS_COMPLETED,
+                $hasAnyReceipt => PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+                $purchaseOrder->isLocalPurchase() => PurchaseOrder::STATUS_DRAFT,
+                default => PurchaseOrder::STATUS_SENT,
             },
         ]);
     }
