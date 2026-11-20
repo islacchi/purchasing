@@ -457,6 +457,7 @@ class PurchaseOrderController extends Controller
         $purchaseOrder->load('items.item', 'items.receipts', 'items.preplistItem');
 
         $validated = $request->validate([
+            'bought_line_id' => ['nullable', 'integer', 'exists:purchase_order_items,id'],
             'prices' => ['nullable', 'array'],
             'prices.*' => ['nullable', 'numeric', 'min:0'],
             'quantities' => ['nullable', 'array'],
@@ -465,7 +466,18 @@ class PurchaseOrderController extends Controller
 
         $prices = $validated['prices'] ?? [];
         $quantities = $validated['quantities'] ?? [];
-        $pending = $purchaseOrder->items->filter(fn (PurchaseOrderItem $item) => ! $item->isReceived());
+        $boughtLineId = $validated['bought_line_id'] ?? null;
+
+        $pending = $purchaseOrder->items
+            ->filter(fn (PurchaseOrderItem $item) => ! $item->isReceived())
+            ->when($boughtLineId !== null, fn ($lines) => $lines->filter(fn (PurchaseOrderItem $item) => $item->id === (int) $boughtLineId))
+            ->values();
+
+        if ($boughtLineId !== null && $pending->isEmpty()) {
+            throw ValidationException::withMessages([
+                'bought_line_id' => 'That purchase order line is not open for a new purchase.',
+            ]);
+        }
 
         $missing = [];
         $boughtThisTrip = [];

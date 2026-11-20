@@ -235,6 +235,90 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame(10, $poItem->qty); // quantity not touched
     }
 
+    public function test_bought_scopes_the_purchase_to_the_requested_line(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        // First trip on the specific line only.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'quantities' => [$poItem->id => 4],
+                'prices' => [$poItem->id => '305.00'],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $poItem->refresh();
+
+        $this->assertFalse($poItem->isReceived());
+        $this->assertSame('partially_received', $po->refresh()->status);
+        $this->assertSame(4, (int) $poItem->receipts()->sum('received_qty'));
+
+        // Second trip on the same line covers the remainder and completes the order.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'quantities' => [$poItem->id => 6],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $poItem->refresh();
+
+        $this->assertTrue($poItem->isReceived());
+        $this->assertSame('completed', $po->refresh()->status);
+    }
+
+    public function test_bought_is_rejected_for_a_completed_local_purchase(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'quantities' => [$poItem->id => 10],
+                'prices' => [$poItem->id => '305.00'],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('completed', $po->refresh()->status);
+
+        // The order is closed; buying through the line is rejected.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'quantities' => [$poItem->id => 2],
+            ])
+            ->assertSessionHasErrors('bought');
+    }
+
     public function test_bought_requires_the_price_for_every_tbd_line(): void
     {
         $user = $this->admin();

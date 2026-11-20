@@ -115,15 +115,7 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                @if ($isLocal)
-                    <button type="button" id="poBoughtBtn"
-                            class="inline-flex items-center gap-2 rounded-lg border border-amber-400 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 {{ $purchaseOrder->status === \App\Models\PurchaseOrder::STATUS_COMPLETED || $purchaseOrder->status === \App\Models\PurchaseOrder::STATUS_CANCELLED ? 'hidden' : '' }}">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 10a2 2 0 100 4m8-4a2 2 0 100 4M8 13h8"/>
-                        </svg>
-                        Mark as bought
-                    </button>
-                @else
+                @if (! $isLocal)
                 <form method="POST" action="{{ route('purchase-order.send', ['purchaseOrder' => $purchaseOrder->id]) }}">
                     @csrf
                     <button type="submit" id="poSendBtn"
@@ -342,7 +334,18 @@
                                             {{ $isLocal ? 'Fully bought' : 'Fully received' }}
                                         </span>
                                     @elseif ($isLocal && $canManagePurchaseOrder)
-                                        <span class="text-[10px] uppercase tracking-wide text-gray-400">Pending</span>
+                                        <button type="button"
+                                                data-po-bought
+                                                data-po-line-id="{{ $item->id }}"
+                                                data-po-qty="{{ $item->remainingQty() }}"
+                                                data-po-label="{{ $item->item?->name ?? 'this line' }}"
+                                                class="mt-0.5 inline-flex items-center gap-1 rounded-md border border-amber-400 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                                aria-label="Mark {{ $item->item?->name ?? 'this line' }} as bought">
+                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 10a2 2 0 100 4m8-4a2 2 0 100 4M8 13h8"/>
+                                            </svg>
+                                            Mark as bought
+                                        </button>
                                     @elseif ($canManagePurchaseOrder && $canReceive)
                                         <button type="button"
                                                 data-po-receive
@@ -387,7 +390,7 @@
                 </p>
                 <p class="mt-1 text-[11px] text-gray-400">
                     @if ($isLocal)
-                        For local purchases, press <span class="font-medium text-gray-500">Mark as bought</span> after each store trip — the system asks for the quantity bought and the price paid. The order completes once every line is fully bought.
+                        For local purchases, press <span class="font-medium text-gray-500">Mark as bought</span> on the line after each store trip — the system asks for the quantity bought and the price paid. The order completes once every line is fully bought.
                     @else
                         Use <span class="font-medium text-gray-500">Receive</span> to record how many units arrived and passed the shelf-life check. The order completes once every line’s full quantity is received.
                     @endif
@@ -548,6 +551,7 @@
             <form id="poBoughtForm" method="POST" action="{{ route('purchase-order.bought', ['purchaseOrder' => $purchaseOrder->id]) }}"
                   class="relative flex max-h-[85vh] w-full max-w-md flex-col rounded-lg bg-white shadow-xl">
                 @csrf
+                <input type="hidden" name="bought_line_id" id="boughtLineId" value="">
                 <div class="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
                     <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-50">
                         <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -556,7 +560,7 @@
                     </span>
                     <div class="min-w-0">
                         <h3 id="poBoughtTitle" class="text-base font-bold text-gray-900">Record purchase</h3>
-                        <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid for each outstanding line. Use 0 when the store had none. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
+                        <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid for this line. Use 0 when the store had none. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
                     </div>
                 </div>
 
@@ -564,7 +568,7 @@
                     @foreach ($items as $item)
                         @php($boughtSoFar = $item->receivedQty())
                         @php($lineDone = $item->isReceived())
-                        <div class="flex items-center justify-between gap-3 py-2">
+                        <div id="boughtLineRow-{{ $item->id }}" class="flex items-center justify-between gap-3 py-2">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-medium text-gray-900" title="{{ $item->item?->name }}">{{ $item->item?->name ?? 'Item removed' }}</p>
                                 <p class="text-[10px] text-gray-500">
@@ -577,7 +581,7 @@
                                     <span class="w-16 text-right text-sm text-gray-500">{{ $boughtSoFar }}</span>
                                     <span class="w-24 text-right text-sm text-gray-500">&#8369;{{ number_format((float) $item->unit_price, 2) }}</span>
                                 @else
-                                    <input type="number" name="quantities[{{ $item->id }}]" min="0" max="{{ $item->remainingQty() }}" step="1"
+                                    <input type="number" name="quantities[{{ $item->id }}]" data-qty-line="{{ $item->id }}" min="0" max="{{ $item->remainingQty() }}" step="1"
                                            value="{{ $item->remainingQty() }}"
                                            class="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
                                            aria-label="Quantity bought for {{ $item->item?->name ?? 'line' }}">
@@ -588,7 +592,7 @@
                                                    class="w-24 cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-right text-sm text-gray-500"
                                                    aria-label="Price for {{ $item->item?->name ?? 'line' }} (locked)">
                                         @else
-                                            <input type="number" name="prices[{{ $item->id }}]" min="0" step="0.01"
+                                            <input type="number" name="prices[{{ $item->id }}]" data-price-line="{{ $item->id }}" min="0" step="0.01"
                                                    placeholder="0.00"
                                                    class="w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                                    aria-label="Price paid for {{ $item->item?->name ?? 'line' }}">
@@ -692,17 +696,40 @@
             }
         })();
 
-        // Mark as bought (local purchase): open the price-confirmation modal.
+        // Mark as bought (local purchase): open the price-confirmation modal for
+        // the line the user picked from the items table.
         (function () {
-            const boughtBtn = document.getElementById('poBoughtBtn');
             const boughtModal = document.getElementById('poBoughtModal');
+            const boughtForm = document.getElementById('poBoughtForm');
             const boughtOverlay = document.getElementById('poBoughtOverlay');
             const boughtCancel = document.getElementById('poBoughtCancel');
+            const boughtLineId = document.getElementById('boughtLineId');
+            let boughtTrigger = null;
 
-            function openBoughtModal() {
+            function openBoughtModal(trigger) {
                 if (!boughtModal) return;
                 boughtModal.classList.remove('hidden');
                 boughtModal.classList.add('flex');
+                boughtTrigger = trigger || null;
+
+                const lineId = trigger ? trigger.getAttribute('data-po-line-id') : null;
+                boughtModal.querySelectorAll('[id^="boughtLineRow-"]').forEach(function (row) {
+                    row.classList.toggle('hidden', row.id !== 'boughtLineRow-' + lineId);
+                });
+
+                if (trigger) {
+                    if (boughtLineId) boughtLineId.value = lineId || '';
+
+                    const qtyInput = boughtForm ? boughtForm.querySelector('input[data-qty-line="' + lineId + '"]') : null;
+                    if (qtyInput) {
+                        qtyInput.value = trigger.getAttribute('data-po-qty') || qtyInput.value;
+                        qtyInput.max = qtyInput.value;
+                    }
+
+                    const priceInput = boughtForm ? boughtForm.querySelector('input[data-price-line="' + lineId + '"]') : null;
+                    if (priceInput) priceInput.value = '';
+                }
+
                 if (boughtCancel) boughtCancel.focus();
             }
             function closeBoughtModal(focusBack) {
@@ -712,18 +739,26 @@
                 if (focusBack) focusBack.focus();
             }
 
-            if (boughtBtn) {
-                boughtBtn.addEventListener('click', openBoughtModal);
-            }
+            document.addEventListener('click', function (event) {
+                const trigger = event.target.closest('[data-po-bought]');
+                if (!trigger) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                openBoughtModal(trigger);
+            });
+
             if (boughtOverlay) {
                 boughtOverlay.addEventListener('click', () => closeBoughtModal());
             }
             if (boughtCancel) {
-                boughtCancel.addEventListener('click', () => closeBoughtModal(boughtBtn));
+                boughtCancel.addEventListener('click', () => closeBoughtModal(boughtTrigger));
             }
             document.addEventListener('keydown', function (event) {
                 if (event.key === 'Escape' && boughtModal && ! boughtModal.classList.contains('hidden')) {
-                    closeBoughtModal(boughtBtn);
+                    closeBoughtModal(boughtTrigger);
                 }
             });
         })();
