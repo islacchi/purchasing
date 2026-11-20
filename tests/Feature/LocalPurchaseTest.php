@@ -309,8 +309,8 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame(1, $po->items()->first()->receipts()->count());
         $this->assertSame(10, (int) $po->items()->first()->qty);
         $this->assertSame(10, $f['projectItem']->fresh()->in_stock);
-        // Not fully covered yet → still pending.
-        $this->assertSame('pending', $f['projectItem']->fresh()->fulfillment_status);
+        // Partially covered: stock arrived but the awarded quantity is not met yet.
+        $this->assertSame('partial', $f['projectItem']->fresh()->fulfillment_status);
     }
 
     public function test_fully_bought_line_becomes_fulfilled(): void

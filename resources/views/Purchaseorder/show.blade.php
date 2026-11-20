@@ -328,6 +328,12 @@
                                         </p>
                                     @endif
 
+                                    @if (! $isReceived && $receivedQty > 0)
+                                        <span class="mt-0.5 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700">
+                                            Partial
+                                        </span>
+                                    @endif
+
                                     @if ($isReceived)
                                         <span class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-green-700">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

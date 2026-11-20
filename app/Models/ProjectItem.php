@@ -61,11 +61,50 @@ class ProjectItem extends Model
     }
 
     /**
+     * Quantity-driven fulfillment state: pending until some stock arrives,
+     * partial while in-stock is short of the awarded quantity, fulfilled once
+     * covered. A stored "waived" flag still wins.
+     */
+    public function quantityStatus(): string
+    {
+        if ($this->fulfillment_status === 'waived') {
+            return 'waived';
+        }
+
+        if ((int) $this->quantity > 0 && (int) $this->in_stock >= (int) $this->quantity) {
+            return 'fulfilled';
+        }
+
+        return (int) $this->in_stock > 0 ? 'partial' : 'pending';
+    }
+
+    /**
+     * Whether only part of the awarded quantity has arrived.
+     */
+    // public function isPartiallyFulfilled(): bool
+    // {
+    //     return $this->quantityStatus() === 'partial';
+    // }
+    public function isPartiallyFulfilled(): bool
+{
+    return ! $this->isFulfilled() && (int) $this->in_stock > 0;
+}
+public function coveredQuantity(): int
+{
+    if ($this->fulfillment_status === 'fulfilled') {
+        return (int) $this->quantity;
+    }
+
+    return min((int) $this->quantity, (int) $this->in_stock);
+}
+
+
+    /**
      * Whether the line counts as fulfilled (received via PO, or covered by stock).
      */
     public function isFulfilled(): bool
     {
-        return $this->fulfillment_status === 'fulfilled' || $this->isFulfilledByStock();
+        return $this->quantityStatus() === 'fulfilled';
     }
 
     /**
@@ -83,4 +122,5 @@ class ProjectItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
+    
 }

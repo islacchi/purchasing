@@ -187,11 +187,11 @@
                                     $unitPrice = $projectItem->awarded_unit_price ?? $projectItem->unit_cost;
                                     $remaining = $projectItem->remainingQuantity();
                                     $lineTotal = $remaining * (float) $unitPrice;
-                                    $fulfillmentStatus = $projectItem->isFulfilled() ? 'fulfilled' : ($projectItem->fulfillment_status ?: 'pending');
-
+                                    $fulfillmentStatus = $projectItem->quantityStatus();
                                     $itemStatus = ucfirst(str_replace('_', ' ', $fulfillmentStatus));
                                     $itemStatusClasses = match ($fulfillmentStatus) {
                                         'fulfilled' => 'bg-green-100 text-green-700',
+                                        'partial' => 'bg-amber-100 text-amber-700',
                                         'waived' => 'bg-orange-100 text-orange-700',
                                         default => 'bg-gray-100 text-gray-700',
                                     };

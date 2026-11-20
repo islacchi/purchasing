@@ -121,9 +121,21 @@ class PurchaseOrderItem extends Model
      */
     public function isPartiallyReceived(): bool
     {
+        return $this->receiptState() === 'partial';
+    }
+
+    /**
+     * Quantity-driven receiving state: pending, partial or completed.
+     */
+    public function receiptState(): string
+    {
         $received = $this->receivedQty();
 
-        return $received > 0 && $received < (int) $this->qty;
+        return match (true) {
+            (int) $this->qty > 0 && $received >= (int) $this->qty => 'completed',
+            $received > 0 => 'partial',
+            default => 'pending',
+        };
     }
 
     /**

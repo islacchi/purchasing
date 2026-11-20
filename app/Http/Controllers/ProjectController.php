@@ -389,6 +389,21 @@ class ProjectController extends Controller
      * Fingerprint of every field the edit form can change — used as the optimistic
      * concurrency checkpoint when the project is saved.
      */
+    /**
+     * Quantity-driven fulfillment state for a submitted project row.
+     */
+    private function fulfillmentStatusFor(array $row): string
+    {
+        $quantity = (int) ($row['quantity'] ?? 0);
+        $inStock = (int) ($row['in_stock'] ?? 0);
+
+        return match (true) {
+            $quantity > 0 && $inStock >= $quantity => 'fulfilled',
+            $inStock > 0 => 'partial',
+            default => 'pending',
+        };
+    }
+
     private function payloadFingerprint(Project $project): string
     {
         $itemRows = $project->items->map(fn (ProjectItem $item) => implode(':', [
@@ -592,6 +607,7 @@ class ProjectController extends Controller
                     'in_stock' => (int) ($row['in_stock'] ?? 0),
                     'unit_cost' => $row['unit_cost'],
                     'awarded_unit_price' => $row['quoted_price'] ?? null,
+                    'fulfillment_status' => $this->fulfillmentStatusFor($row),
                 ]);
 
                 continue;
@@ -608,7 +624,7 @@ class ProjectController extends Controller
                 'in_stock' => (int) ($row['in_stock'] ?? 0),
                 'unit_cost' => $row['unit_cost'],
                 'awarded_unit_price' => $row['quoted_price'] ?? null,
-                'fulfillment_status' => 'pending',
+                'fulfillment_status' => $this->fulfillmentStatusFor($row),
             ]);
         }
 

@@ -94,6 +94,16 @@ class Project extends Model
     }
 
     /**
+     * Number of item rows that have received only part of their quantity.
+     */
+    public function partiallyFulfilledItemCount(): int
+    {
+        return $this->items
+            ->filter(fn (ProjectItem $item) => $item->isPartiallyFulfilled())
+            ->count();
+    }
+
+    /**
      * Percentage of item rows already fulfilled.
      */
     public function progressPercentage(): float
@@ -109,17 +119,20 @@ class Project extends Model
     public function statusLabel(): string
     {
         $total = $this->totalItemCount();
-        $fulfilled = $this->fulfilledItemCount();
 
         if ($total === 0) {
             return 'Not started';
         }
 
-        if ($fulfilled >= $total) {
+        if ($this->fulfilledItemCount() >= $total) {
             return 'Completed';
         }
 
-        return $fulfilled > 0 ? 'In progress' : 'Pending';
+        // Any item partially covered (stock arrived, quantity short) means
+        // the project is in progress; fully pending projects stay pending.
+        return ($this->fulfilledItemCount() + $this->partiallyFulfilledItemCount()) > 0
+            ? 'In progress'
+            : 'Pending';
     }
 
     /**

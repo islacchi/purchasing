@@ -71,11 +71,15 @@ final class PurchaseReceipts
 
             $newStock = (int) $projectItem->in_stock + $delta;
 
+            $newStatus = match (true) {
+                (int) $projectItem->quantity > 0 && $newStock >= (int) $projectItem->quantity => 'fulfilled',
+                $newStock > 0 => 'partial',
+                default => $projectItem->fulfillment_status,
+            };
+
             $projectItem->update([
                 'in_stock' => $newStock,
-                'fulfillment_status' => $newStock >= (int) $projectItem->quantity
-                    ? 'fulfilled'
-                    : $projectItem->fulfillment_status,
+                'fulfillment_status' => $newStatus,
             ]);
         }
     }
