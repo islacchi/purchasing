@@ -52,7 +52,7 @@
                     <div class="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
                         <div>
                             <h3 class="text-sm font-bold uppercase tracking-wider text-gray-700">Lines to buy · {{ $lines->count() }}</h3>
-                            <p class="mt-0.5 text-xs text-gray-500">Set <span class="font-medium">Qty</span> to how many units you are buying on this order \u2014 anything left over stays pending on the prep list. <span class="font-medium">Local Price</span> stays blank by default; it is only recorded once the purchase is marked as bought.</p>
+                            <p class="mt-0.5 text-xs text-gray-500">The <span class="font-medium">Qty</span> column is fixed at the remaining quantity to procure on this order — the exact number bought is entered when the purchase is marked as bought. <span class="font-medium">Local Price</span> stays blank by default; it is only recorded once the purchase is marked as bought.</p>
                         </div>
                         <button type="button" id="lpToggleAll"
                                 class="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-300">
@@ -106,11 +106,14 @@
                                             @endif
                                         </td>
                                         <td class="px-3 py-2.5 align-top text-right">
+                                            {{-- Static by design: the quantity to procure is the remaining need.
+                                                 The exact quantity actually bought is asked on the Mark-as-bought step. --}}
                                             <input type="number" min="1" max="{{ $line['remaining'] }}" step="1"
                                                    name="lines[{{ $line['id'] }}][qty]"
                                                    value="{{ $line['remaining'] }}"
-                                                   class="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
-                                                   aria-label="Quantity to buy">
+                                                   readonly
+                                                   class="w-20 rounded-lg border border-gray-300 bg-gray-50 px-2 py-1.5 text-right text-sm text-gray-500 focus:outline-none"
+                                                   aria-label="Quantity to procure — recorded when the purchase is bought">
                                         </td>
                                         <td class="px-3 py-2.5 align-top text-right">
                                             <div class="flex items-center justify-end gap-1">

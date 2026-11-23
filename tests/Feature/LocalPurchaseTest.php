@@ -201,6 +201,24 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame(10, (int) $poItem->allocations()->sum('qty'));
     }
 
+    public function test_local_purchase_form_shows_a_static_quantity_for_each_line(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $content = $this->actingAs($user)
+            ->get(route('preplist.local-purchase', ['preplist' => $f['preplist']->id]))
+            ->assertOk()
+            ->getContent();
+
+        // The quantity to procure is rendered static (read-only) on the
+        // builder — the exact bought quantity is asked on Mark-as-bought.
+        $this->assertStringContainsString('name="lines['.$preplistItem->id.'][qty]"', $content);
+        $this->assertStringContainsString('readonly', $content);
+    }
+
     public function test_bought_records_prices_receipts_and_completes_the_order(): void
     {
         $user = $this->admin();
