@@ -87,7 +87,7 @@
                                 <p class="break-words font-semibold text-gray-900">{{ $item['name'] }}</p>
                                 <p class="mt-0.5 text-xs text-gray-500">
                                     @if(!empty($item['shelf_life']))
-                                        &ge; {{ $item['shelf_life'] }} mo shelf life
+                                        &ge; {{ $item['shelf_life'] }} months remaining at delivery
                                     @else
                                         Non-perishable
                                     @endif
