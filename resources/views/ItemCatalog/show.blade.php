@@ -33,6 +33,9 @@
                 @if ($item->category)
                     <span class="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-teal-800">{{ $item->category->name }}</span>
                 @endif
+                @if ((int) ($item->box_size ?? 0) > 0)
+                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-800">Box of {{ $item->box_size }}</span>
+                @endif
             </div>
             <p class="mt-1 text-xs text-gray-500">Unit: {{ $item->unit }} · Default min shelf life: {{ $item->default_min_shelf_life_months ?: 0 }} month{{ $item->default_min_shelf_life_months == 1 ? '' : 's' }}</p>
         </div>
@@ -59,6 +62,14 @@
                     <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
                         <span class="text-gray-500">Default min shelf life</span>
                         <span class="text-right font-semibold text-gray-900">{{ $item->default_min_shelf_life_months ?: 0 }} month{{ $item->default_min_shelf_life_months == 1 ? '' : 's' }}</span>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                        <span class="text-gray-500">Box size</span>
+                        <span class="text-right font-semibold text-gray-900">{{ (int) ($item->box_size ?? 0) > 0 ? 'Box of '.$item->box_size : '—' }}</span>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 py-2 text-xs">
+                        <span class="text-gray-500">Outstanding to procure</span>
+                        <span class="text-right font-semibold text-gray-900">{{ $itemOutstanding }} {{ $item->unit }}</span>
                     </div>
                     @if ($requestedProjects->isNotEmpty())
                         <div class="flex items-baseline justify-between gap-3 py-2 text-xs">

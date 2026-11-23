@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\ItemCategory;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderItemAllocation;
+use App\Models\ProjectItem;
 use App\Models\Supplier;
 use App\Support\Pagination;
 use Illuminate\Http\Request;
@@ -201,6 +202,13 @@ class ItemCatalogController extends Controller
 
         $bestSupplier = $supplierBreakdown->first();
 
+        // Outstanding quantity still to procure for this catalog item across
+        // every project that requested it (stock-on-hand already deducted).
+        $itemOutstanding = (int) ProjectItem::query()
+            ->where('item_id', $item->id)
+            ->get()
+            ->sum(fn (ProjectItem $projectItem) => $projectItem->remainingQuantity());
+
         // Which projects actually ordered this item (via the PO lines' allocations).
         $lineIds = $lines->pluck('id');
         $requestedProjects = PurchaseOrderItemAllocation::query()
@@ -221,6 +229,7 @@ class ItemCatalogController extends Controller
             'chartPoints',
             'bestSupplier',
             'requestedProjects',
+            'itemOutstanding',
         ));
     }
 
