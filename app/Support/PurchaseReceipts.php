@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseOrderReceipt;
+use App\Support\BoxQuantity;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -16,14 +17,15 @@ use InvalidArgumentException;
 final class PurchaseReceipts
 {
     /**
-     * @param  int  $qty  How many units arrived (or were bought) this time.
+     * @param  int  $qty  How many base pieces arrived (or were bought) this
+     *                    time for piece-tracked lines; plain units otherwise.
      * @param  bool  $allowOverage  When true, a bought quantity may exceed the
      *                              ordered quantity (box-driven purchases can cover
      *                              a full box beyond the outstanding need).
      */
     public static function finalize(PurchaseOrderItem $line, int $userId, int $qty, bool $allowOverage = false): void
     {
-        $remaining = $line->remainingQty();
+        $remaining = $line->trackedInPieces() ? $line->remainingPieces() : $line->remainingQty();
 
         if ($qty < 1) {
             throw new InvalidArgumentException('Receipt quantity must be at least 1 for this line.');
@@ -50,23 +52,37 @@ final class PurchaseReceipts
     /**
      * Add this receipt's share of each allocation to the matching project
      * lines' on-hand stock, and mark those lines fulfilled once fully covered.
+     *
+     * Piece-tracked lines (local purchases of boxed items) already carry their
+     * quantities in base pieces, so the stock bump is a straight split. Older
+     * / quoted lines carry line units; for boxed project items one line unit
+     * stands for one requirement box and is converted to pieces.
      */
     public static function bumpStock(PurchaseOrderItem $line, int $qty): void
     {
-        $line->loadMissing('allocations.projectItem');
+        $line->loadMissing('allocations.projectItem.item');
 
         $allocations = $line->allocations->values();
-        $orderedQty = (int) $line->qty;
 
-        if ($allocations->isEmpty() || $orderedQty <= 0 || $qty <= 0) {
+        if ($allocations->isEmpty() || $qty <= 0) {
             return;
         }
 
-        $newTotal = min($orderedQty, (int) $line->receipts()->sum('received_qty'));
+        $tracked = $line->trackedInPieces();
+        $ordered = $tracked ? $line->orderedPieces() : (int) $line->qty;
+
+        if ($ordered <= 0) {
+            return;
+        }
+
+        $newTotal = min($ordered, (int) $line->receipts()->sum('received_qty'));
         $oldTotal = max(0, $newTotal - $qty);
 
-        $before = self::split($allocations, $orderedQty, $oldTotal);
-        $after = self::split($allocations, $orderedQty, $newTotal);
+        $denominator = (int) $allocations->sum('qty');
+        $denominator = $denominator > 0 ? $denominator : $ordered;
+
+        $before = self::split($allocations, $denominator, $oldTotal);
+        $after = self::split($allocations, $denominator, $newTotal);
 
         foreach ($allocations as $index => $allocation) {
             $projectItem = $allocation->projectItem;
@@ -76,10 +92,16 @@ final class PurchaseReceipts
                 continue;
             }
 
-            $newStock = (int) $projectItem->in_stock + $delta;
+            // Tracked lines count in pieces already; legacy lines count in
+            // requirement boxes and must be converted for boxed items.
+            $deltaPieces = $tracked
+                ? $delta
+                : BoxQuantity::toPieces($delta, $projectItem->boxSize());
+
+            $newStock = $projectItem->inStockPieces() + $deltaPieces;
 
             $newStatus = match (true) {
-                (int) $projectItem->quantity > 0 && $newStock >= (int) $projectItem->quantity => 'fulfilled',
+                $projectItem->requiredPieces() > 0 && $newStock >= $projectItem->requiredPieces() => 'fulfilled',
                 $newStock > 0 => 'partial',
                 default => $projectItem->fulfillment_status,
             };

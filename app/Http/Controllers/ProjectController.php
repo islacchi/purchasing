@@ -11,6 +11,7 @@ use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Support\ActivityLogger;
+use App\Support\BoxQuantity;
 use App\Support\Pagination;
 use App\Support\ProjectSummaryWorkbook;
 use Illuminate\Database\Eloquent\Collection;
@@ -83,7 +84,7 @@ class ProjectController extends Controller
                                 ->whereColumn('project_items.project_id', 'projects.id')
                                 ->where('fulfillment_status', '!=', 'fulfilled')
                                 ->where(function ($inner) {
-                                    $inner->whereColumn('in_stock', '<', 'quantity')
+                                    $inner->whereRaw('in_stock < quantity * COALESCE((SELECT box_size FROM items WHERE items.id = project_items.item_id), 1)')
                                         ->orWhere('quantity', '<=', 0)
                                         ->orWhereNull('in_stock');
                                 })
@@ -96,7 +97,7 @@ class ProjectController extends Controller
                                 ->whereColumn('project_items.project_id', 'projects.id')
                                 ->where('fulfillment_status', '!=', 'fulfilled')
                                 ->where(function ($inner) {
-                                    $inner->whereColumn('in_stock', '<', 'quantity')
+                                    $inner->whereRaw('in_stock < quantity * COALESCE((SELECT box_size FROM items WHERE items.id = project_items.item_id), 1)')
                                         ->orWhere('quantity', '<=', 0)
                                         ->orWhereNull('in_stock');
                                 })
@@ -394,15 +395,20 @@ class ProjectController extends Controller
      * concurrency checkpoint when the project is saved.
      */
     /**
-     * Quantity-driven fulfillment state for a submitted project row.
+     * Quantity-driven fulfillment state for a submitted project row. On-hand
+     * stock is counted in base pieces, so a boxed row compares
+     * stock < quantity x box size.
      */
-    private function fulfillmentStatusFor(array $row): string
+    private function fulfillmentStatusFor(array $row, ?Item $item = null): string
     {
-        $quantity = (int) ($row['quantity'] ?? 0);
+        $boxSize = $item?->box_size;
+        $boxSize = $boxSize !== null && (int) $boxSize > 0 ? (int) $boxSize : null;
+
+        $required = BoxQuantity::toPieces((int) ($row['quantity'] ?? 0), $boxSize);
         $inStock = (int) ($row['in_stock'] ?? 0);
 
         return match (true) {
-            $quantity > 0 && $inStock >= $quantity => 'fulfilled',
+            $required > 0 && $inStock >= $required => 'fulfilled',
             $inStock > 0 => 'partial',
             default => 'pending',
         };
@@ -611,7 +617,7 @@ class ProjectController extends Controller
                     'in_stock' => (int) ($row['in_stock'] ?? 0),
                     'unit_cost' => $row['unit_cost'],
                     'awarded_unit_price' => $row['quoted_price'] ?? null,
-                    'fulfillment_status' => $this->fulfillmentStatusFor($row),
+                    'fulfillment_status' => $this->fulfillmentStatusFor($row, $resolved),
                 ]);
 
                 continue;
@@ -628,7 +634,7 @@ class ProjectController extends Controller
                 'in_stock' => (int) ($row['in_stock'] ?? 0),
                 'unit_cost' => $row['unit_cost'],
                 'awarded_unit_price' => $row['quoted_price'] ?? null,
-                'fulfillment_status' => $this->fulfillmentStatusFor($row),
+                'fulfillment_status' => $this->fulfillmentStatusFor($row, $resolved),
             ]);
         }
 

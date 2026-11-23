@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BoxQuantity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -64,12 +65,33 @@ class PreplistItem extends Model
 
     /**
      * Quantity still to procure after deducting stock-on-hand from each source.
+     * Returned in the requirement unit: boxes for boxed items, units otherwise.
      */
     public function remainingQuantity(): int
     {
+        return BoxQuantity::toBoxes($this->remainingPieces(), $this->boxSize());
+    }
+
+    /**
+     * Base pieces still to procure across every source project line. This is
+     * the exact figure purchases are reconciled against, regardless of the
+     * pack size bought.
+     */
+    public function remainingPieces(): int
+    {
         return (int) $this->sources->sum(
-            fn (PreplistItemSource $source) => $source->projectItem?->remainingQuantity() ?? 0
+            fn (PreplistItemSource $source) => $source->projectItem?->remainingPieces() ?? 0
         );
+    }
+
+    /**
+     * The item's box-size requirement, when it has one.
+     */
+    public function boxSize(): ?int
+    {
+        $boxSize = $this->item?->box_size;
+
+        return $boxSize !== null && (int) $boxSize > 0 ? (int) $boxSize : null;
     }
 
     /**

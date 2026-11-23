@@ -489,11 +489,14 @@ class PurchaseOrderController extends Controller
         $boughtThisTrip = [];
 
         foreach ($pending as $line) {
-            // Box logic only applies to items that carry a box-size
-            // requirement — unpackaged items ignore any box payload and use the
-            // plain bought quantity instead.
-            $remaining = $line->remainingQty();
-            $requirementBox = (int) ($line->item?->box_size ?? 0);
+            // Box logic only applies to piece-tracked lines — a local purchase
+            // of a boxed item snapshots the requirement pack, so the bought
+            // quantity can be reconciled in base pieces no matter which pack
+            // the store actually sells. Unpackaged (and legacy) lines keep
+            // their plain unit quantity.
+            $tracked = $line->trackedInPieces();
+            $remaining = $tracked ? $line->remainingPieces() : $line->remainingQty();
+            $requirementBox = $tracked ? (int) $line->box_size : 0;
             $boxSize = $requirementBox > 0 ? (int) ($boxSizes[$line->id] ?? $requirementBox) : 0;
             $boxCount = $boxSize > 0 ? (int) ($boxes[$line->id] ?? 0) : 0;
             $maxBoxes = $boxSize > 0 ? (int) ceil($remaining / $boxSize) : 0;
@@ -505,15 +508,15 @@ class PurchaseOrderController extends Controller
             }
 
             // A box count drives the bought quantity: buying N boxes of a
-            // Box-of-M pack covers N x M units (packaging may overage); the
-            // pack itself can be overridden per purchase (a Box-of-10 bought
-            // against a Box-of-25 requirement weights the bought quantity by 10).
-            // Without a box count the plain quantity payload is honoured.
+            // Box-of-M pack covers N x M base pieces (packaging may overage);
+            // the pack itself can be overridden per purchase (a Box-of-10
+            // bought against a Box-of-20 requirement weights the quantity by
+            // 10). Without a box count the plain piece/unit quantity is used.
             $qty = $boxCount > 0 ? $boxCount * $boxSize : (int) ($quantities[$line->id] ?? $remaining);
 
             if ($boxCount === 0 && ($qty < 0 || $qty > $remaining)) {
                 throw ValidationException::withMessages([
-                    'quantities' => 'Quantity for '.($line->item?->name ?? 'a line').' must be between 0 and '.$remaining.'.',
+                    'quantities' => 'Quantity for '.($line->item?->name ?? 'a line').' must be between 0 and '.$remaining.($tracked ? ' pieces' : '').'.',
                 ]);
             }
 

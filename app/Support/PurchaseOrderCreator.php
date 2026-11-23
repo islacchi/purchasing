@@ -94,6 +94,9 @@ final class PurchaseOrderCreator
 
                 $poItem = self::writeLine($purchaseOrder, null, $preplistItem, array_merge([
                     'min_remaining_months' => $preplistItem->min_shelf_life_months,
+                    // Boxed local lines snapshot the requirement pack so any
+                    // pack bought later is reconciled in base pieces.
+                    'box_size' => $preplistItem->item?->box_size,
                 ], $line));
 
                 if (! empty($line['bought_now'])) {
@@ -133,6 +136,7 @@ final class PurchaseOrderCreator
             'preplist_item_id' => $preplistItem->id,
             'item_id' => $preplistItem->item_id,
             'qty' => $line['qty'],
+            'box_size' => $line['box_size'] ?? null,
             'unit_price' => $line['unit_price'],
             'min_remaining_months' => $line['min_remaining_months'] ?? null,
         ]);
@@ -144,10 +148,17 @@ final class PurchaseOrderCreator
 
     public static function allocateLine(PurchaseOrderItem $purchaseOrderItem, PreplistItem $preplistItem, int $qty): void
     {
+        // Piece-tracked (boxed local) lines allocate their base pieces so the
+        // stock bump never loses a partial box; plain lines allocate units.
+        $boxSize = $purchaseOrderItem->trackedInPieces() ? (int) $purchaseOrderItem->box_size : null;
+        $totalQuantity = BoxQuantity::toPieces($qty, $boxSize);
+
         $sources = $preplistItem->sources->values();
-        $shares = $sources->map(fn ($source) => $source->projectItem?->remainingQuantity() ?? 0);
+        $shares = $sources->map(fn ($source) => $boxSize !== null
+            ? ($source->projectItem?->remainingPieces() ?? 0)
+            : ($source->projectItem?->remainingQuantity() ?? 0));
         $totalRequested = (int) $shares->sum();
-        $remaining = $qty;
+        $remaining = $totalQuantity;
         $lastPositiveIndex = $shares->filter(fn ($share) => $share > 0)->keys()->last();
 
         foreach ($sources as $index => $source) {
@@ -156,9 +167,9 @@ final class PurchaseOrderCreator
             if ($totalRequested > 0) {
                 $share = $lastPositiveIndex !== null && $index === $lastPositiveIndex
                     ? $remaining
-                    : (int) floor($qty * $weight / $totalRequested);
+                    : (int) floor($totalQuantity * $weight / $totalRequested);
             } else {
-                $share = $index === 0 ? $qty : 0;
+                $share = $index === 0 ? $totalQuantity : 0;
             }
 
             $remaining -= $share;

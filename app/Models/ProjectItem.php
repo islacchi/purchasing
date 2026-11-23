@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BoxQuantity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -45,11 +46,58 @@ class ProjectItem extends Model
     }
 
     /**
-     * Quantity still to procure after deducting what the office already has.
+     * The box-size requirement of the catalog item, when it has one.
+     */
+    public function boxSize(): ?int
+    {
+        $boxSize = $this->item?->box_size;
+
+        return $boxSize !== null && (int) $boxSize > 0 ? (int) $boxSize : null;
+    }
+
+    /**
+     * Whether the item is packaged to a box quantity.
+     */
+    public function hasBoxRequirement(): bool
+    {
+        return $this->boxSize() !== null;
+    }
+
+    /**
+     * The awarded requirement in base pieces. Items with a box size are
+     * entered in boxes (100 boxes of 20 = 2,000 pieces); unpackaged items keep
+     * their plain unit quantity.
+     */
+    public function requiredPieces(): int
+    {
+        return BoxQuantity::toPieces((int) $this->quantity, $this->boxSize());
+    }
+
+    /**
+     * On-hand stock in base pieces. Receipts from any pack size are stored in
+     * pieces so partial boxes are never lost to rounding.
+     */
+    public function inStockPieces(): int
+    {
+        return (int) $this->in_stock;
+    }
+
+    /**
+     * Base pieces still to procure after deducting stock on hand.
+     */
+    public function remainingPieces(): int
+    {
+        return max(0, $this->requiredPieces() - $this->inStockPieces());
+    }
+
+    /**
+     * Quantity still to procure, expressed in the requirement unit (boxes for
+     * boxed items). A partly covered box rounds up because a full box is the
+     * smallest thing that can be bought.
      */
     public function remainingQuantity(): int
     {
-        return max(0, $this->quantity - (int) $this->in_stock);
+        return BoxQuantity::toBoxes($this->remainingPieces(), $this->boxSize());
     }
 
     /**
@@ -57,7 +105,7 @@ class ProjectItem extends Model
      */
     public function isFulfilledByStock(): bool
     {
-        return $this->quantity > 0 && (int) $this->in_stock >= $this->quantity;
+        return $this->requiredPieces() > 0 && $this->inStockPieces() >= $this->requiredPieces();
     }
 
     /**
@@ -71,33 +119,32 @@ class ProjectItem extends Model
             return 'waived';
         }
 
-        if ((int) $this->quantity > 0 && (int) $this->in_stock >= (int) $this->quantity) {
+        if ($this->isFulfilledByStock()) {
             return 'fulfilled';
         }
 
-        return (int) $this->in_stock > 0 ? 'partial' : 'pending';
+        return $this->inStockPieces() > 0 ? 'partial' : 'pending';
     }
 
     /**
      * Whether only part of the awarded quantity has arrived.
      */
-    // public function isPartiallyFulfilled(): bool
-    // {
-    //     return $this->quantityStatus() === 'partial';
-    // }
     public function isPartiallyFulfilled(): bool
-{
-    return ! $this->isFulfilled() && (int) $this->in_stock > 0;
-}
-public function coveredQuantity(): int
-{
-    if ($this->fulfillment_status === 'fulfilled') {
-        return (int) $this->quantity;
+    {
+        return ! $this->isFulfilled() && $this->inStockPieces() > 0;
     }
 
-    return min((int) $this->quantity, (int) $this->in_stock);
-}
+    /**
+     * Base pieces already covered by stock (capped at the requirement).
+     */
+    public function coveredQuantity(): int
+    {
+        if ($this->fulfillment_status === 'fulfilled') {
+            return $this->requiredPieces();
+        }
 
+        return min($this->requiredPieces(), $this->inStockPieces());
+    }
 
     /**
      * Whether the line counts as fulfilled (received via PO, or covered by stock).

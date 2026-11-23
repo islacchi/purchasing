@@ -265,6 +265,8 @@ class PreplistController extends Controller
                     'name' => $preplistItem->item?->name ?? 'Item',
                     'unit' => $preplistItem->item?->unit ?? 'unit',
                     'remaining' => $remaining,
+                    'remaining_pieces' => $preplistItem->remainingPieces(),
+                    'box_size' => $preplistItem->boxSize(),
                     'shelf_life' => (int) $preplistItem->min_shelf_life_months,
                     'suggested_price' => $awardedPrices->isNotEmpty() ? (float) $awardedPrices->max() : null,
                     'source_count' => $sources->count(),

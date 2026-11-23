@@ -48,7 +48,7 @@
 
         $receivedCount = $items->filter(fn ($item) => $item->isReceived())->count();
         $receivedUnits = $items->sum(fn ($item) => $item->receivedQty());
-        $orderedUnits = $items->sum(fn ($item) => (int) $item->qty);
+        $orderedUnits = $items->sum(fn ($item) => $item->orderedPieces());
         $canReceive = $purchaseOrder->canReceive();
         $canManagePurchaseOrder = auth()->user()?->canModule('purchase-order', 'manage') ?? false;
 
@@ -302,7 +302,12 @@
                                     <p class="font-medium text-gray-900 break-words">{{ $item->item?->name ?? 'Item removed' }}</p>
                                     <p class="mt-0.5 text-xs text-gray-500">{{ $item->item?->unit ?? '' }}</p>
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-2.5 text-center text-gray-700">{{ $item->qty }}</td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center text-gray-700">
+                                    {{ $item->qty }}
+                                    @if ($item->trackedInPieces())
+                                        <span class="mt-0.5 block text-[10px] font-normal text-gray-400">{{ number_format($item->orderedPieces()) }} pcs</span>
+                                    @endif
+                                </td>
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     @if ($minShelf > 0)
                                         <span class="text-gray-700" title="Minimum {{ $minShelf }} months remaining shelf life at delivery">&ge; {{ $minShelf }} mo</span>
@@ -314,10 +319,16 @@
                                 <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">{{ $item->unit_price === null ? '—' : $peso($item->extendedTotal()) }}</td>
                                                                 <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     @php($receivedQty = $item->receivedQty())
+                                    @php($tracked = $item->trackedInPieces())
                                     @if ($receivedQty > 0)
                                         <p class="text-[11px] font-semibold {{ $isReceived ? 'text-green-700' : 'text-amber-700' }}">
-                                            {{ $receivedQty }} / {{ $item->qty }}
+                                            {{ number_format($receivedQty) }} / {{ number_format($item->orderedPieces()) }}{{ $tracked ? ' pcs' : '' }}
                                         </p>
+                                        @if (! $isReceived)
+                                            <p class="mt-0.5 text-[10px] text-gray-400">
+                                                {{ $item->remainingQty() }} {{ $item->item?->unit ?? 'unit' }} left
+                                            </p>
+                                        @endif
                                     @endif
 
                                     @if (! $isReceived && $receivedQty > 0)
@@ -337,7 +348,7 @@
                                         <button type="button"
                                                 data-po-bought
                                                 data-po-line-id="{{ $item->id }}"
-                                                data-po-qty="{{ $item->remainingQty() }}"
+                                                data-po-qty="{{ $tracked ? $item->remainingPieces() : $item->remainingQty() }}"
                                                 data-po-label="{{ $item->item?->name ?? 'this line' }}"
                                                 class="mt-0.5 inline-flex items-center gap-1 rounded-md border border-amber-400 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                                 aria-label="Mark {{ $item->item?->name ?? 'this line' }} as bought">
@@ -561,7 +572,7 @@
                     <div class="min-w-0">
                         <h3 id="poBoughtTitle" class="text-base font-bold text-gray-900">Record purchase</h3>
                         <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid on this trip. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
-                        @if ($items->contains(fn ($line) => $line->item?->box_size !== null))
+                        @if ($items->contains(fn ($line) => $line->trackedInPieces()))
                             <p class="mt-1 text-[11px] text-gray-400">Boxed items: keep <span class="font-medium text-gray-500">Boxes</span> at 0 to record an exact quantity, or enter the box size and box count and the quantity follows box size × box count.</p>
                         @endif
                     </div>
@@ -571,53 +582,63 @@
                     @foreach ($items as $item)
                         @php($boughtSoFar = $item->receivedQty())
                         @php($lineDone = $item->isReceived())
+                        @php($tracked = $item->trackedInPieces())
+                        @php($outstanding = $tracked ? $item->remainingPieces() : $item->remainingQty())
                         <div id="boughtLineRow-{{ $item->id }}" class="py-3">
                             <div class="flex flex-wrap items-start justify-between gap-2">
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-semibold text-gray-900" title="{{ $item->item?->name }}">{{ $item->item?->name ?? 'Item removed' }}</p>
                                     <p class="mt-0.5 text-[11px] text-gray-500">
-                                        Ordered <span class="font-medium text-gray-700">{{ $item->qty }}</span>
+                                        Ordered
+                                        <span class="font-medium text-gray-700">{{ $item->qty }}</span>
+                                        @if ($tracked)
+                                            {{ $item->item?->unit ?? 'units' }} <span class="text-gray-400">({{ number_format($item->orderedPieces()) }} pcs)</span>
+                                        @endif
                                         @if ($boughtSoFar > 0)
-                                            · Already bought <span class="font-medium text-gray-700">{{ $boughtSoFar }}</span>
+                                            · Already bought <span class="font-medium text-gray-700">{{ number_format($boughtSoFar) }}{{ $tracked ? ' pcs' : '' }}</span>
                                         @endif
                                         @if (! $lineDone)
-                                            · Outstanding <span class="font-medium text-gray-700">{{ $item->remainingQty() }}</span>
+                                            · Outstanding
+                                            <span class="font-medium text-gray-700">{{ number_format($outstanding) }}{{ $tracked ? ' pcs' : '' }}</span>
+                                            @if ($tracked && $outstanding > 0)
+                                                <span class="text-gray-400">({{ $item->remainingQty() }} {{ $item->item?->unit ?? 'units' }})</span>
+                                            @endif
                                         @endif
                                     </p>
                                 </div>
-                                @if ($item->item?->box_size !== null)
-                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">Box of {{ (int) $item->item->box_size }}</span>
+                                @if ($tracked)
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">Box of {{ (int) $item->box_size }}</span>
                                 @endif
                             </div>
 
                             @if ($lineDone)
                                 <div class="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2.5">
                                     <span class="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Bought</span>
-                                    <span class="text-sm text-gray-600">Qty <span class="font-semibold text-gray-900">{{ $boughtSoFar }}</span></span>
+                                    <span class="text-sm text-gray-600">Qty <span class="font-semibold text-gray-900">{{ number_format($boughtSoFar) }}{{ $tracked ? ' pcs' : '' }}</span></span>
                                     <span class="text-sm text-gray-600">Unit price <span class="font-semibold text-gray-900">&#8369;{{ number_format((float) $item->unit_price, 2) }}</span></span>
                                 </div>
                             @else
                                 <div class="mt-3 flex flex-wrap gap-3">
-                                    @if ($item->item?->box_size !== null)
+                                    @if ($tracked)
                                         <div class="min-w-[8rem] flex-1">
                                             <label for="boughtBoxSize-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Box size</label>
-                                            <input id="boughtBoxSize-{{ $item->id }}" type="number" name="box_sizes[{{ $item->id }}]" data-box-size-line="{{ $item->id }}" value="{{ (int) $item->item->box_size }}" min="1" step="1"
+                                            <input id="boughtBoxSize-{{ $item->id }}" type="number" name="box_sizes[{{ $item->id }}]" data-box-size-line="{{ $item->id }}" value="{{ (int) $item->box_size }}" min="1" step="1"
                                                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
                                         </div>
                                         <div class="min-w-[8rem] flex-1">
                                             <label for="boughtBoxes-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Boxes to buy</label>
-                                            <input id="boughtBoxes-{{ $item->id }}" type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) $item->item->box_size }}" min="0" step="1" value="0"
+                                            <input id="boughtBoxes-{{ $item->id }}" type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) $item->box_size }}" min="0" step="1" value="0"
                                                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
                                         </div>
                                     @endif
                                     <div class="min-w-[8rem] flex-1">
-                                        <label for="boughtQty-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Qty bought</label>
-                                        <input id="boughtQty-{{ $item->id }}" type="number" name="quantities[{{ $item->id }}]" data-qty-line="{{ $item->id }}" min="0" max="{{ $item->remainingQty() }}" step="1"
-                                               value="{{ $item->remainingQty() }}"
+                                        <label for="boughtQty-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Qty bought{{ $tracked ? ' (pcs)' : '' }}</label>
+                                        <input id="boughtQty-{{ $item->id }}" type="number" name="quantities[{{ $item->id }}]" data-qty-line="{{ $item->id }}" data-line-remaining="{{ $outstanding }}" min="0" max="{{ $outstanding }}" step="1"
+                                               value="{{ $outstanding }}"
                                                class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
                                     </div>
                                     <div class="min-w-[9rem] flex-1">
-                                        <label for="boughtPrice-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Unit price</label>
+                                        <label for="boughtPrice-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Unit price{{ $tracked ? ' (per '.strtolower($item->item?->unit ?? 'box').')' : '' }}</label>
                                         <div class="relative mt-1">
                                             <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs text-gray-400">&#8369;</span>
                                             @if ($item->unit_price !== null)
@@ -631,8 +652,12 @@
                                         </div>
                                     </div>
                                 </div>
-                                @if ($item->item?->box_size !== null)
-                                    <p class="mt-2 text-[11px] text-gray-400">Leave <span class="font-medium text-gray-500">Boxes</span> at 0 to record the exact quantity; entering boxes multiplies by the box size.</p>
+                                @if ($tracked)
+                                    <p class="mt-2 text-[11px] text-gray-400">
+                                        The requirement is counted in pieces ({{ number_format($item->orderedPieces()) }} pcs). Leave
+                                        <span class="font-medium text-gray-500">Boxes</span> at 0 to record an exact piece quantity, or enter the
+                                        box size and box count bought — the quantity follows box size × box count.
+                                    </p>
                                 @endif
                             @endif
                         </div>

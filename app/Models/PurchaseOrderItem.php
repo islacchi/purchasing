@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BoxQuantity;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,6 +27,7 @@ class PurchaseOrderItem extends Model
         'preplist_item_id',
         'item_id',
         'qty',
+        'box_size',
         'unit_price',
         'min_remaining_months',
     ];
@@ -39,6 +41,7 @@ class PurchaseOrderItem extends Model
     {
         return [
             'qty' => 'integer',
+            'box_size' => 'integer',
             'unit_price' => 'decimal:2',
             'min_remaining_months' => 'integer',
         ];
@@ -101,7 +104,26 @@ class PurchaseOrderItem extends Model
     }
 
     /**
-     * Units recorded as received/bought so far (receipts accumulate).
+     * Whether this line is tracked in base pieces. Local purchases of boxed
+     * items store the requirement box size on the line so any pack bought can
+     * be reconciled exactly: 10 boxes of 40 = 400 pieces, not 10 boxes.
+     */
+    public function trackedInPieces(): bool
+    {
+        return $this->box_size !== null && (int) $this->box_size > 0;
+    }
+
+    /**
+     * The full ordered quantity in base pieces (or plain units).
+     */
+    public function orderedPieces(): int
+    {
+        return BoxQuantity::toPieces((int) $this->qty, $this->trackedInPieces() ? (int) $this->box_size : null);
+    }
+
+    /**
+     * Units recorded as received/bought so far. For piece-tracked lines this
+     * is the exact number of base pieces; otherwise it is the plain units.
      */
     public function receivedQty(): int
     {
@@ -109,11 +131,22 @@ class PurchaseOrderItem extends Model
     }
 
     /**
-     * Units still outstanding on this line.
+     * Base pieces still outstanding on this line.
+     */
+    public function remainingPieces(): int
+    {
+        return max(0, $this->orderedPieces() - $this->receivedQty());
+    }
+
+    /**
+     * Units still outstanding on this line, in the requirement unit (boxes for
+     * boxed lines). A partly covered box rounds up — you cannot buy half a box.
      */
     public function remainingQty(): int
     {
-        return max(0, (int) $this->qty - $this->receivedQty());
+        return $this->trackedInPieces()
+            ? BoxQuantity::toBoxes($this->remainingPieces(), (int) $this->box_size)
+            : $this->remainingPieces();
     }
 
     /**
@@ -130,9 +163,10 @@ class PurchaseOrderItem extends Model
     public function receiptState(): string
     {
         $received = $this->receivedQty();
+        $ordered = $this->orderedPieces();
 
         return match (true) {
-            (int) $this->qty > 0 && $received >= (int) $this->qty => 'completed',
+            $ordered > 0 && $received >= $ordered => 'completed',
             $received > 0 => 'partial',
             default => 'pending',
         };
@@ -143,6 +177,6 @@ class PurchaseOrderItem extends Model
      */
     public function isReceived(): bool
     {
-        return $this->receivedQty() >= (int) $this->qty;
+        return $this->receivedQty() >= $this->orderedPieces();
     }
 }
