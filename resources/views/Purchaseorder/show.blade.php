@@ -561,7 +561,7 @@
                     <div class="min-w-0">
                         <h3 id="poBoughtTitle" class="text-base font-bold text-gray-900">Record purchase</h3>
                         <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid for this line. Use 0 when the store had none. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
-                        <p class="mt-0.5 text-[11px] text-gray-400">Boxed items: enter the box count and the bought quantity follows the box size.</p>
+                        <p class="mt-0.5 text-[11px] text-gray-400">Boxed items: enter the box size and the box count — the bought quantity follows box size × box count.</p>
                     </div>
                 </div>
 
@@ -582,6 +582,11 @@
                                     <span class="w-16 text-right text-sm text-gray-500">{{ $boughtSoFar }}</span>
                                     <span class="w-24 text-right text-sm text-gray-500">&#8369;{{ number_format((float) $item->unit_price, 2) }}</span>
                                 @else
+                                    @if ($item->item?->box_size !== null)
+                                        <input type="number" name="box_sizes[{{ $item->id }}]" data-box-size-line="{{ $item->id }}" value="{{ (int) $item->item->box_size }}" min="1" step="1"
+                                               class="w-14 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                               aria-label="Box size for {{ $item->item?->name ?? 'line' }}">
+                                    @endif
                                     <input type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) ($item->item?->box_size ?? 0) }}" min="0" step="1" value="0"
                                            {{ $item->item?->box_size === null ? 'disabled' : '' }}
                                            class="w-14 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
@@ -734,8 +739,16 @@
                     const boxInput = boughtForm ? boughtForm.querySelector('input[data-box-line="' + lineId + '"]') : null;
                     if (boxInput) {
                         boxInput.value = '0';
-                        const boxSize = parseInt(boxInput.getAttribute('data-box-size') || '0', 10) || 0;
-                        const remaining = parseInt(qtyInput && qtyInput.max ? qtyInput.max : (trigger.getAttribute('data-po-qty') || '0'), 10) || 0;
+                    }
+
+                    const boxSizeInput = boughtForm ? boughtForm.querySelector('input[data-box-size-line="' + lineId + '"]') : null;
+                    const boxSize = parseInt((boxSizeInput && boxSizeInput.value) || (boxInput && boxInput.getAttribute('data-box-size')) || '0', 10) || 0;
+                    const remaining = parseInt(qtyInput && qtyInput.max ? qtyInput.max : (trigger.getAttribute('data-po-qty') || '0'), 10) || 0;
+
+                    if (boxSizeInput) {
+                        boxSizeInput.value = String(boxSize);
+                    }
+                    if (boxInput) {
                         boxInput.max = String(boxSize > 0 ? Math.ceil(remaining / boxSize) : 0);
                     }
 
@@ -778,22 +791,28 @@
             if (boughtForm) {
                 boughtForm.addEventListener('input', function (event) {
                     const boxInput = event.target.closest('[data-box-line]');
-                    if (! boxInput) {
+                    const sizeInput = event.target.closest('[data-box-size-line]');
+                    const lineId = boxInput ? boxInput.getAttribute('data-box-line') : (sizeInput ? sizeInput.getAttribute('data-box-size-line') : null);
+                    if (! lineId) {
                         return;
                     }
 
-                    const boxLineId = boxInput.getAttribute('data-box-line');
-                    const qtyInput = boughtForm.querySelector('input[data-qty-line="' + boxLineId + '"]');
-                    if (! qtyInput) {
-                        return;
+                    const qtyInput = boughtForm.querySelector('input[data-qty-line="' + lineId + '"]');
+                    const currentBoxInput = boughtForm.querySelector('input[data-box-line="' + lineId + '"]');
+                    const currentSizeInput = boughtForm.querySelector('input[data-box-size-line="' + lineId + '"]');
+                    const boxSize = parseInt((currentSizeInput && currentSizeInput.value) || (currentBoxInput && currentBoxInput.getAttribute('data-box-size')) || '0', 10) || 0;
+                    const boxes = parseInt(currentBoxInput ? currentBoxInput.value : '0', 10) || 0;
+                    const units = boxes > 0 && boxSize > 0 ? boxes * boxSize : (parseInt(qtyInput ? qtyInput.value : '0', 10) || 0);
+                    const remaining = parseInt(qtyInput ? qtyInput.max : '0', 10) || 0;
+
+                    if (qtyInput) {
+                        qtyInput.value = String(units);
+                        qtyInput.max = String(units);
                     }
 
-                    const boxSize = parseInt(boxInput.getAttribute('data-box-size') || '0', 10) || 0;
-                    const boxes = parseInt(boxInput.value, 10) || 0;
-                    const units = boxes > 0 && boxSize > 0 ? boxes * boxSize : (parseInt(qtyInput.value, 10) || 0);
-
-                    qtyInput.value = String(units);
-                    qtyInput.max = String(units);
+                    if (currentBoxInput && boxes > 0) {
+                        currentBoxInput.max = String(boxSize > 0 ? Math.ceil(remaining / boxSize) : 0);
+                    }
                 });
             }
         })();

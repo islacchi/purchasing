@@ -464,11 +464,14 @@ class PurchaseOrderController extends Controller
             'quantities.*' => ['nullable', 'integer', 'min:0'],
             'boxes' => ['nullable', 'array'],
             'boxes.*' => ['nullable', 'integer', 'min:0'],
+            'box_sizes' => ['nullable', 'array'],
+            'box_sizes.*' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $prices = $validated['prices'] ?? [];
         $quantities = $validated['quantities'] ?? [];
         $boxes = $validated['boxes'] ?? [];
+        $boxSizes = $validated['box_sizes'] ?? [];
         $boughtLineId = $validated['bought_line_id'] ?? null;
 
         $pending = $purchaseOrder->items
@@ -487,7 +490,7 @@ class PurchaseOrderController extends Controller
 
         foreach ($pending as $line) {
             $remaining = $line->remainingQty();
-            $boxSize = (int) ($line->item?->box_size ?? 0);
+            $boxSize = (int) ($boxSizes[$line->id] ?? $line->item?->box_size ?? 0);
             $boxCount = (int) ($boxes[$line->id] ?? 0);
             $maxBoxes = $boxSize > 0 ? (int) ceil($remaining / $boxSize) : 0;
 
@@ -498,7 +501,9 @@ class PurchaseOrderController extends Controller
             }
 
             // A box count drives the bought quantity: buying N boxes of a
-            // Box-of-M requirement covers N x M units (packaging may overage).
+            // Box-of-M pack covers N x M units (packaging may overage); the
+            // pack itself can be overridden per purchase (a Box-of-10 bought
+            // against a Box-of-25 requirement weights the bought quantity by 10).
             // Without a box count the plain quantity payload is honoured.
             $qty = $boxCount > 0 ? $boxCount * $boxSize : (int) ($quantities[$line->id] ?? $remaining);
 

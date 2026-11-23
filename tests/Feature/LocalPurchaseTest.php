@@ -564,6 +564,77 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame('draft', $po->refresh()->status);
     }
 
+    public function test_bought_uses_the_recorded_box_size_for_boxed_lines(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+        $f['item']->update(['box_size' => 30]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '305.00']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        // The purchase happened at a Box-of-10 even though the requirement is
+        // a Box-of-30 — one box of ten covers the ten-unit outstanding line.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'boxes' => [$poItem->id => 1],
+                'box_sizes' => [$poItem->id => 10],
+                'prices' => [$poItem->id => '305.00'],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $poItem->refresh();
+
+        $this->assertSame(10, (int) $poItem->receipts()->sum('received_qty'));
+        $this->assertTrue($poItem->isReceived());
+        $this->assertSame('completed', $po->refresh()->status);
+    }
+
+    public function test_bought_rejects_a_box_count_above_the_recorded_pack_ceiling(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+        $f['item']->update(['box_size' => 30]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '305.00']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        // Ceiling is computed against the recorded pack (Box-of-10), not the
+        // requirement (Box-of-30): only two boxes of ten cover the ten units.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'boxes' => [$poItem->id => 3],
+                'box_sizes' => [$poItem->id => 10],
+                'prices' => [$poItem->id => '305.00'],
+            ])
+            ->assertSessionHasErrors('boxes');
+
+        $this->assertSame(0, (int) $poItem->receipts()->sum('received_qty'));
+        $this->assertSame('draft', $po->refresh()->status);
+    }
+
     public function test_bought_can_skip_a_line_with_zero_quantity(): void
     {
         $user = $this->admin();
