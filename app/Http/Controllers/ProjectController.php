@@ -331,6 +331,10 @@ class ProjectController extends Controller
             ->whereIn('project_item_id', $projectItemIds)
             ->with('preplistItem.preplist')
             ->get()
+            // Sources whose prep list no longer exists (soft-deleted or
+            // gone) must not keep a project line locked — an orphaned source
+            // is not a live procurement promise any more.
+            ->filter(fn (PreplistItemSource $source) => $source->preplistItem?->preplist !== null && ! $source->preplistItem?->preplist?->trashed())
             ->groupBy('project_item_id')
             ->map(function ($group) {
                 return $group

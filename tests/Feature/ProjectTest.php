@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Item;
 use App\Models\ItemCategory;
+use App\Models\Preplist;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
@@ -493,6 +494,54 @@ class ProjectTest extends TestCase
             ->assertSee('is-locked', false)
             ->assertSee('readonly', false)
             ->assertSee('locked-category-value', false);
+    }
+
+    public function test_project_edit_unlocks_a_line_once_its_prep_list_is_deleted(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $projectItem = $this->addItem($project);
+
+        $this->actingAs($user)
+            ->post(route('preplist.store'), [
+                'name' => 'Post-delete unlock fixture',
+                'sources' => [$projectItem->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $preplist = Preplist::query()->latest('id')->firstOrFail();
+        $this->actingAs($user)
+            ->delete(route('preplist.destroy', ['preplist' => $preplist->id]))
+            ->assertRedirect(route('preplist'));
+
+        // The sourcing prep list is gone, so the line must no longer be
+        // locked and becomes editable again (quantity / awarded price).
+        $this->actingAs($user)
+            ->get(route('projects.edit', ['project' => $project->id]))
+            ->assertOk();
+
+        $this->actingAs($user)
+            ->put(route('projects.update', ['project' => $project->id]), [
+                'procuring_entity_id' => $entity->id,
+                'title' => 'Project edited after source removal',
+                'reference_no' => 'RF-2026-EDIT4',
+                'mode_of_procurement' => 'small_value',
+                'items' => [
+                    [
+                        'description' => 'Mefenamic Capsule - 500mg',
+                        'category' => 'drugs and medicines',
+                        'unit' => 'Box',
+                        'quantity' => 77,
+                        'unit_cost' => 320.00,
+                        'quoted_price' => 305.00,
+                        'in_stock' => 0,
+                    ],
+                ],
+            ])
+            ->assertSessionHas('status');
+
+        $this->assertSame(77, (int) $project->fresh()->items()->firstOrFail()->quantity);
     }
 
     public function test_project_update_rejects_a_stale_fingerprint(): void
