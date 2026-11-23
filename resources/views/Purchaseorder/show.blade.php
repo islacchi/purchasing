@@ -549,7 +549,7 @@
             <div id="poBoughtOverlay" class="absolute inset-0 bg-gray-900/50"></div>
 
             <form id="poBoughtForm" method="POST" action="{{ route('purchase-order.bought', ['purchaseOrder' => $purchaseOrder->id]) }}"
-                  class="relative flex max-h-[85vh] w-full max-w-md flex-col rounded-lg bg-white shadow-xl">
+                  class="relative flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
                 @csrf
                 <input type="hidden" name="bought_line_id" id="boughtLineId" value="">
                 <div class="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
@@ -560,9 +560,9 @@
                     </span>
                     <div class="min-w-0">
                         <h3 id="poBoughtTitle" class="text-base font-bold text-gray-900">Record purchase</h3>
-                        <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid for this line. Use 0 when the store had none. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
+                        <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid on this trip. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
                         @if ($items->contains(fn ($line) => $line->item?->box_size !== null))
-                            <p class="mt-0.5 text-[11px] text-gray-400">Boxed items: enter the box size and the box count — the bought quantity follows box size × box count.</p>
+                            <p class="mt-1 text-[11px] text-gray-400">Boxed items: keep <span class="font-medium text-gray-500">Boxes</span> at 0 to record an exact quantity, or enter the box size and box count and the quantity follows box size × box count.</p>
                         @endif
                     </div>
                 </div>
@@ -571,47 +571,70 @@
                     @foreach ($items as $item)
                         @php($boughtSoFar = $item->receivedQty())
                         @php($lineDone = $item->isReceived())
-                        <div id="boughtLineRow-{{ $item->id }}" class="flex items-center justify-between gap-3 py-2">
-                            <div class="min-w-0">
-                                <p class="truncate text-sm font-medium text-gray-900" title="{{ $item->item?->name }}">{{ $item->item?->name ?? 'Item removed' }}</p>
-                                <p class="text-[10px] text-gray-500">
-                                    Ordered {{ $item->qty }}{{ $boughtSoFar > 0 ? ' · bought '.$boughtSoFar : '' }}
-                                </p>
-                            </div>
-                            <div class="flex shrink-0 items-center gap-2">
-                                @if ($lineDone)
-                                    <span class="w-14 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Bought</span>
-                                    <span class="w-16 text-right text-sm text-gray-500">{{ $boughtSoFar }}</span>
-                                    <span class="w-24 text-right text-sm text-gray-500">&#8369;{{ number_format((float) $item->unit_price, 2) }}</span>
-                                @else
-                                    {{-- Box inputs exist only for items that carry a box-size requirement. --}}
-                                    @if ($item->item?->box_size !== null)
-                                        <input type="number" name="box_sizes[{{ $item->id }}]" data-box-size-line="{{ $item->id }}" value="{{ (int) $item->item->box_size }}" min="1" step="1"
-                                               class="w-14 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                               aria-label="Box size for {{ $item->item?->name ?? 'line' }}">
-                                        <input type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) $item->item->box_size }}" min="0" step="1" value="0"
-                                               class="w-14 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                               aria-label="Boxes to buy for {{ $item->item?->name ?? 'line' }}">
-                                    @endif
-                                    <input type="number" name="quantities[{{ $item->id }}]" data-qty-line="{{ $item->id }}" min="0" max="{{ $item->remainingQty() }}" step="1"
-                                           value="{{ $item->remainingQty() }}"
-                                           class="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                           aria-label="Quantity bought for {{ $item->item?->name ?? 'line' }}">
-                                    <div class="flex items-center gap-1">
-                                        <span class="text-xs text-gray-400">&#8369;</span>
-                                        @if ($item->unit_price !== null)
-                                            <input type="number" value="{{ number_format((float) $item->unit_price, 2, '.', '') }}" readonly disabled
-                                                   class="w-24 cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-right text-sm text-gray-500"
-                                                   aria-label="Price for {{ $item->item?->name ?? 'line' }} (locked)">
-                                        @else
-                                            <input type="number" name="prices[{{ $item->id }}]" data-price-line="{{ $item->id }}" min="0" step="0.01"
-                                                   placeholder="0.00"
-                                                   class="w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                                   aria-label="Price paid for {{ $item->item?->name ?? 'line' }}">
+                        <div id="boughtLineRow-{{ $item->id }}" class="py-3">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-gray-900" title="{{ $item->item?->name }}">{{ $item->item?->name ?? 'Item removed' }}</p>
+                                    <p class="mt-0.5 text-[11px] text-gray-500">
+                                        Ordered <span class="font-medium text-gray-700">{{ $item->qty }}</span>
+                                        @if ($boughtSoFar > 0)
+                                            · Already bought <span class="font-medium text-gray-700">{{ $boughtSoFar }}</span>
                                         @endif
-                                    </div>
+                                        @if (! $lineDone)
+                                            · Outstanding <span class="font-medium text-gray-700">{{ $item->remainingQty() }}</span>
+                                        @endif
+                                    </p>
+                                </div>
+                                @if ($item->item?->box_size !== null)
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">Box of {{ (int) $item->item->box_size }}</span>
                                 @endif
                             </div>
+
+                            @if ($lineDone)
+                                <div class="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2.5">
+                                    <span class="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Bought</span>
+                                    <span class="text-sm text-gray-600">Qty <span class="font-semibold text-gray-900">{{ $boughtSoFar }}</span></span>
+                                    <span class="text-sm text-gray-600">Unit price <span class="font-semibold text-gray-900">&#8369;{{ number_format((float) $item->unit_price, 2) }}</span></span>
+                                </div>
+                            @else
+                                <div class="mt-3 flex flex-wrap gap-3">
+                                    @if ($item->item?->box_size !== null)
+                                        <div class="min-w-[8rem] flex-1">
+                                            <label for="boughtBoxSize-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Box size</label>
+                                            <input id="boughtBoxSize-{{ $item->id }}" type="number" name="box_sizes[{{ $item->id }}]" data-box-size-line="{{ $item->id }}" value="{{ (int) $item->item->box_size }}" min="1" step="1"
+                                                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
+                                        </div>
+                                        <div class="min-w-[8rem] flex-1">
+                                            <label for="boughtBoxes-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Boxes to buy</label>
+                                            <input id="boughtBoxes-{{ $item->id }}" type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) $item->item->box_size }}" min="0" step="1" value="0"
+                                                   class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
+                                        </div>
+                                    @endif
+                                    <div class="min-w-[8rem] flex-1">
+                                        <label for="boughtQty-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Qty bought</label>
+                                        <input id="boughtQty-{{ $item->id }}" type="number" name="quantities[{{ $item->id }}]" data-qty-line="{{ $item->id }}" min="0" max="{{ $item->remainingQty() }}" step="1"
+                                               value="{{ $item->remainingQty() }}"
+                                               class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
+                                    </div>
+                                    <div class="min-w-[9rem] flex-1">
+                                        <label for="boughtPrice-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Unit price</label>
+                                        <div class="relative mt-1">
+                                            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs text-gray-400">&#8369;</span>
+                                            @if ($item->unit_price !== null)
+                                                <input id="boughtPrice-{{ $item->id }}" type="number" value="{{ number_format((float) $item->unit_price, 2, '.', '') }}" readonly disabled
+                                                       class="w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 py-2 pl-7 pr-3 text-right text-sm text-gray-500">
+                                            @else
+                                                <input id="boughtPrice-{{ $item->id }}" type="number" name="prices[{{ $item->id }}]" data-price-line="{{ $item->id }}" min="0" step="0.01"
+                                                       placeholder="0.00"
+                                                       class="w-full rounded-lg border border-gray-300 py-2 pl-7 pr-3 text-right text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300">
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                                @if ($item->item?->box_size !== null)
+                                    <p class="mt-2 text-[11px] text-gray-400">Leave <span class="font-medium text-gray-500">Boxes</span> at 0 to record the exact quantity; entering boxes multiplies by the box size.</p>
+                                @endif
+                            @endif
                         </div>
                     @endforeach
                 </div>
