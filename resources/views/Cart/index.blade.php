@@ -100,7 +100,7 @@
                                                     @if ($line['itemBox'])
                                                         · pack: Box of {{ $line['itemBox'] }}
                                                     @endif
-                                                    @if ($line['supplierBox'])
+                                                    @if ($line['itemBox'] && $line['supplierBox'])
                                                         · supplier: Box of {{ $line['supplierBox'] }}
                                                     @endif
                                                 </p>

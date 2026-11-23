@@ -114,7 +114,7 @@
                                                     @endif
                                                 @endif
                                             </p>
-                                            @if ($itemBox || ($line['supplier_box_size'] ?? null))
+                                            @if ($itemBox)
                                                 <p class="mt-0.5 text-[10px] font-medium text-gray-400">
                                                     @if ($itemBox)
                                                         Req: Box of {{ $itemBox }}

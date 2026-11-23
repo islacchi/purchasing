@@ -635,6 +635,94 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame('draft', $po->refresh()->status);
     }
 
+    public function test_bought_modal_hides_box_fields_for_unpackaged_items(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        // The catalog item carries no box-size requirement, so the
+        // Mark-as-bought modal must not offer box fields at all.
+        $this->actingAs($user)
+            ->get(route('purchase-order.show', ['purchaseOrder' => $po->id]))
+            ->assertOk()
+            ->assertDontSee('name="boxes['.$poItem->id.']"', false)
+            ->assertDontSee('name="box_sizes['.$poItem->id.']"', false)
+            ->assertDontSee('Boxed items', false);
+    }
+
+    public function test_bought_modal_shows_box_fields_for_boxed_items(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+        $f['item']->update(['box_size' => 25]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('purchase-order.show', ['purchaseOrder' => $po->id]))
+            ->assertOk()
+            ->assertSee('name="boxes['.$poItem->id.']"', false)
+            ->assertSee('name="box_sizes['.$poItem->id.']"', false)
+            ->assertSee('Boxed items', false);
+    }
+
+    public function test_bought_ignores_box_payload_for_unpackaged_items(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '305.00']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        // A stray box payload must not drive the quantity for an item with no
+        // box-size requirement: the plain quantity is used instead.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'boxes' => [$poItem->id => 1],
+                'box_sizes' => [$poItem->id => 5],
+                'quantities' => [$poItem->id => 3],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(3, (int) $poItem->receipts()->sum('received_qty'));
+        $this->assertFalse($poItem->refresh()->isReceived());
+    }
+
     public function test_bought_can_skip_a_line_with_zero_quantity(): void
     {
         $user = $this->admin();

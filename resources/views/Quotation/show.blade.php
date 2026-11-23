@@ -353,7 +353,7 @@
                                                 <span>Brand: <span class="font-medium text-gray-700">{{ $brand ?: 'Not stated' }}</span></span>
                                                 <span class="text-gray-300">·</span>
                                                 <span>Expiry: <span class="font-medium text-gray-700">{{ $expiry ?: 'Not stated' }}</span></span>
-                                                @if ($quotedItem->supplier_box_size)
+                                                @if (! empty($item['box_size']) && $quotedItem->supplier_box_size)
                                                     <span class="text-gray-300">·</span>
                                                     <span>Supplier pack: <span class="font-semibold text-gray-700">Box of {{ $quotedItem->supplier_box_size }}</span></span>
                                                 @endif

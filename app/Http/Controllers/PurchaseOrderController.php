@@ -489,9 +489,13 @@ class PurchaseOrderController extends Controller
         $boughtThisTrip = [];
 
         foreach ($pending as $line) {
+            // Box logic only applies to items that carry a box-size
+            // requirement — unpackaged items ignore any box payload and use the
+            // plain bought quantity instead.
             $remaining = $line->remainingQty();
-            $boxSize = (int) ($boxSizes[$line->id] ?? $line->item?->box_size ?? 0);
-            $boxCount = (int) ($boxes[$line->id] ?? 0);
+            $requirementBox = (int) ($line->item?->box_size ?? 0);
+            $boxSize = $requirementBox > 0 ? (int) ($boxSizes[$line->id] ?? $requirementBox) : 0;
+            $boxCount = $boxSize > 0 ? (int) ($boxes[$line->id] ?? 0) : 0;
             $maxBoxes = $boxSize > 0 ? (int) ceil($remaining / $boxSize) : 0;
 
             if ($boxSize > 0 && $boxCount > $maxBoxes) {

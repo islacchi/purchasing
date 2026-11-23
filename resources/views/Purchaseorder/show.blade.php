@@ -561,7 +561,9 @@
                     <div class="min-w-0">
                         <h3 id="poBoughtTitle" class="text-base font-bold text-gray-900">Record purchase</h3>
                         <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid for this line. Use 0 when the store had none. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
-                        <p class="mt-0.5 text-[11px] text-gray-400">Boxed items: enter the box size and the box count — the bought quantity follows box size × box count.</p>
+                        @if ($items->contains(fn ($line) => $line->item?->box_size !== null))
+                            <p class="mt-0.5 text-[11px] text-gray-400">Boxed items: enter the box size and the box count — the bought quantity follows box size × box count.</p>
+                        @endif
                     </div>
                 </div>
 
@@ -582,15 +584,15 @@
                                     <span class="w-16 text-right text-sm text-gray-500">{{ $boughtSoFar }}</span>
                                     <span class="w-24 text-right text-sm text-gray-500">&#8369;{{ number_format((float) $item->unit_price, 2) }}</span>
                                 @else
+                                    {{-- Box inputs exist only for items that carry a box-size requirement. --}}
                                     @if ($item->item?->box_size !== null)
                                         <input type="number" name="box_sizes[{{ $item->id }}]" data-box-size-line="{{ $item->id }}" value="{{ (int) $item->item->box_size }}" min="1" step="1"
                                                class="w-14 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
                                                aria-label="Box size for {{ $item->item?->name ?? 'line' }}">
+                                        <input type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) $item->item->box_size }}" min="0" step="1" value="0"
+                                               class="w-14 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                               aria-label="Boxes to buy for {{ $item->item?->name ?? 'line' }}">
                                     @endif
-                                    <input type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) ($item->item?->box_size ?? 0) }}" min="0" step="1" value="0"
-                                           {{ $item->item?->box_size === null ? 'disabled' : '' }}
-                                           class="w-14 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                           aria-label="Boxes to buy for {{ $item->item?->name ?? 'line' }}">
                                     <input type="number" name="quantities[{{ $item->id }}]" data-qty-line="{{ $item->id }}" min="0" max="{{ $item->remainingQty() }}" step="1"
                                            value="{{ $item->remainingQty() }}"
                                            class="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
