@@ -561,6 +561,7 @@
                     <div class="min-w-0">
                         <h3 id="poBoughtTitle" class="text-base font-bold text-gray-900">Record purchase</h3>
                         <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid for this line. Use 0 when the store had none. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
+                        <p class="mt-0.5 text-[11px] text-gray-400">Boxed items: enter the box count and the bought quantity follows the box size.</p>
                     </div>
                 </div>
 
@@ -581,6 +582,10 @@
                                     <span class="w-16 text-right text-sm text-gray-500">{{ $boughtSoFar }}</span>
                                     <span class="w-24 text-right text-sm text-gray-500">&#8369;{{ number_format((float) $item->unit_price, 2) }}</span>
                                 @else
+                                    <input type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) ($item->item?->box_size ?? 0) }}" min="0" step="1" value="0"
+                                           {{ $item->item?->box_size === null ? 'disabled' : '' }}
+                                           class="w-14 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                           aria-label="Boxes to buy for {{ $item->item?->name ?? 'line' }}">
                                     <input type="number" name="quantities[{{ $item->id }}]" data-qty-line="{{ $item->id }}" min="0" max="{{ $item->remainingQty() }}" step="1"
                                            value="{{ $item->remainingQty() }}"
                                            class="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
@@ -726,6 +731,14 @@
                         qtyInput.max = qtyInput.value;
                     }
 
+                    const boxInput = boughtForm ? boughtForm.querySelector('input[data-box-line="' + lineId + '"]') : null;
+                    if (boxInput) {
+                        boxInput.value = '0';
+                        const boxSize = parseInt(boxInput.getAttribute('data-box-size') || '0', 10) || 0;
+                        const remaining = parseInt(qtyInput && qtyInput.max ? qtyInput.max : (trigger.getAttribute('data-po-qty') || '0'), 10) || 0;
+                        boxInput.max = String(boxSize > 0 ? Math.ceil(remaining / boxSize) : 0);
+                    }
+
                     const priceInput = boughtForm ? boughtForm.querySelector('input[data-price-line="' + lineId + '"]') : null;
                     if (priceInput) priceInput.value = '';
                 }
@@ -761,6 +774,28 @@
                     closeBoughtModal(boughtTrigger);
                 }
             });
+
+            if (boughtForm) {
+                boughtForm.addEventListener('input', function (event) {
+                    const boxInput = event.target.closest('[data-box-line]');
+                    if (! boxInput) {
+                        return;
+                    }
+
+                    const boxLineId = boxInput.getAttribute('data-box-line');
+                    const qtyInput = boughtForm.querySelector('input[data-qty-line="' + boxLineId + '"]');
+                    if (! qtyInput) {
+                        return;
+                    }
+
+                    const boxSize = parseInt(boxInput.getAttribute('data-box-size') || '0', 10) || 0;
+                    const boxes = parseInt(boxInput.value, 10) || 0;
+                    const units = boxes > 0 && boxSize > 0 ? boxes * boxSize : (parseInt(qtyInput.value, 10) || 0);
+
+                    qtyInput.value = String(units);
+                    qtyInput.max = String(units);
+                });
+            }
         })();
 
         // Cancel and delete purchase order confirmation modals.

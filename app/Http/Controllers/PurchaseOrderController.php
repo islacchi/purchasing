@@ -462,10 +462,13 @@ class PurchaseOrderController extends Controller
             'prices.*' => ['nullable', 'numeric', 'min:0'],
             'quantities' => ['nullable', 'array'],
             'quantities.*' => ['nullable', 'integer', 'min:0'],
+            'boxes' => ['nullable', 'array'],
+            'boxes.*' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $prices = $validated['prices'] ?? [];
         $quantities = $validated['quantities'] ?? [];
+        $boxes = $validated['boxes'] ?? [];
         $boughtLineId = $validated['bought_line_id'] ?? null;
 
         $pending = $purchaseOrder->items
@@ -484,9 +487,22 @@ class PurchaseOrderController extends Controller
 
         foreach ($pending as $line) {
             $remaining = $line->remainingQty();
-            $qty = (int) ($quantities[$line->id] ?? $remaining);
+            $boxSize = (int) ($line->item?->box_size ?? 0);
+            $boxCount = (int) ($boxes[$line->id] ?? 0);
+            $maxBoxes = $boxSize > 0 ? (int) ceil($remaining / $boxSize) : 0;
 
-            if ($qty < 0 || $qty > $remaining) {
+            if ($boxSize > 0 && $boxCount > $maxBoxes) {
+                throw ValidationException::withMessages([
+                    'boxes' => 'Box count for '.($line->item?->name ?? 'a line').' cannot exceed '.$maxBoxes.' for the '.$remaining.' still outstanding.',
+                ]);
+            }
+
+            // A box count drives the bought quantity: buying N boxes of a
+            // Box-of-M requirement covers N x M units (packaging may overage).
+            // Without a box count the plain quantity payload is honoured.
+            $qty = $boxCount > 0 ? $boxCount * $boxSize : (int) ($quantities[$line->id] ?? $remaining);
+
+            if ($boxCount === 0 && ($qty < 0 || $qty > $remaining)) {
                 throw ValidationException::withMessages([
                     'quantities' => 'Quantity for '.($line->item?->name ?? 'a line').' must be between 0 and '.$remaining.'.',
                 ]);
@@ -529,7 +545,9 @@ class PurchaseOrderController extends Controller
                     $line->update(['unit_price' => $prices[$line->id]]);
                 }
 
-                PurchaseReceipts::finalize($line, $request->user()->id, $qty);
+                // Local purchases may overage through box math (buying a full
+                // box beyond the outstanding need); supplier receipts stay strict.
+                PurchaseReceipts::finalize($line, $request->user()->id, $qty, true);
             }
 
             if ($purchaseOrder->issued_on === null) {

@@ -17,12 +17,19 @@ final class PurchaseReceipts
 {
     /**
      * @param  int  $qty  How many units arrived (or were bought) this time.
+     * @param  bool  $allowOverage  When true, a bought quantity may exceed the
+     *                              ordered quantity (box-driven purchases can cover
+     *                              a full box beyond the outstanding need).
      */
-    public static function finalize(PurchaseOrderItem $line, int $userId, int $qty): void
+    public static function finalize(PurchaseOrderItem $line, int $userId, int $qty, bool $allowOverage = false): void
     {
         $remaining = $line->remainingQty();
 
-        if ($qty < 1 || $qty > $remaining) {
+        if ($qty < 1) {
+            throw new InvalidArgumentException('Receipt quantity must be at least 1 for this line.');
+        }
+
+        if (! $allowOverage && $qty > $remaining) {
             throw new InvalidArgumentException(
                 'Receipt quantity must be between 1 and '.$remaining.' for this line.'
             );
