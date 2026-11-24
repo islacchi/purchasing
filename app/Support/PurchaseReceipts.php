@@ -118,9 +118,12 @@ final class PurchaseReceipts
      * proportionally to each allocation's share of the ordered quantity.
      * The last allocation absorbs the rounding remainder.
      *
+     * Public so other read paths (e.g. reporting a boxed line's overage on
+     * its project items) can share the exact same attribution rule.
+     *
      * @return array<int, int>
      */
-    private static function split($allocations, int $orderedQty, int $receivedTotal): array
+    public static function split($allocations, int $orderedQty, int $receivedTotal): array
     {
         $shares = [];
         $assigned = 0;

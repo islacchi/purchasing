@@ -51,6 +51,7 @@
         $orderedUnits = $items->sum(fn ($item) => $item->orderedPieces());
         $canReceive = $purchaseOrder->canReceive();
         $canManagePurchaseOrder = auth()->user()?->canModule('purchase-order', 'manage') ?? false;
+        $poClosed = in_array($purchaseOrder->status, [\App\Models\PurchaseOrder::STATUS_COMPLETED, \App\Models\PurchaseOrder::STATUS_CANCELLED], true);
 
         $supplierName = $supplier?->name ?? 'Supplier removed';
 
@@ -326,7 +327,11 @@
                                         </p>
                                         @if (! $isReceived)
                                             <p class="mt-0.5 text-[10px] text-gray-400">
-                                                {{ $item->remainingQty() }} {{ $item->item?->unit ?? 'unit' }} left
+                                                @if ($tracked)
+                                                    {{ $item->remainingQty() }} more box{{ $item->remainingQty() === 1 ? '' : 'es' }} of {{ $item->box_size }} {{ $item->remainingPieces() }} pcs left
+                                                @else
+                                                    {{ $item->remainingQty() }} {{ $item->item?->unit ?? 'unit' }} left
+                                                @endif
                                             </p>
                                         @endif
                                     @endif
@@ -344,7 +349,7 @@
                                             </svg>
                                             {{ $isLocal ? 'Fully bought' : 'Fully received' }}
                                         </span>
-                                    @elseif ($isLocal && $canManagePurchaseOrder)
+                                    @elseif ($isLocal && ! $poClosed && $canManagePurchaseOrder)
                                         <button type="button"
                                                 data-po-bought
                                                 data-po-line-id="{{ $item->id }}"
@@ -362,8 +367,9 @@
                                                 data-po-receive
                                                 data-po-action="{{ route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]) }}"
                                                 data-po-label="{{ $item->item?->name ?? 'This line' }}"
-                                                data-po-remaining="{{ $item->remainingQty() }}"
-                                                data-po-ordered="{{ $item->qty }}"
+                                                data-po-remaining="{{ $item->remainingPieces() }}"
+                                                data-po-ordered="{{ $item->orderedPieces() }}"
+                                                data-po-pack="{{ $item->trackedInPieces() ? (int) $item->box_size : '' }}"
                                                 class="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[#2a7a94] bg-white px-2 py-1 text-[10px] font-semibold text-[#2a7a94] transition-colors hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-300"
                                                 aria-label="Record a received quantity for {{ $item->item?->name ?? 'this line' }}">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -401,7 +407,7 @@
                 </p>
                 <p class="mt-1 text-[11px] text-gray-400">
                     @if ($isLocal)
-                        For local purchases, press <span class="font-medium text-gray-500">Mark as bought</span> on the line after each store trip — the system asks for the quantity bought and the price paid. The order completes once every line is fully bought.
+                        For local purchases, press <span class="font-medium text-gray-500">Mark as bought</span> once the trip is done — the system asks for the quantity bought and the price paid on each line and completes the order. Anything the store did not supply stays open with the projects and can be compiled again to source the rest.
                     @else
                         Use <span class="font-medium text-gray-500">Receive</span> to record how many units arrived and passed the shelf-life check. The order completes once every line’s full quantity is received.
                     @endif
@@ -522,7 +528,7 @@
                         <h3 id="poReceiveTitle" class="text-base font-bold text-gray-900">Record a receipt</h3>
                         <p class="mt-1 text-sm text-gray-500">
                             <span id="poReceiveItemName" class="font-medium text-gray-800">This line</span>
-                            &mdash; how many units arrived?
+                            &mdash; how many <span id="poReceiveNoun" class="font-medium text-gray-800">units</span> arrived?
                             <span id="poReceiveRemaining" class="text-gray-500"></span>
                         </p>
                     </div>
@@ -554,7 +560,6 @@
         </div>
 
         {{-- Record local purchase - quantity bought + price paid per outstanding line --}}
-        @php($poClosed = in_array($purchaseOrder->status, [\App\Models\PurchaseOrder::STATUS_COMPLETED, \App\Models\PurchaseOrder::STATUS_CANCELLED], true))
         @if ($isLocal && ! $poClosed)
         <div id="poBoughtModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="poBoughtTitle">
             <div id="poBoughtOverlay" class="absolute inset-0 bg-gray-900/50"></div>
@@ -562,7 +567,6 @@
             <form id="poBoughtForm" method="POST" action="{{ route('purchase-order.bought', ['purchaseOrder' => $purchaseOrder->id]) }}"
                   class="relative flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
                 @csrf
-                <input type="hidden" name="bought_line_id" id="boughtLineId" value="">
                 <div class="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
                     <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-50">
                         <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -571,9 +575,9 @@
                     </span>
                     <div class="min-w-0">
                         <h3 id="poBoughtTitle" class="text-base font-bold text-gray-900">Record purchase</h3>
-                        <p class="mt-1 text-sm text-gray-500">Enter the quantity bought and the price paid on this trip. The order becomes <span class="font-medium text-gray-800">Completed</span> only once every line&rsquo;s full quantity is bought.</p>
+                        <p class="mt-1 text-sm text-gray-500">Enter what this trip bought on each line — setting a line&rsquo;s quantity to 0 leaves it unbought. Recording the trip <span class="font-medium text-gray-800">completes</span> the order; anything left unbought stays open with the projects.</p>
                         @if ($items->contains(fn ($line) => $line->trackedInPieces()))
-                            <p class="mt-1 text-[11px] text-gray-400">Boxed items: keep <span class="font-medium text-gray-500">Boxes</span> at 0 to record an exact quantity, or enter the box size and box count and the quantity follows box size × box count.</p>
+                            <p class="mt-1 text-[11px] text-gray-400">Boxed items: leave <span class="font-medium text-gray-500">Boxes bought</span> at 0 to record an exact quantity, or enter the item&rsquo;s box size and the boxes bought — the quantity follows box size × boxes bought.</p>
                         @endif
                     </div>
                 </div>
@@ -620,14 +624,15 @@
                             @else
                                 <div class="mt-3 flex flex-wrap gap-3">
                                     @if ($tracked)
+                                        @php($boughtBoxSize = max(1, (int) ($item->item?->box_size ?? $item->box_size)))
                                         <div class="min-w-[8rem] flex-1">
                                             <label for="boughtBoxSize-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Box size</label>
-                                            <input id="boughtBoxSize-{{ $item->id }}" type="number" name="box_sizes[{{ $item->id }}]" data-box-size-line="{{ $item->id }}" value="{{ (int) $item->box_size }}" min="1" step="1"
+                                            <input id="boughtBoxSize-{{ $item->id }}" type="number" name="box_sizes[{{ $item->id }}]" data-box-size-line="{{ $item->id }}" value="{{ $boughtBoxSize }}" min="1" step="1"
                                                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
                                         </div>
                                         <div class="min-w-[8rem] flex-1">
-                                            <label for="boughtBoxes-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Boxes to buy</label>
-                                            <input id="boughtBoxes-{{ $item->id }}" type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ (int) $item->box_size }}" min="0" step="1" value="0"
+                                            <label for="boughtBoxes-{{ $item->id }}" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500">Boxes bought</label>
+                                            <input id="boughtBoxes-{{ $item->id }}" type="number" name="boxes[{{ $item->id }}]" data-box-line="{{ $item->id }}" data-box-size="{{ $boughtBoxSize }}" min="0" step="1" value="0"
                                                    class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-right text-sm focus:outline-none focus:ring-2 focus:ring-amber-300">
                                         </div>
                                     @endif
@@ -655,8 +660,10 @@
                                 @if ($tracked)
                                     <p class="mt-2 text-[11px] text-gray-400">
                                         The requirement is counted in pieces ({{ number_format($item->orderedPieces()) }} pcs). Leave
-                                        <span class="font-medium text-gray-500">Boxes</span> at 0 to record an exact piece quantity, or enter the
-                                        box size and box count bought — the quantity follows box size × box count.
+                                        <span class="font-medium text-gray-500">Boxes bought</span> at 0 to record an exact piece quantity, or enter the
+                                        item&rsquo;s box size and the boxes bought — the quantity follows box size × boxes bought.
+                                        @php($coverBoxes = max(1, (int) ceil($outstanding / $boughtBoxSize)))
+                                        <span data-lack-line="{{ $item->id }}" data-lack-text>&middot; Lacking before this trip: <span class="font-medium text-gray-700">{{ number_format($outstanding) }}</span> pcs (<span class="font-medium text-gray-700">{{ $coverBoxes }}</span> box{{ $coverBoxes === 1 ? '' : 'es' }} of {{ $boughtBoxSize }} cover{{ $coverBoxes === 1 ? 's' : '' }} the line)</span>
                                     </p>
                                 @endif
                             @endif
@@ -665,7 +672,7 @@
                 </div>
 
                 <div class="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
-                    <p class="text-[11px] text-gray-400">Outstanding lines stay open for the next trip.</p>
+                    <p class="text-[11px] text-gray-400">The trip completes the order — what the store did not supply can be compiled again to source it from other suppliers.</p>
                     <div class="flex items-center gap-2">
                         <button type="button" id="poBoughtCancel"
                                 class="whitespace-nowrap rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
@@ -691,6 +698,7 @@
             const receiveOverlay = document.getElementById('poReceiveOverlay');
             const receiveCancel = document.getElementById('poReceiveCancel');
             const receiveItemName = document.getElementById('poReceiveItemName');
+            const receiveNoun = document.getElementById('poReceiveNoun');
             const receiveRemaining = document.getElementById('poReceiveRemaining');
             const receiveQty = document.getElementById('poReceiveQty');
             const receiveMax = document.getElementById('poReceiveMax');
@@ -721,10 +729,14 @@
 
                     const outstanding = parseInt(trigger.getAttribute('data-po-remaining') || '0', 10);
                     const ordered = trigger.getAttribute('data-po-ordered') || '';
+                    const pack = trigger.getAttribute('data-po-pack') || '';
 
                     receiveForm.setAttribute('action', trigger.getAttribute('data-po-action'));
                     receiveItemName.textContent = trigger.getAttribute('data-po-label') || 'This line';
 
+                    if (receiveNoun) {
+                        receiveNoun.textContent = pack ? 'pieces' : 'units';
+                    }
                     if (receiveRemaining) {
                         receiveRemaining.textContent = ordered !== ''
                             ? outstanding + ' of ' + ordered + ' still outstanding.'
@@ -735,7 +747,9 @@
                         receiveQty.value = String(Math.max(1, outstanding));
                     }
                     if (receiveMax) {
-                        receiveMax.textContent = outstanding > 0 ? 'of ' + outstanding + ' outstanding' : '';
+                        receiveMax.textContent = outstanding > 0
+                            ? 'of ' + outstanding + ' ' + (pack ? 'pieces' : 'units') + ' outstanding' + (pack ? ' — the order is packed in boxes of ' + pack : '')
+                            : '';
                     }
 
                     openReceiveModal();
@@ -763,7 +777,6 @@
             const boughtForm = document.getElementById('poBoughtForm');
             const boughtOverlay = document.getElementById('poBoughtOverlay');
             const boughtCancel = document.getElementById('poBoughtCancel');
-            const boughtLineId = document.getElementById('boughtLineId');
             let boughtTrigger = null;
 
             function openBoughtModal(trigger) {
@@ -772,13 +785,8 @@
                 boughtModal.classList.add('flex');
                 boughtTrigger = trigger || null;
 
-                const lineId = trigger ? trigger.getAttribute('data-po-line-id') : null;
-                boughtModal.querySelectorAll('[id^="boughtLineRow-"]').forEach(function (row) {
-                    row.classList.toggle('hidden', row.id !== 'boughtLineRow-' + lineId);
-                });
-
                 if (trigger) {
-                    if (boughtLineId) boughtLineId.value = lineId || '';
+                    const lineId = trigger.getAttribute('data-po-line-id');
 
                     const qtyInput = boughtForm ? boughtForm.querySelector('input[data-qty-line="' + lineId + '"]') : null;
                     if (qtyInput) {
@@ -804,6 +812,19 @@
 
                     const priceInput = boughtForm ? boughtForm.querySelector('input[data-price-line="' + lineId + '"]') : null;
                     if (priceInput) priceInput.value = '';
+
+                    const lackLine = boughtForm ? boughtForm.querySelector('[data-lack-line="' + lineId + '"]') : null;
+                    if (lackLine && qtyInput) {
+                        const outstandingPcs = parseInt(qtyInput.getAttribute('data-line-remaining') || '0', 10) || 0;
+                        const sizeAtOpen = boughtForm ? boughtForm.querySelector('input[data-box-size-line="' + lineId + '"]') : null;
+                        const packAtOpen = parseInt((sizeAtOpen && sizeAtOpen.value) || '0', 10);
+                        let resetText = '· Lacking before this trip: ' + outstandingPcs.toLocaleString('en-PH') + ' pcs';
+                        if (outstandingPcs > 0 && packAtOpen > 0) {
+                            const coverBoxes = Math.ceil(outstandingPcs / packAtOpen);
+                            resetText += ' (' + coverBoxes + ' box' + (coverBoxes === 1 ? '' : 'es') + ' of ' + packAtOpen + ' ' + (coverBoxes === 1 ? 'covers' : 'cover') + ' the line)';
+                        }
+                        lackLine.textContent = resetText;
+                    }
                 }
 
                 if (boughtCancel) boughtCancel.focus();
@@ -840,28 +861,52 @@
 
             if (boughtForm) {
                 boughtForm.addEventListener('input', function (event) {
-                    const boxInput = event.target.closest('[data-box-line]');
-                    const sizeInput = event.target.closest('[data-box-size-line]');
-                    const lineId = boxInput ? boxInput.getAttribute('data-box-line') : (sizeInput ? sizeInput.getAttribute('data-box-size-line') : null);
+                    const boxEl = event.target.closest('[data-box-line]');
+                    const sizeEl = event.target.closest('[data-box-size-line]');
+                    const qtyEl = event.target.closest('[data-qty-line]');
+                    const lineId = boxEl
+                        ? boxEl.getAttribute('data-box-line')
+                        : (sizeEl ? sizeEl.getAttribute('data-box-size-line') : (qtyEl ? qtyEl.getAttribute('data-qty-line') : null));
                     if (! lineId) {
                         return;
                     }
 
                     const qtyInput = boughtForm.querySelector('input[data-qty-line="' + lineId + '"]');
-                    const currentBoxInput = boughtForm.querySelector('input[data-box-line="' + lineId + '"]');
-                    const currentSizeInput = boughtForm.querySelector('input[data-box-size-line="' + lineId + '"]');
-                    const boxSize = parseInt((currentSizeInput && currentSizeInput.value) || (currentBoxInput && currentBoxInput.getAttribute('data-box-size')) || '0', 10) || 0;
-                    const boxes = parseInt(currentBoxInput ? currentBoxInput.value : '0', 10) || 0;
-                    const units = boxes > 0 && boxSize > 0 ? boxes * boxSize : (parseInt(qtyInput ? qtyInput.value : '0', 10) || 0);
-                    const remaining = parseInt(qtyInput ? qtyInput.max : '0', 10) || 0;
+                    const boxCountInput = boughtForm.querySelector('input[data-box-line="' + lineId + '"]');
+                    const sizeInput = boughtForm.querySelector('input[data-box-size-line="' + lineId + '"]');
+                    const boxSize = parseInt((sizeInput && sizeInput.value) || (boxCountInput && boxCountInput.getAttribute('data-box-size')) || '0', 10) || 0;
+                    const boxes = parseInt(boxCountInput ? boxCountInput.value : '0', 10) || 0;
+                    // The outstanding pieces live on the data attribute: once
+                    // boxes drive the quantity, qty.max mirrors the bought
+                    // quantity and can no longer stand in for what is lacking.
+                    const outstanding = parseInt(qtyInput ? qtyInput.getAttribute('data-line-remaining') : '0', 10) || 0;
+                    // A box count drives the bought quantity (boxes × box
+                    // size); without one the plain quantity field applies.
+                    const bought = boxes > 0 && boxSize > 0
+                        ? boxes * boxSize
+                        : (parseInt(qtyInput ? qtyInput.value : '0', 10) || 0);
 
-                    if (qtyInput) {
-                        qtyInput.value = String(units);
-                        qtyInput.max = String(units);
+                    if (qtyInput && boxes > 0 && boxSize > 0) {
+                        qtyInput.value = String(bought);
+                        qtyInput.max = String(bought);
                     }
 
-                    if (currentBoxInput && boxes > 0) {
-                        currentBoxInput.max = String(boxSize > 0 ? Math.ceil(remaining / boxSize) : 0);
+                    if (boxCountInput && boxes > 0 && boxSize > 0) {
+                        boxCountInput.max = String(Math.ceil(outstanding / boxSize));
+                    }
+
+                    const lackText = boughtForm.querySelector('[data-lack-line="' + lineId + '"]');
+                    if (lackText) {
+                        const lacking = Math.max(0, outstanding - bought);
+                        lackText.textContent = lacking > 0
+                            ? '· Lacking after this trip: ' + lacking.toLocaleString('en-PH') + ' pcs'
+                            : '· Nothing left lacking; this trip covers the line.';
+                        // A lighter/smaller pack changes how many boxes it takes
+                        // to cover the line — keep that count in view.
+                        if (outstanding > 0 && boxes > 0 && boxSize > 0) {
+                            const coverBoxes = Math.ceil(outstanding / boxSize);
+                            lackText.textContent += ' (' + coverBoxes + ' box' + (coverBoxes === 1 ? '' : 'es') + ' of ' + boxSize + ' ' + (coverBoxes === 1 ? 'covers' : 'cover') + ' the line)';
+                        }
                     }
                 });
             }

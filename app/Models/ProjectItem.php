@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Support\BoxQuantity;
+use App\Support\PurchaseReceipts;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProjectItem extends Model
 {
@@ -169,5 +171,50 @@ class ProjectItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
-    
+
+    /**
+     * The stock allocations feeding this project item from purchase orders.
+     */
+    public function poAllocations(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderItemAllocation::class);
+    }
+
+    /**
+     * Pieces received beyond a boxed line's ordered quantity (a local
+     * purchase may overage to a whole box). The stock bump keeps the
+     * counted share at the requirement, so the surplus is only reported:
+     * each project item shows the proportional share of each line's overage
+     * attributed to it by its allocations.
+     */
+    public function purchaseOveragePieces(): int
+    {
+        $total = 0;
+
+        $this->loadMissing('poAllocations.purchaseOrderItem.allocations', 'poAllocations.purchaseOrderItem.receipts');
+
+        foreach ($this->poAllocations as $allocation) {
+            $poItem = $allocation->purchaseOrderItem;
+
+            if (! $poItem) {
+                continue;
+            }
+
+            $overage = max(0, $poItem->receivedQty() - $poItem->orderedPieces());
+
+            if ($overage < 1) {
+                continue;
+            }
+
+            $allocations = $poItem->allocations->values();
+            $denominator = (int) $allocations->sum('qty') ?: (int) $poItem->orderedPieces() ?: 1;
+            $shares = PurchaseReceipts::split($allocations, $denominator, $overage);
+            $index = $allocations->search(fn ($alloc) => $alloc->id === $allocation->id);
+
+            $total += (int) ($shares[$index] ?? 0);
+        }
+
+        return $total;
+    }
+
 }

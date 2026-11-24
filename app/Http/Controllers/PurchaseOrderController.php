@@ -132,12 +132,27 @@ class PurchaseOrderController extends Controller
 
                 $remaining = $preplistItem->remainingQuantity();
 
+                // A supplier packing differently changes the quantity unit: one
+                // of their boxes covers theirBox pieces, so the orderable
+                // quantity is the pack-adjusted ceiling of the requirement.
+                $itemBox = $preplistItem->item?->box_size !== null
+                    ? (int) $preplistItem->item->box_size
+                    : null;
+                $supplierBox = $quotationItem?->supplier_box_size !== null
+                    ? (int) $quotationItem->supplier_box_size
+                    : null;
+                $suggestion = \App\Support\PackagingAdjuster::suggestion($itemBox, $supplierBox, $remaining);
+                $maxQty = $suggestion ? $suggestion['neededBoxes'] : $remaining;
+
                 return [
                     'id' => $preplistItem->id,
                     'quotation_item_id' => $quotationItem?->id,
                     'name' => $preplistItem->item?->name ?? 'Item',
                     'requested' => $remaining,
                     'remaining' => $remaining,
+                    'max_qty' => $maxQty,
+                    'supplier_pack' => $suggestion ? $suggestion['theirBox'] : null,
+                    'item_pack' => $itemBox > 0 ? $itemBox : null,
                     'unit' => $unit,
                     'unit_price' => $quotationItem?->unit_price,
                     'min_remaining_months' => (int) $preplistItem->min_shelf_life_months,
@@ -180,7 +195,7 @@ class PurchaseOrderController extends Controller
         ]);
 
         $quotation = Quotation::query()
-            ->with(['preplist.items.sources.projectItem', 'items'])
+            ->with(['preplist.items.item', 'preplist.items.sources.projectItem', 'items'])
             ->findOrFail($validated['quotation_id']);
 
         $preplistItems = $quotation->preplist->items->keyBy('id');
@@ -212,6 +227,21 @@ class PurchaseOrderController extends Controller
             if ($requested <= 0) {
                 continue;
             }
+
+            // When the supplier packs differently, quantities are their
+            // boxes: one of their boxes covers theirBox pieces, so the
+            // orderable quantity is the pack-adjusted ceiling of the
+            // requirement, and the PO line snapshots that pack so receipt
+            // accounting reconciles in base pieces.
+            $itemBox = $preplistItem->item?->box_size !== null
+                ? (int) $preplistItem->item->box_size
+                : null;
+            $supplierBox = $quotationItem->supplier_box_size !== null
+                ? (int) $quotationItem->supplier_box_size
+                : null;
+            $suggestion = \App\Support\PackagingAdjuster::suggestion($itemBox, $supplierBox, (int) $requested);
+            $maxQty = $suggestion ? $suggestion['neededBoxes'] : (int) $requested;
+
             $qty = (int) ($row['qty'] ?? 0);
 
             if ($qty < 1) {
@@ -220,7 +250,7 @@ class PurchaseOrderController extends Controller
                 ]);
             }
 
-            if ($requested > 0 && $qty > $requested) {
+            if ($qty > $maxQty) {
                 throw ValidationException::withMessages([
                     'items' => 'The purchase quantity cannot exceed the quantity requested internally.',
                 ]);
@@ -232,6 +262,7 @@ class PurchaseOrderController extends Controller
                 'qty' => $qty,
                 'unit_price' => $quotationItem->unit_price,
                 'min_remaining_months' => (int) ($row['min_remaining_months'] ?? $quotationItem->min_remaining_months ?? 0),
+                'box_size' => $suggestion ? $suggestion['theirBox'] : null,
             ];
         }
 
@@ -374,7 +405,9 @@ class PurchaseOrderController extends Controller
      * Receipts accumulate: each call records how many units arrived this
      * time (defaulting to the full outstanding quantity). The order is only
      * completed once every line is fully received; until then it stays
-     * partially received.
+     * partially received. Piece-tracked lines (a packing snapshot stored on
+     * the line) are reconciled in base pieces, so a partial physical delivery
+     * cannot silently complete a requirement ordered in another pack size.
      */
     public function toggleReceipt(Request $request, PurchaseOrder $purchaseOrder, PurchaseOrderItem $purchaseOrderItem)
     {
@@ -411,7 +444,14 @@ class PurchaseOrderController extends Controller
                 ->withErrors(['purchase_order' => 'Someone else already recorded this receipt since the page was loaded. Refresh the page and try again.']);
         }
 
-        $remaining = $purchaseOrderItem->remainingQty();
+        // Piece-tracked lines (one packing declared on the line: boxed local
+        // purchases, and supplier lines whose supplier packs differently) are
+        // reconciled in base pieces — a partial pack of the requirement stays
+        // open and the project cannot complete on short physical stock.
+        $remaining = $purchaseOrderItem->trackedInPieces()
+            ? $purchaseOrderItem->remainingPieces()
+            : $purchaseOrderItem->remainingQty();
+
         $qty = (int) ($expected['received_qty'] ?? $remaining);
 
         if ($qty < 1 || $qty > $remaining) {
@@ -432,15 +472,18 @@ class PurchaseOrderController extends Controller
             ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
             ->with('status', $qty === $remaining
                 ? 'Line marked as received.'
-                : 'Recorded '.$qty.' of '.$purchaseOrderItem->qty.' received.');
+                : 'Recorded '.$qty.' of '.($purchaseOrderItem->trackedInPieces() ? $purchaseOrderItem->orderedPieces() : $purchaseOrderItem->qty).' received.');
     }
 
     /**
      * Record a local purchase trip.
      *
-     * The modal asks for the quantity bought and the price paid on each
-     * outstanding line. Receipts accumulate across trips: the order becomes
-     * Completed only once every line has its full ordered quantity covered.
+     * The form collects the quantity bought and the price paid on each
+     * outstanding line. A local purchase settles in one trip: the order is
+     * completed the moment the details are recorded. A line left partly
+     * bought (or skipped) does not keep the order open — what the store
+     * did not supply stays outstanding on the project items, where it can
+     * be compiled again to source the rest from other suppliers.
      */
     public function bought(Request $request, PurchaseOrder $purchaseOrder)
     {
@@ -457,7 +500,6 @@ class PurchaseOrderController extends Controller
         $purchaseOrder->load('items.item', 'items.receipts', 'items.preplistItem');
 
         $validated = $request->validate([
-            'bought_line_id' => ['nullable', 'integer', 'exists:purchase_order_items,id'],
             'prices' => ['nullable', 'array'],
             'prices.*' => ['nullable', 'numeric', 'min:0'],
             'quantities' => ['nullable', 'array'],
@@ -472,31 +514,26 @@ class PurchaseOrderController extends Controller
         $quantities = $validated['quantities'] ?? [];
         $boxes = $validated['boxes'] ?? [];
         $boxSizes = $validated['box_sizes'] ?? [];
-        $boughtLineId = $validated['bought_line_id'] ?? null;
 
+        // Every line still open for purchase is recorded in this trip —
+        // set its quantity to 0 to leave it unbought.
         $pending = $purchaseOrder->items
             ->filter(fn (PurchaseOrderItem $item) => ! $item->isReceived())
-            ->when($boughtLineId !== null, fn ($lines) => $lines->filter(fn (PurchaseOrderItem $item) => $item->id === (int) $boughtLineId))
             ->values();
-
-        if ($boughtLineId !== null && $pending->isEmpty()) {
-            throw ValidationException::withMessages([
-                'bought_line_id' => 'That purchase order line is not open for a new purchase.',
-            ]);
-        }
 
         $missing = [];
         $boughtThisTrip = [];
 
         foreach ($pending as $line) {
-            // Box logic only applies to piece-tracked lines — a local purchase
-            // of a boxed item snapshots the requirement pack, so the bought
-            // quantity can be reconciled in base pieces no matter which pack
-            // the store actually sells. Unpackaged (and legacy) lines keep
-            // their plain unit quantity.
+            // Box logic only applies to piece-tracked lines: a boxed local
+            // line is reconciled in base pieces no matter which pack the item
+            // is actually bought in, and plain unit lines skip it. The box
+            // size comes from the item actually bought (a line can outlive a
+            // box-size edit); the requirement snapshot only backs packless
+            // items, and the store's pack can still be recorded per purchase.
             $tracked = $line->trackedInPieces();
             $remaining = $tracked ? $line->remainingPieces() : $line->remainingQty();
-            $requirementBox = $tracked ? (int) $line->box_size : 0;
+            $requirementBox = $tracked ? (int) ($line->item?->box_size ?? $line->box_size) : 0;
             $boxSize = $requirementBox > 0 ? (int) ($boxSizes[$line->id] ?? $requirementBox) : 0;
             $boxCount = $boxSize > 0 ? (int) ($boxes[$line->id] ?? 0) : 0;
             $maxBoxes = $boxSize > 0 ? (int) ceil($remaining / $boxSize) : 0;
@@ -545,7 +582,9 @@ class PurchaseOrderController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($request, $purchaseOrder, $pending, $prices, $boughtThisTrip) {
+        $fullyBought = false;
+
+        DB::transaction(function () use ($request, $purchaseOrder, $pending, $prices, $boughtThisTrip, &$fullyBought) {
             foreach ($pending as $line) {
                 $qty = $boughtThisTrip[$line->id];
 
@@ -568,21 +607,27 @@ class PurchaseOrderController extends Controller
 
             $this->refreshReceiptStatus($purchaseOrder);
 
-            $completed = $purchaseOrder->status === PurchaseOrder::STATUS_COMPLETED;
+            // A local purchase is settled once the trip's details are in —
+            // do not hold the order open for lines the store did not supply.
+            $fullyBought = $purchaseOrder->items->every(fn (PurchaseOrderItem $item) => $item->isReceived());
+
+            if ($purchaseOrder->isLocalPurchase()) {
+                $purchaseOrder->update(['status' => PurchaseOrder::STATUS_COMPLETED]);
+            }
 
             ActivityLogger::log(
-                $completed ? 'Completed' : 'Edited',
+                'Completed',
                 'Purchase Order',
-                $purchaseOrder->po_number.($completed ? ' (local purchase bought)' : ' (local purchase, partially bought)'),
+                $purchaseOrder->po_number.' (local purchase bought)',
                 $purchaseOrder
             );
         });
 
         return redirect()
             ->route('purchase-order.show', ['purchaseOrder' => $purchaseOrder->id])
-            ->with('status', $purchaseOrder->fresh()->status === PurchaseOrder::STATUS_COMPLETED
+            ->with('status', $fullyBought
                 ? 'Purchase order '.$purchaseOrder->po_number.' is fully bought and completed.'
-                : 'Purchase recorded. Outstanding lines stay open until their full quantity is bought.');
+                : 'Purchase order '.$purchaseOrder->po_number.' is completed. What its lines still lacked stays open with the projects — compile it again to source the rest from other suppliers.');
     }
 
     /**

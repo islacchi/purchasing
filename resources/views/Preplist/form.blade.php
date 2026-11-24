@@ -182,7 +182,7 @@
                 <div class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
                     <div>
                         <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Available projects</p>
-                        <p class="mt-0.5 text-[11px] text-gray-500">Lines already fulfilled or sourced elsewhere are hidden.</p>
+                        <p class="mt-0.5 text-[11px] text-gray-500">Fulfilled lines and lines pending in another prep list are hidden — partially bought lines stay available for their remaining quantity.</p>
                     </div>
                     <div class="flex items-center gap-3 text-[11px] font-semibold">
                         <button type="button" id="expandAllBtn" class="text-[#2a7a94] transition-colors hover:text-[#236b80] hover:underline">Expand all</button>
@@ -270,6 +270,8 @@
                                         <span class="item-name min-w-0 truncate text-xs text-gray-700" title="{{ $projectItem->item?->name ?? 'Item' }}">{{ $projectItem->item?->name ?? 'Item' }}</span>
                                         @if ($isFulfilled)
                                             <span class="inline-flex items-center justify-self-start whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">Fulfilled</span>
+                                        @elseif ($projectItem->isPartiallyFulfilled())
+                                            <span class="inline-flex items-center justify-self-start whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Partial</span>
                                         @else
                                             <span class="inline-flex items-center justify-self-start whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">Pending</span>
                                         @endif
@@ -298,7 +300,7 @@
                     @empty
                         <div class="border-t border-dashed border-gray-200 px-6 py-12 text-center">
                             <h3 class="text-base font-semibold text-gray-900">No project items available</h3>
-                            <p class="mt-1 text-sm text-gray-500">Nothing to compile — lines already fulfilled, or already sourced into another prep list, are hidden.</p>
+                            <p class="mt-1 text-sm text-gray-500">Nothing to compile — fulfilled lines and lines pending in another prep list are hidden.</p>
                             <a href="{{ route('projects.create') }}" class="mt-4 inline-flex items-center gap-2 rounded-md bg-[#2a7a94] px-4 py-2 text-sm font-medium text-white hover:bg-[#236b80]">
                                 Add project
                             </a>

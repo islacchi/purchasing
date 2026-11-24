@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\DB;
 final class PurchaseOrderCreator
 {
     /**
-     * @param  array<int, array{quotation_item: \App\Models\QuotationItem, preplist_item: PreplistItem, qty: int, unit_price: float|string, min_remaining_months: int}>  $lines
+     * @param  array<int, array{quotation_item: \App\Models\QuotationItem, preplist_item: PreplistItem, qty: int, unit_price: float|string, min_remaining_months: int, box_size?: ?int}>  $lines
      * @param  array{expected_delivery?: ?string, payment_terms?: ?string, deliver_to?: ?string, notes?: ?string}  $details
      */
     public static function createFor(int $createdBy, array $lines, array $details = []): PurchaseOrder

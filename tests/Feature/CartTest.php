@@ -13,6 +13,7 @@ use App\Models\Project;
 use App\Models\ProjectItem;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseOrderItemAllocation;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Models\Supplier;
@@ -627,5 +628,99 @@ class CartTest extends TestCase
 
         $this->assertDatabaseCount('purchase_orders', 0);
         $this->assertDatabaseCount('po_cart_items', 1);
+    }
+
+    public function test_supplier_pack_mismatch_stays_piece_accurate_through_partial_delivery(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $supplier = Supplier::create(['name' => 'Different Pack Supplier']);
+
+        $project = $this->project($user, $entity, ['title' => 'Boxed project', 'reference_no' => 'RF-2026-0071']);
+        // 12 boxes of 50 are required; 7 boxes (350 pieces) are on hand.
+        $item = $this->item(['name' => 'Boxed DeviceK', 'box_size' => 50]);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 12, 'in_stock' => 350]);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Boxed Region VII batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier, [
+            'rfq_number' => 'RFQ-'.now()->year.'-0071A',
+        ]);
+        $preplistItem = PreplistItem::query()->firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 305.00,
+            'supplier_box_size' => 30, // packed in 30s instead of the 50s required
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)->post(route('po-cart.add'), ['quotation_item_id' => QuotationItem::firstOrFail()->id]);
+
+        $cartItem = PoCartItem::query()->firstOrFail();
+
+        // The stock still lacks 5 of our boxes (250 pieces). The supplier
+        // covers it with 9 of their boxes (270 pieces) — order the ceiling.
+        $this->actingAs($user)
+            ->post(route('po-cart.checkout'), [
+                'qty' => [(string) $cartItem->id => 9],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('purchase_orders', 1);
+        $po = PurchaseOrder::query()->firstOrFail();
+        $line = PurchaseOrderItem::query()->firstOrFail();
+
+        // The line snapshots the supplier's pack and is reconciled in pieces.
+        $this->assertSame(9, (int) $line->qty);
+        $this->assertSame(30, (int) $line->box_size);
+        $this->assertTrue($line->trackedInPieces());
+        $this->assertSame(270, $line->orderedPieces());
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.send', ['purchaseOrder' => $po->id]))
+            ->assertRedirect(route('purchase-order.show', ['purchaseOrder' => $po->id]));
+
+        // First delivery: 5 of their boxes arrive — 150 pieces, not a full
+        // requirement box. The project must NOT complete on this.
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $po->id, 'purchaseOrderItem' => $line->id]), [
+                'received_qty' => 150,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(150, (int) $line->fresh()->receipts()->sum('received_qty'));
+        $this->assertFalse($line->fresh()->isReceived());
+        $this->assertSame(PurchaseOrder::STATUS_PARTIALLY_RECEIVED, $po->fresh()->status);
+
+        $projectItem->refresh();
+        $this->assertSame(500, (int) $projectItem->in_stock); // 350 + 150 actually arrived
+        $this->assertSame(2, $projectItem->remainingQuantity()); // 100 pieces = 2 of our boxes
+        $this->assertSame('partial', $projectItem->fulfillment_status);
+
+        // The rest arrives (4 more boxes = 120 pieces): the order closes but
+        // only 620 of 600 needed are on hand — over-delivery, not a magic
+        // requirement completion.
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $po->id, 'purchaseOrderItem' => $line->id]), [
+                'received_qty' => 120,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(PurchaseOrder::STATUS_COMPLETED, $po->fresh()->status);
+        $this->assertTrue($line->fresh()->isReceived());
+
+        $projectItem->refresh();
+        $this->assertSame(620, (int) $projectItem->in_stock);
+        $this->assertSame('fulfilled', $projectItem->fulfillment_status);
+        // The single source absorbs the whole allocated order quantity.
+        $this->assertSame(270, (int) PurchaseOrderItemAllocation::query()
+            ->where('purchase_order_item_id', $line->id)->sum('qty'));
     }
 }

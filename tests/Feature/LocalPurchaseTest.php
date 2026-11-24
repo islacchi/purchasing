@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\ItemCategory;
 use App\Models\Preplist;
 use App\Models\PreplistItem;
+use App\Models\PreplistItemSource;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\ProjectItem;
@@ -253,7 +254,7 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame(10, $poItem->qty); // quantity not touched
     }
 
-    public function test_bought_scopes_the_purchase_to_the_requested_line(): void
+    public function test_bought_completes_the_order_once_details_are_recorded(): void
     {
         $user = $this->admin();
         $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
@@ -271,33 +272,60 @@ class LocalPurchaseTest extends TestCase
         $po = PurchaseOrder::query()->latest('id')->firstOrFail();
         $poItem = $po->items()->firstOrFail();
 
-        // First trip on the specific line only.
+        // Details are asked on the outstanding line and the order completes.
         $this->actingAs($user)
             ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
-                'bought_line_id' => $poItem->id,
-                'quantities' => [$poItem->id => 4],
                 'prices' => [$poItem->id => '305.00'],
             ])
             ->assertSessionHasNoErrors();
 
-        $poItem->refresh();
+        $po->refresh();
 
-        $this->assertFalse($poItem->isReceived());
-        $this->assertSame('partially_received', $po->refresh()->status);
-        $this->assertSame(4, (int) $poItem->receipts()->sum('received_qty'));
+        $this->assertSame('completed', $po->status);
+        $this->assertTrue($poItem->refresh()->isReceived());
+        $this->assertEquals(305.00, (float) $poItem->refresh()->unit_price);
+    }
 
-        // Second trip on the same line covers the remainder and completes the order.
+    public function test_bought_completes_the_order_even_when_a_line_is_only_partly_bought(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
         $this->actingAs($user)
-            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
-                'bought_line_id' => $poItem->id,
-                'quantities' => [$poItem->id => 6],
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '305.00']],
             ])
             ->assertSessionHasNoErrors();
 
-        $poItem->refresh();
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
 
-        $this->assertTrue($poItem->isReceived());
-        $this->assertSame('completed', $po->refresh()->status);
+        // The store sold only 4 of the 10 ordered — the recorded trip still
+        // closes the order instead of holding it open for later trips.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'quantities' => [$poItem->id => 4],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po->refresh();
+
+        $this->assertSame('completed', $po->status);
+        $this->assertFalse($poItem->refresh()->isReceived());
+        $this->assertSame(4, (int) $f['projectItem']->fresh()->in_stock);
+        $this->assertSame(46, $f['projectItem']->fresh()->remainingQuantity());
+        $this->assertTrue($f['projectItem']->fresh()->isPartiallyFulfilled());
+
+        // The completed order cannot take another trip.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'quantities' => [$poItem->id => 6],
+            ])
+            ->assertSessionHasErrors('bought');
     }
 
     public function test_bought_is_rejected_for_a_completed_local_purchase(): void
@@ -416,7 +444,7 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame(0, (int) $f['projectItem']->fresh()->in_stock);
     }
 
-    public function test_partial_bought_quantity_keeps_the_line_open_until_fully_covered(): void
+    public function test_partial_project_line_is_back_on_the_compile_page(): void
     {
         $user = $this->admin();
         $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
@@ -427,46 +455,70 @@ class LocalPurchaseTest extends TestCase
             ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
                 'supplier_id' => $supplier->id,
                 'selected' => [$preplistItem->id],
-                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '305.00']],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
             ])
             ->assertSessionHasNoErrors();
 
         $po = PurchaseOrder::query()->latest('id')->firstOrFail();
-        $poItem = $po->items()->firstOrFail();
 
-        // First trip: 4 of the 10 ordered units.
         $this->actingAs($user)
             ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
-                'quantities' => [$poItem->id => 4],
+                'prices' => [$po->items->first()->id => '305.00'],
             ])
             ->assertSessionHasNoErrors();
 
-        $poItem->refresh();
+        // The awarded line is still partly unbought, so it stays available
+        // for the remaining quantity instead of being locked away.
+        $this->actingAs($user)
+            ->get(route('preplist.create'))
+            ->assertOk()
+            ->assertSee('Mefenamic Capsule - 500mg', false);
+    }
 
-        $this->assertSame(10, (int) $poItem->qty); // ordered qty is untouched
-        $this->assertSame(10, (int) $poItem->allocations()->sum('qty'));
-        $this->assertSame(4, (int) $poItem->receipts()->sum('received_qty'));
-        $this->assertFalse($poItem->isReceived());
-        $this->assertSame(6, $poItem->remainingQty());
-        $this->assertSame('partially_received', $po->refresh()->status);
+    public function test_partial_project_line_compiles_again_to_source_the_rest(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'prices' => [$po->items->first()->id => '305.00'],
+            ])
+            ->assertSessionHasNoErrors();
 
         $projectItem = $f['projectItem']->fresh();
-        $this->assertSame(4, (int) $projectItem->in_stock);
-        $this->assertSame(46, $projectItem->remainingQuantity());
+        $this->assertSame(10, (int) $projectItem->in_stock); // 10 of 50 awarded bought
+        $this->assertSame(40, $projectItem->remainingQuantity());
+        $this->assertTrue($projectItem->isPartiallyFulfilled());
 
-        // Second trip: the remaining 6 completes the line and the order.
+        // The remaining quantity can be compiled into a new prep list to
+        // source the rest from other suppliers.
         $this->actingAs($user)
-            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
-                'quantities' => [$poItem->id => 6],
+            ->post(route('preplist.store'), [
+                'name' => 'Restock the shortfall',
+                'sources' => [$projectItem->id],
+                'shelf_life' => [$projectItem->id => 0],
             ])
             ->assertSessionHasNoErrors();
 
-        $poItem->refresh();
+        $second = Preplist::query()->latest('id')->firstOrFail();
+        $this->assertNotSame($f['preplist']->id, $second->id);
 
-        $this->assertSame(10, (int) $poItem->receipts()->sum('received_qty'));
-        $this->assertTrue($poItem->isReceived());
-        $this->assertSame('completed', $po->refresh()->status);
-        $this->assertSame(10, (int) $f['projectItem']->fresh()->in_stock);
+        $secondItem = PreplistItem::query()->where('preplist_id', $second->id)->firstOrFail();
+        $this->assertSame(40, $secondItem->remainingQuantity());
+        $this->assertSame(2, PreplistItemSource::query()->count());
     }
 
     public function test_bought_quantity_cannot_exceed_the_outstanding_quantity(): void
@@ -516,18 +568,64 @@ class LocalPurchaseTest extends TestCase
         $po = PurchaseOrder::query()->latest('id')->firstOrFail();
         $poItem = $po->items()->firstOrFail();
 
-        // One box of 30 covers the 10-unit outstanding line — with overage.
+        // Ten boxes of 30 are 300 pieces. The store only sells boxes of 40,
+        // so eight boxes (320 pieces) cover the line, with overage.
         $this->actingAs($user)
             ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
                 'bought_line_id' => $poItem->id,
-                'boxes' => [$poItem->id => 1],
+                'boxes' => [$poItem->id => 8],
+                'box_sizes' => [$poItem->id => 40],
                 'prices' => [$poItem->id => '305.00'],
             ])
             ->assertSessionHasNoErrors();
 
         $poItem->refresh();
 
-        $this->assertSame(30, (int) $poItem->receipts()->sum('received_qty'));
+        $this->assertSame(320, (int) $poItem->receipts()->sum('received_qty'));
+        $this->assertSame(0, $poItem->remainingPieces());
+        $this->assertTrue($poItem->isReceived());
+        $this->assertSame('completed', $po->refresh()->status);
+    }
+
+    public function test_bought_defaults_to_the_items_current_box_size_for_boxed_lines(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+        $f['item']->update(['box_size' => 30]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        // The item is repacked to Box-of-20 after the order was raised; the
+        // mark-as-bought box math must follow the actual item bought, not the
+        // stale requirement snapshot (Box-of-30).
+        $f['item']->update(['box_size' => 20]);
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+        $this->assertSame(30, (int) $poItem->box_size);
+
+        // Fifteen boxes of 20 are 300 pieces — the full outstanding line.
+        // Against the stale snapshot the ceiling would be ten boxes and this
+        // would be rejected.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'boxes' => [$poItem->id => 15],
+                'prices' => [$poItem->id => '305.00'],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $poItem->refresh();
+
+        $this->assertSame(300, (int) $poItem->receipts()->sum('received_qty'));
         $this->assertTrue($poItem->isReceived());
         $this->assertSame('completed', $po->refresh()->status);
     }
@@ -551,11 +649,12 @@ class LocalPurchaseTest extends TestCase
         $po = PurchaseOrder::query()->latest('id')->firstOrFail();
         $poItem = $po->items()->firstOrFail();
 
-        // Ceiling for a 10-unit outstanding line on Box-of-30 is one box.
+        // Ceiling: a 300-piece outstanding line on Box-of-30 is ten boxes —
+        // eleven of them must fail.
         $this->actingAs($user)
             ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
                 'bought_line_id' => $poItem->id,
-                'boxes' => [$poItem->id => 2],
+                'boxes' => [$poItem->id => 11],
                 'prices' => [$poItem->id => '305.00'],
             ])
             ->assertSessionHasErrors('boxes');
@@ -583,12 +682,12 @@ class LocalPurchaseTest extends TestCase
         $po = PurchaseOrder::query()->latest('id')->firstOrFail();
         $poItem = $po->items()->firstOrFail();
 
-        // The purchase happened at a Box-of-10 even though the requirement is
-        // a Box-of-30 — one box of ten covers the ten-unit outstanding line.
+        // The purchase happened at a Box-of-10 even though the requirement
+        // is a Box-of-30 — thirty small boxes still cover the 300-piece line.
         $this->actingAs($user)
             ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
                 'bought_line_id' => $poItem->id,
-                'boxes' => [$poItem->id => 1],
+                'boxes' => [$poItem->id => 30],
                 'box_sizes' => [$poItem->id => 10],
                 'prices' => [$poItem->id => '305.00'],
             ])
@@ -596,7 +695,7 @@ class LocalPurchaseTest extends TestCase
 
         $poItem->refresh();
 
-        $this->assertSame(10, (int) $poItem->receipts()->sum('received_qty'));
+        $this->assertSame(300, (int) $poItem->receipts()->sum('received_qty'));
         $this->assertTrue($poItem->isReceived());
         $this->assertSame('completed', $po->refresh()->status);
     }
@@ -621,11 +720,12 @@ class LocalPurchaseTest extends TestCase
         $poItem = $po->items()->firstOrFail();
 
         // Ceiling is computed against the recorded pack (Box-of-10), not the
-        // requirement (Box-of-30): only two boxes of ten cover the ten units.
+        // requirement (Box-of-30): the 300-piece line holds at thirty boxes
+        // of ten, so thirty-one must fail.
         $this->actingAs($user)
             ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
                 'bought_line_id' => $poItem->id,
-                'boxes' => [$poItem->id => 3],
+                'boxes' => [$poItem->id => 31],
                 'box_sizes' => [$poItem->id => 10],
                 'prices' => [$poItem->id => '305.00'],
             ])
@@ -633,6 +733,115 @@ class LocalPurchaseTest extends TestCase
 
         $this->assertSame(0, (int) $poItem->receipts()->sum('received_qty'));
         $this->assertSame('draft', $po->refresh()->status);
+    }
+
+    public function test_bought_modal_prefills_item_box_size_and_labels_boxes_bought(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+        $f['item']->update(['box_size' => 25]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        // The item is repacked to Box-of-30 after the order was raised; the
+        // modal must offer the item's own box size for the boxes bought.
+        $f['item']->update(['box_size' => 30]);
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('purchase-order.show', ['purchaseOrder' => $po->id]))
+            ->assertOk()
+            ->assertSee('name="box_sizes['.$poItem->id.']"', false)
+            ->assertSee('value="30"', false)
+            ->assertSee('data-box-size="30"', false)
+            ->assertSee('>Boxes bought<', false)
+            ->assertDontSee('>Boxes to buy<', false)
+            ->assertSee('Lacking before this trip', false)
+            // 250 pieces outstanding at the item's Box-of-30: 9 boxes cover it.
+            ->assertSee('boxes of 30 cover the line', false);
+    }
+
+    public function test_project_notes_overshoot_when_a_boxed_local_buy_excels_the_requirement(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+        $f['item']->update(['box_size' => 30]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        // Eight boxes of 40 cover the 300-piece requirement with 20 pieces
+        // of overage — those pieces never enter counted stock.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'boxes' => [$poItem->id => 8],
+                'box_sizes' => [$poItem->id => 40],
+                'prices' => [$poItem->id => '305.00'],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(300, (int) $f['projectItem']->fresh()->in_stock);
+
+        // The project page notes the overage instead of inflating the stock.
+        $this->actingAs($user)
+            ->get(route('projects.show', ['project' => $f['project']->id]))
+            ->assertOk()
+            ->assertSee('+20 pcs overage', false);
+    }
+
+    public function test_project_hides_the_overshoot_note_without_overshoot(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+        $f['item']->update(['box_size' => 30]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        // Ten boxes of 30 settle the line exactly — no overage to note.
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_line_id' => $poItem->id,
+                'boxes' => [$poItem->id => 10],
+                'prices' => [$poItem->id => '305.00'],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($user)
+            ->get(route('projects.show', ['project' => $f['project']->id]))
+            ->assertOk()
+            ->assertDontSee('overage', false);
     }
 
     public function test_bought_modal_hides_box_fields_for_unpackaged_items(): void

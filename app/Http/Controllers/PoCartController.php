@@ -444,12 +444,22 @@ class PoCartController extends Controller
             foreach ($cartItems->groupBy(fn ($ci) => $ci->quotationItem->quotation_id) as $quotationId => $group) {
                 $lines = [];
                 foreach ($group as $cartItem) {
+                    // Quantities here live in the supplier's box units whenever
+                    // the supplier packs differently (the checkout cap is the
+                    // pack-adjusted ceiling), so snapshot that pack on the PO
+                    // line: base pieces reconcile the requirement, the
+                    // supplier's pack, and what actually arrives.
+                    $itemBox = (int) ($cartItem->quotationItem?->preplistItem?->item?->box_size ?? 0);
+                    $supplierBox = (int) ($cartItem->quotationItem?->supplier_box_size ?? 0);
+                    $pack = $itemBox > 0 && $supplierBox > 0 ? $supplierBox : null;
+
                     $lines[] = [
                         'quotation_item' => $cartItem->quotationItem,
                         'preplist_item' => $cartItem->quotationItem->preplistItem,
                         'qty' => $cartItem->qty,
                         'unit_price' => $cartItem->quotationItem->unit_price,
                         'min_remaining_months' => $cartItem->quotationItem->min_remaining_months,
+                        'box_size' => $pack,
                     ];
                 }
                 $created[] = PurchaseOrderCreator::createFor($request->user()->id, $lines, $details);

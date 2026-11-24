@@ -197,7 +197,15 @@
                                     };
                                 @endphp
                                 <tr class="hover:bg-gray-50">
-                                    <td class="max-w-[22rem] px-4 py-3 text-sm text-gray-900 break-words">{{ $projectItem->item?->name ?? '-' }}</td>
+                                    <td class="max-w-[22rem] px-4 py-3 text-sm text-gray-900 break-words">
+                                        <p class="break-words">{{ $projectItem->item?->name ?? '-' }}</p>
+                                        @php($overagePieces = $projectItem->purchaseOveragePieces())
+                                        @if ($overagePieces > 0)
+                                            <p class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-700" title="Received beyond the ordered quantity on a boxed purchase — counted stock stops at the requirement.">
+                                                +{{ number_format($overagePieces) }} {{ $overagePieces === 1 ? 'pc' : 'pcs' }} overage
+                                            </p>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ $remaining }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900">{{ $projectItem->item?->unit ?? '—' }}</td>
                                     <td class="px-4 py-3 text-sm text-gray-900 text-right">₱ {{ number_format((float) $projectItem->unit_cost, 2) }}</td>

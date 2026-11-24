@@ -21,7 +21,7 @@
         $quotedItems = $items->filter(fn ($item) => $item['unit_price'] !== null);
         $quotedCount = $quotedItems->count();
 
-        $subtotal = $quotedItems->sum(fn ($item) => (float) $item['unit_price'] * $item['requested']);
+        $subtotal = $quotedItems->sum(fn ($item) => (float) $item['unit_price'] * $item['max_qty']);
         $delivery = 0.0;
         $total = $subtotal + $delivery;
 
@@ -129,7 +129,10 @@
                                     @foreach ($items as $index => $item)
                                         @php
                                             $isQuoted = $item['unit_price'] !== null;
-                                            $lineAmount = $isQuoted ? $item['unit_price'] * $item['requested'] : 0;
+                                            $lineAmount = $isQuoted ? $item['unit_price'] * $item['max_qty'] : 0;
+                                            $packNote = ! empty($item['supplier_pack']) && ! empty($item['item_pack'])
+                                                ? 'Supplier packs in '.(int) $item['supplier_pack'].'s — qty is their boxes; '.$item['requested'].' internal '.$item['unit'].'('.(int) $item['item_pack'].'s) are needed.'
+                                                : null;
                                             // Rows are keyed by quotation item id so the store endpoint
                                             // can re-fetch the exact line; unquoted rows use a local key
                                             // and are ignored by the server.
@@ -140,7 +143,7 @@
                                             data-index="{{ $index }}"
                                             data-name="{{ $item['name'] }}"
                                             data-price="{{ $isQuoted ? $item['unit_price'] : 0 }}"
-                                            data-max="{{ $item['requested'] }}"
+                                            data-max="{{ $item['max_qty'] }}"
                                             data-unit="{{ $item['unit'] }}"
                                             data-supplier-expiry="{{ $item['expiry'] ?? '' }}">
                                             <td class="px-3 py-4 text-center">
@@ -154,7 +157,11 @@
                                             <td class="px-3 py-4">
                                                 <p class="font-medium break-words {{ $isQuoted ? 'text-gray-900' : 'text-gray-500' }}">{{ $item['name'] }}</p>
                                                 <p class="mt-0.5 text-xs text-gray-500">
-                                                    {{ $item['unit'] }}
+                                                    @if (! empty($packNote))
+                                                        {{ $packNote }}
+                                                    @else
+                                                        {{ $item['unit'] }}
+                                                    @endif
                                                     <span class="mx-1 text-gray-300">&middot;</span>
                                                     {{ implode(' · ', $item['allocations']) }}
                                                 </p>
@@ -194,9 +201,9 @@
                                                     <input type="number"
                                                            class="po-qty w-20 rounded-md border border-gray-300 px-2 py-1 text-center text-sm text-gray-900 focus:border-[#2a7a94] focus:outline-none focus:ring-2 focus:ring-[#2a7a94]/20"
                                                            name="items[{{ $rowKey }}][qty]"
-                                                           value="{{ $item['requested'] }}"
+                                                           value="{{ $item['max_qty'] }}"
                                                            min="1"
-                                                           max="{{ $item['requested'] }}"
+                                                           max="{{ $item['max_qty'] }}"
                                                            step="1"
                                                            inputmode="numeric"
                                                            aria-label="Purchase quantity for {{ $item['name'] }}">

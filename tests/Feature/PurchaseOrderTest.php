@@ -653,6 +653,125 @@ class PurchaseOrderTest extends TestCase
         $this->assertSame(PurchaseOrder::STATUS_SENT, $purchaseOrder->fresh()->status);
     }
 
+    public function test_supplier_pack_mismatch_on_the_quotation_path_stays_piece_accurate(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity, ['title' => 'Boxed project', 'reference_no' => 'RF-2026-0311']);
+        // 12 boxes of 50 required, 2 boxes (100 pieces) on hand: 10 internal
+        // boxes (500 pieces) still open.
+        $item = $this->item(['name' => 'Boxed ItemDelta']);
+        $item->update(['box_size' => 50]); // Pack state is not part of this fixture's defaults.
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 12, 'in_stock' => 100]);
+        $preplist = $this->compile($user, [
+            'name' => 'Boxed batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ]);
+
+        $supplier = Supplier::firstOrCreate(['name' => 'Triple Tact']);
+        $preplistItem = PreplistItem::query()->firstOrFail();
+
+        $quotation = Quotation::create([
+            'preplist_id' => $preplist->id,
+            'supplier_id' => $supplier->id,
+            'created_by' => $user->id,
+            'rfq_number' => sprintf('RFQ-%d-%04d', (int) now()->year, ++self::$rfqSequence),
+            'generated_at' => now(),
+        ]);
+
+        $quotationItem = QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'min_remaining_months' => 0,
+            'unit_price' => 305.00,
+            'supplier_box_size' => 30,
+            'quoted_at' => now(),
+        ]);
+
+        // The order page switches the quantity to their boxes: 17 of their
+        // 30s cover the 500 open pieces (10 boxes of 50).
+        $this->actingAs($user)
+            ->get(route('purchase-order.create', ['rfq' => $quotation->id]))
+            ->assertOk()
+            ->assertSee('value="17"', false)
+            ->assertSee('their boxes', false);
+
+        // Beyond the cap is rejected...
+        $this->actingAs($user)
+            ->post(route('purchase-order.store'), [
+                'quotation_id' => $quotation->id,
+                'items' => [
+                    $quotationItem->id => [
+                        'quotation_item_id' => (string) $quotationItem->id,
+                        'included' => '1',
+                        'qty' => '18',
+                        'min_remaining_months' => '0',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('items');
+
+        $this->assertDatabaseCount('purchase_orders', 0);
+
+        // ...and a valid quantity writes the PO with the supplier's pack
+        // snapshot on the line — reconciled in base pieces.
+        $this->actingAs($user)
+            ->post(route('purchase-order.store'), [
+                'quotation_id' => $quotation->id,
+                'items' => [
+                    $quotationItem->id => [
+                        'quotation_item_id' => (string) $quotationItem->id,
+                        'included' => '1',
+                        'qty' => '6',
+                        'min_remaining_months' => '0',
+                    ],
+                ],
+            ])
+            ->assertStatus(200); // the PO workbook download
+
+        $po = PurchaseOrder::query()->firstOrFail();
+        $line = PurchaseOrderItem::query()->firstOrFail();
+        $this->assertSame(6, (int) $line->qty);
+        $this->assertSame(30, (int) $line->box_size);
+        $this->assertTrue($line->trackedInPieces());
+        $this->assertSame(180, $line->orderedPieces());
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.send', ['purchaseOrder' => $po->id]))
+            ->assertRedirect(route('purchase-order.show', ['purchaseOrder' => $po->id]));
+
+        // First delivery: 4 of their boxes (120 pieces) land — that is part
+        // of the order, not 4 of the requirement's 50s. Stay open.
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $po->id, 'purchaseOrderItem' => $line->id]), [
+                'received_qty' => 120,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $projectItem->refresh();
+        $this->assertSame(220, (int) $projectItem->in_stock); // 100 + 120 actually arrived
+        $this->assertSame('partial', $projectItem->fulfillment_status);
+        $this->assertSame(PurchaseOrder::STATUS_PARTIALLY_RECEIVED, $po->fresh()->status);
+
+        // The last 2 boxes (60 pieces) complete the order — yet the project
+        // stays partial at 280 of 600: the delivery was right, and so is the
+        // requirement still outstanding.
+        $this->actingAs($user)
+            ->post(route('purchase-order.receive', ['purchaseOrder' => $po->id, 'purchaseOrderItem' => $line->id]), [
+                'received_qty' => 60,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(PurchaseOrder::STATUS_COMPLETED, $po->fresh()->status);
+        $this->assertTrue($line->fresh()->isReceived());
+
+        $projectItem->refresh();
+        $this->assertSame(280, (int) $projectItem->in_stock);
+        $this->assertSame('partial', $projectItem->fulfillment_status);
+        $this->assertSame(7, $projectItem->remainingQuantity()); // 320 pieces = 7 of our boxes open
+    }
+
     public function test_receive_toggle_rejects_stale_expected_state(): void
     {
         $user = $this->admin();

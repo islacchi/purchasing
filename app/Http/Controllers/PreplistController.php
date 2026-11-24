@@ -716,9 +716,13 @@ class PreplistController extends Controller
     /**
      * Available projects that have item rows to compile.
      *
-     * Hidden from the compile page, besides fulfilled lines: any project
-     * line already sourced into another prep list. Lines sourced into the
-     * prep being edited stay visible so editing cannot silently drop them.
+     * Hidden from the compile page: fulfilled lines, and any project line
+     * already sourced into another prep list. A partially bought line is
+     * still available — its remaining quantity can be compiled again to
+     * source the rest of the requirement from other suppliers.
+     *
+     * Lines sourced into the prep being edited stay visible so editing
+     * cannot silently drop them.
      */
     private function projectsWithItems(?Preplist $prepList = null)
     {
@@ -727,7 +731,8 @@ class PreplistController extends Controller
             : $prepList->items->flatMap(fn (PreplistItem $item) => $item->sources->pluck('project_item_id'))->all();
 
         // Project lines already promised to a different prep list are not
-        // offered for a new compile.
+        // offered for a new compile — unless they are only partly bought,
+        // in which case their remaining quantity goes to other suppliers.
         $sourcedElsewhere = $this->sourcedElsewhereByItem($prepList);
 
         return Project::query()
@@ -736,7 +741,7 @@ class PreplistController extends Controller
             ->get()
             ->map(function (Project $project) use ($sourcedItemIds, $sourcedElsewhere) {
                 $project->setRelation('items', $project->items
-                    ->reject(fn (ProjectItem $item) => ($item->isFulfilled() || $sourcedElsewhere->has($item->id)) && ! in_array($item->id, $sourcedItemIds, true))
+                    ->reject(fn (ProjectItem $item) => ($item->isFulfilled() || ($sourcedElsewhere->has($item->id) && ! $item->isPartiallyFulfilled())) && ! in_array($item->id, $sourcedItemIds, true))
                     ->values());
 
                 return $project;
@@ -747,7 +752,9 @@ class PreplistController extends Controller
 
     /**
      * Reject source lines already sourced into a different prep list — they
-     * cannot be compiled again. Own lines (editing the prep list that
+     * cannot be compiled again. A partially bought line is still open for
+     * its remaining requirement, so it may be compiled again to source the
+     * rest from other suppliers. Own lines (editing the prep list that
      * holds them) remain valid.
      */
     private function assertNoAlreadySourcedElsewhere(array $validated, ?Preplist $prepList = null): void
@@ -759,11 +766,12 @@ class PreplistController extends Controller
         }
 
         $alreadySourced = PreplistItemSource::query()
-            ->with('preplistItem.preplist')
+            ->with(['preplistItem.preplist', 'projectItem'])
             ->whereIn('project_item_id', $ids)
             ->get()
             ->filter(fn (PreplistItemSource $source) => $prepList === null
-                || $source->preplistItem?->preplist_id !== $prepList->id);
+                || $source->preplistItem?->preplist_id !== $prepList->id)
+            ->filter(fn (PreplistItemSource $source) => ! $source->projectItem?->isPartiallyFulfilled());
 
         if ($alreadySourced->isEmpty()) {
             return;
