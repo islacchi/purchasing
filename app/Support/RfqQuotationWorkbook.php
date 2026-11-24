@@ -178,7 +178,7 @@ class RfqQuotationWorkbook
 
         $rows[] = self::row($rowNumber++, [
             self::cell('A10', 10, 'Prep List'),
-            self::cell('B10', 9, $preplist->reference_no.' - '.$preplist->name),
+            self::cell('B10', 9, null),
             self::cell('C10', 7, null),
             self::cell('D10', 7, null),
             self::cell('E10', 7, null),
@@ -250,8 +250,8 @@ class RfqQuotationWorkbook
             self::cell('F'.$headerRow, 2, 'Brand'),
             self::cell('G'.$headerRow, 2, 'Unit Price (PHP)'),
             self::cell('H'.$headerRow, 2, 'Expiry'),
-            self::cell('I'.$headerRow, 2, 'Suppliers Remarks'),
-            self::cell('J'.$headerRow, 2, 'Supplier Box of'),
+            self::cell('I'.$headerRow, 2, 'Supplier Box of'),
+            self::cell('J'.$headerRow, 2, 'Suppliers Remarks'),
         ], 32);
 
         foreach ($items->values() as $index => $preplistItem) {

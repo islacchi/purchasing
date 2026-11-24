@@ -99,7 +99,7 @@ class QuotationWorkbookParser
                     $description,
                 ),
                 'unit_price' => self::unitPrice($cells['G'] ?? null),
-                'supplier_box_size' => self::supplierBoxSize($cells['J'] ?? null, $rowNumber, $description),
+                'supplier_box_size' => self::supplierBoxSize($cells['I'] ?? null, $rowNumber, $description),
             ];
         }
 
@@ -120,11 +120,12 @@ class QuotationWorkbookParser
             $cells = self::rowCells($row, $sharedStrings);
 
             if (
-                isset($cells['A'], $cells['B'], $cells['G'], $cells['I'])
+                isset($cells['A'], $cells['B'], $cells['G'], $cells['I'], $cells['J'])
                 && trim((string) $cells['A']) === 'No.'
                 && trim((string) $cells['B']) === 'Item Description'
                 && trim((string) $cells['G']) === 'Unit Price (PHP)'
-                && trim((string) $cells['I']) === 'Suppliers Remarks'
+                && trim((string) $cells['I']) === 'Supplier Box of'
+                && trim((string) $cells['J']) === 'Suppliers Remarks'
             ) {
                 return (int) $row['r'];
             }
@@ -367,8 +368,8 @@ class QuotationWorkbookParser
 
     /**
      * The supplier's box size for an item (units per box), when the supplier
-     * wrote one in J. A positive whole number wins; anything else aborts the
-     * upload with the row number.
+     * wrote one in the Supplier Box of column. A positive whole number wins;
+     * anything else aborts the upload with the row number.
      */
     private static function supplierBoxSize(?string $raw, int $rowNumber, string $description): ?int
     {

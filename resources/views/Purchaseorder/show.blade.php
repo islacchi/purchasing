@@ -272,13 +272,14 @@
                 <div class="lg:min-h-0 lg:flex-1 lg:overflow-auto">
                 <table class="w-full table-fixed text-xs">
                     <colgroup>
-                        <col class="w-[5%]">
-                        <col class="w-[33%]">
-                        <col class="w-[9%]">
-                        <col class="w-[14%]">
-                        <col class="w-[13%]">
-                        <col class="w-[13%]">
-                        <col class="w-[13%]">
+                        <col class="w-[4%]">
+                        <col class="w-[30%]">
+                        <col class="w-[8%]">
+                        <col class="w-[12%]">
+                        <col class="w-[11%]">
+                        <col class="w-[11%]">
+                        <col class="w-[12%]">
+                        <col class="w-[12%]">
                     </colgroup>
                     <thead class="sticky top-0 z-10 bg-[#0e5266]">
                         <tr class="text-left text-[10px] font-semibold uppercase tracking-wider text-white">
@@ -288,6 +289,7 @@
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Shelf life req.</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">{{ $purchaseOrder->isLocalPurchase() ? 'Local price' : 'Unit price' }}</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Total unit price</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">{{ $purchaseOrder->isLocalPurchase() ? 'Bought qty' : 'Received qty' }}</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">{{ $purchaseOrder->isLocalPurchase() ? 'Bought' : 'Received' }}</th>
                         </tr>
                     </thead>
@@ -318,7 +320,12 @@
                                 </td>
                                 <td class="break-words px-3 py-2 text-right text-gray-700">{{ $item->unit_price === null ? '—' : $peso($item->unit_price) }}</td>
                                 <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">{{ $item->unit_price === null ? '—' : $peso($item->extendedTotal()) }}</td>
-                                                                <td class="whitespace-nowrap px-3 py-2.5 text-center">
+                                                                <td class="whitespace-nowrap px-3 py-2.5 text-center text-gray-700">
+                                    @php($receivedQty = $item->receivedQty())
+                                    @php($tracked = $item->trackedInPieces())
+                                    {{ number_format($receivedQty) }} / {{ number_format($item->orderedPieces()) }}{{ $tracked ? ' pcs' : '' }}
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     @php($receivedQty = $item->receivedQty())
                                     @php($tracked = $item->trackedInPieces())
                                     @if ($receivedQty > 0)
@@ -362,7 +369,7 @@
                                             </svg>
                                             Mark as bought
                                         </button>
-                                    @elseif ($canManagePurchaseOrder && $canReceive)
+                                    @elseif ($canManagePurchaseOrder && ! $poClosed && $canReceive)
                                         <button type="button"
                                                 data-po-receive
                                                 data-po-action="{{ route('purchase-order.receive', ['purchaseOrder' => $purchaseOrder->id, 'purchaseOrderItem' => $item->id]) }}"
@@ -377,10 +384,10 @@
                                             </svg>
                                             Receive
                                         </button>
-                                    @elseif ($canManagePurchaseOrder)
+                                    @elseif ($canManagePurchaseOrder && ! $poClosed)
                                         @php($title = 'Send the PO to the supplier before recording receipts')
                                         <span class="text-[10px] text-gray-400" title="{{ $title }}">{{ $isLocal ? 'Pending' : 'Not sent' }}</span>
-                                    @else
+                                    @elseif (! $canManagePurchaseOrder)
                                         @php($title = 'Your role does not have access to that module.')
                                         <input type="checkbox" data-access-restricted-modal-toggle
                                                class="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#2a7a94] focus:ring-teal-300 disabled:opacity-40"
