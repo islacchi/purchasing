@@ -173,6 +173,12 @@ class InStockTest extends TestCase
         $this->assertSame(1000, $projectItem->in_stock);
         $this->assertSame(50, $projectItem->remainingQuantity());
         $this->assertSame('partial', $projectItem->quantityStatus());
+
+        // The edit form displays the stock in the requirement unit (boxes).
+        $this->actingAs($user)
+            ->get(route('projects.edit', ['project' => $projectItem->project_id]))
+            ->assertOk()
+            ->assertSee('value="50"', false);
     }
 
     public function test_stock_covered_items_count_as_fulfilled_in_project_progress(): void

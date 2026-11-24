@@ -220,7 +220,9 @@ class ProjectController extends Controller
                         'unit' => $projectItem->item?->unit ?? '',
                         'box_size' => $projectItem->item?->box_size ?? '',
                         'quantity' => $projectItem->quantity,
-                        'in_stock' => $projectItem->in_stock,
+                        // Stored stock is base pieces; display it in the
+                        // requirement unit (boxes) that the form understands.
+                        'in_stock' => BoxQuantity::toBoxes((int) $projectItem->in_stock, $projectItem->item?->box_size),
                         'unit_cost' => $projectItem->unit_cost,
                         'quoted_price' => $projectItem->awarded_unit_price,
                     ])
