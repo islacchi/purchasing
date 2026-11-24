@@ -306,7 +306,7 @@
                                    title="{{ $lockTitle }}"
                                    class="{{ $fieldClass }} text-right">
                         </div>
-                        {{-- On-hand quantity; fully covered lines are fulfilled and are excluded from PO --}}
+                        {{-- On-hand quantity — typed in the item's requirement unit (boxes for boxed items); fully covered lines are fulfilled and excluded from PO --}}
                         <div>
                             <input type="number" min="0" step="1" name="items[{{ $i }}][in_stock]" value="{{ $item['in_stock'] ?? '' }}"
                                    {{ $locked ? 'readonly' : '' }}

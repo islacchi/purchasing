@@ -137,6 +137,44 @@ class InStockTest extends TestCase
         $response->assertSee('Fulfilled');
     }
 
+    public function test_in_stock_input_is_read_in_the_requirement_unit_for_boxed_items(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        // The item is boxed at 20 units per box: a requirement of 100 boxes,
+        // typed with 50 boxes on hand.
+        $this->actingAs($user)->post(route('projects.store'), [
+            'procuring_entity_id' => $entity->id,
+            'title' => 'Boxed stock check',
+            'reference_no' => 'RF-2026-0099',
+            'mode_of_procurement' => 'small_value',
+            'amount_awarded' => 5000,
+            'date_awarded' => '2026-07-03',
+            'delivery_days' => 30,
+            'items' => [
+                [
+                    'description' => 'Boxed Item',
+                    'category' => 'drugs and medicines',
+                    'unit' => 'Box',
+                    'box_size' => 20,
+                    'quantity' => 100,
+                    'in_stock' => 50,
+                    'unit_cost' => 10,
+                    'quoted_price' => 9,
+                ],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $projectItem = ProjectItem::whereHas('item', fn ($query) => $query->where('name', 'Boxed Item'))->firstOrFail();
+
+        // 50 boxes on hand = 1,000 base pieces; the 100-box requirement is
+        // 2,000 pieces, so 50 boxes remain to procure.
+        $this->assertSame(1000, $projectItem->in_stock);
+        $this->assertSame(50, $projectItem->remainingQuantity());
+        $this->assertSame('partial', $projectItem->quantityStatus());
+    }
+
     public function test_stock_covered_items_count_as_fulfilled_in_project_progress(): void
     {
         $user = $this->admin();

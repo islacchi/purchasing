@@ -396,8 +396,8 @@ class ProjectController extends Controller
      */
     /**
      * Quantity-driven fulfillment state for a submitted project row. On-hand
-     * stock is counted in base pieces, so a boxed row compares
-     * stock < quantity x box size.
+     * stock is counted in base pieces; the row's in_stock input is in the
+     * requirement unit, so convert before comparing.
      */
     private function fulfillmentStatusFor(array $row, ?Item $item = null): string
     {
@@ -405,7 +405,7 @@ class ProjectController extends Controller
         $boxSize = $boxSize !== null && (int) $boxSize > 0 ? (int) $boxSize : null;
 
         $required = BoxQuantity::toPieces((int) ($row['quantity'] ?? 0), $boxSize);
-        $inStock = (int) ($row['in_stock'] ?? 0);
+        $inStock = BoxQuantity::toPieces((int) ($row['in_stock'] ?? 0), $boxSize);
 
         return match (true) {
             $required > 0 && $inStock >= $required => 'fulfilled',
@@ -614,7 +614,7 @@ class ProjectController extends Controller
 
                 $match->update([
                     'quantity' => (int) $row['quantity'],
-                    'in_stock' => (int) ($row['in_stock'] ?? 0),
+                    'in_stock' => $this->inStockFromInput($row, $resolved),
                     'unit_cost' => $row['unit_cost'],
                     'awarded_unit_price' => $row['quoted_price'] ?? null,
                     'fulfillment_status' => $this->fulfillmentStatusFor($row, $resolved),
@@ -631,7 +631,7 @@ class ProjectController extends Controller
                 'project_id' => $project->id,
                 'item_id' => $resolved->id,
                 'quantity' => (int) $row['quantity'],
-                'in_stock' => (int) ($row['in_stock'] ?? 0),
+                'in_stock' => $this->inStockFromInput($row, $resolved),
                 'unit_cost' => $row['unit_cost'],
                 'awarded_unit_price' => $row['quoted_price'] ?? null,
                 'fulfillment_status' => $this->fulfillmentStatusFor($row, $resolved),
@@ -660,5 +660,16 @@ class ProjectController extends Controller
                     .'. Remove them in the prep list first, then save the project.',
             ]);
         }
+    }
+
+    /**
+     * The in_stock value the user typed, in the requirement unit: boxes for a
+     * boxed item. For storage it converts to base pieces — a row input of
+     * 50 for a 100-box requirement stores 5,000 pieces, so the quantity to
+     * procure is reduced by the stock actually on hand.
+     */
+    private function inStockFromInput(array $row, ?Item $item): int
+    {
+        return BoxQuantity::toPieces((int) ($row['in_stock'] ?? 0), $item?->box_size);
     }
 }
