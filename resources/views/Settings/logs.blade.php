@@ -289,6 +289,9 @@
             </div>
         </div>
 
+        {{-- Delete modal — renders when a batch is pending (auto-opens) --}}
+        @include('Settings.log-delete-modal')
+
         {{-- Back to settings — pinned to the very bottom like the privileges page --}}
         <div class="no-print mt-4 flex shrink-0 items-center justify-start">
             <a href="{{ route('settings') }}"

@@ -63,17 +63,20 @@ class ActivityLogDeleteTest extends TestCase
                 'logs' => [$log->id],
                 'reason' => 'Stale duplicate',
             ])
-            ->assertRedirect(route('settings.logs.delete.confirm'))
+            ->assertRedirect(route('settings.logs'))
             ->assertSessionHas('logs_delete_batch');
 
-        // The log is still there: nothing is deleted until the final confirm.
+        // The log is still there: nothing is deleted until the modal's final
+        // confirmed button fires.
         $this->assertDatabaseHas('activity_logs', ['id' => $log->id]);
 
+        // The logs page now opens the delete modal with the entries and reason.
         $this->actingAs($admin)
-            ->get(route('settings.logs.delete.confirm'))
+            ->get(route('settings.logs'))
             ->assertOk()
             ->assertSee('Deletable entry')
-            ->assertSee('Stale duplicate');
+            ->assertSee('Stale duplicate')
+            ->assertSee('logDeleteModal');
 
         $this->actingAs($admin)
             ->post(route('settings.logs.delete.execute'))
@@ -83,10 +86,10 @@ class ActivityLogDeleteTest extends TestCase
         $this->assertDatabaseMissing('activity_logs', ['id' => $log->id]);
     }
 
-    public function test_confirm_page_without_a_pending_batch_redirects_back(): void
+    public function test_execute_without_a_pending_batch_redirects_back(): void
     {
         $this->actingAs($this->admin())
-            ->get(route('settings.logs.delete.confirm'))
+            ->post(route('settings.logs.delete.execute'))
             ->assertRedirect(route('settings.logs'));
     }
 }
