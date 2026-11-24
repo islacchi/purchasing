@@ -215,11 +215,10 @@
                                     </svg>
                                     Restore
                                 </button>
-                                <form method="POST" action="{{ route('settings.backup.destroy', ['file' => $backup['filename']]) }}"
-                                      onsubmit="return confirm('Delete this back-up?');">
+                                <form method="POST" action="{{ route('settings.backup.destroy', ['file' => $backup['filename']]) }}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Delete" aria-label="Delete {{ $backup['filename'] }}">
+                                    <button type="button" data-backup-delete class="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 cursor-pointer" title="Delete" aria-label="Delete {{ $backup['filename'] }}">
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
                                         </svg>
@@ -290,6 +289,38 @@
         </form>
     </div>
 
+    {{-- Delete back-up confirmation modal --}}
+    <div id="backupDeleteModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="backupDeleteTitle">
+        <div id="backupDeleteOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+            <div class="flex items-start gap-3 px-5 py-4">
+                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                    <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 0 0 1 16.138 21H7.862a2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <h3 id="backupDeleteTitle" class="text-base font-bold text-gray-900">Delete this back-up?</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        The back-up file will be removed from this list.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                <button type="button" id="backupDeleteCancel"
+                        class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                    Cancel
+                </button>
+                <button type="button" id="backupDeleteConfirm"
+                        class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
+                    Delete back-up
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Collapse the restore guide on Escape.
         (function () {
@@ -356,6 +387,50 @@
                 confirmBtn.disabled = phraseInput.value.trim() !== 'RESTORE';
             });
 
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            });
+        })();
+    </script>
+
+    <script>
+        // Delete back-up confirmation modal
+        (function () {
+            var modal = document.getElementById('backupDeleteModal');
+            if (!modal) {
+                return;
+            }
+
+            var overlay = document.getElementById('backupDeleteOverlay');
+            var cancelBtn = document.getElementById('backupDeleteCancel');
+            var confirmBtn = document.getElementById('backupDeleteConfirm');
+            var deleteForm = null;
+
+            function openModal(btn) {
+                deleteForm = btn.closest('form');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                confirmBtn.focus();
+            }
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            document.querySelectorAll('[data-backup-delete]').forEach(function (btn) {
+                btn.addEventListener('click', function () { openModal(btn); });
+            });
+            if (overlay) {
+                overlay.addEventListener('click', closeModal);
+            }
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', closeModal);
+            }
+            confirmBtn.addEventListener('click', function () {
+                if (deleteForm) deleteForm.submit();
+            });
             document.addEventListener('keydown', function (event) {
                 if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
                     closeModal();

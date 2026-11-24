@@ -225,11 +225,10 @@
                                                 <span>Delete</span>
                                             </span>
                                         @else
-                                            <form method="POST" action="{{ route('preplist.destroy', ['preplist' => $preplist->id]) }}"
-                                                  onsubmit="return confirm('Delete this prep list?');">
+                                            <form method="POST" action="{{ route('preplist.destroy', ['preplist' => $preplist->id]) }}">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50" title="Delete">
+                                                <button type="button" data-preplist-delete class="dropdown-action w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer" title="Delete">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                     </svg>
@@ -260,6 +259,36 @@
             </div>
         @endif
     </div>
+    </div>
+
+    {{-- Delete prep list confirmation modal --}}
+    <div id="preplistDeleteModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="preplistDeleteTitle">
+        <div id="preplistDeleteOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+            <div class="flex items-start gap-3 px-5 py-4">
+                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                    <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 016.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <h3 id="preplistDeleteTitle" class="text-base font-bold text-gray-900">Delete this prep list?</h3>
+                    <p class="mt-1 text-sm text-gray-500">This prep list and its items will be permanently deleted.</p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                <button type="button" id="preplistDeleteCancel"
+                        class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                    Cancel
+                </button>
+                <button type="button" id="preplistDeleteConfirm"
+                        class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
+                    Delete
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -379,5 +408,45 @@
                 window.location.href = row.dataset.href;
             });
         });
+    </script>
+
+    <script>
+        // Delete prep list confirmation modal
+        (function () {
+            var modal = document.getElementById('preplistDeleteModal');
+            if (!modal) {
+                return;
+            }
+
+            var overlay = document.getElementById('preplistDeleteOverlay');
+            var cancelBtn = document.getElementById('preplistDeleteCancel');
+            var confirmBtn = document.getElementById('preplistDeleteConfirm');
+            var deleteForm = null;
+
+            function openModal(btn) {
+                deleteForm = btn.closest('form');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                confirmBtn.focus();
+            }
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+
+            document.querySelectorAll('[data-preplist-delete]').forEach(function (btn) {
+                btn.addEventListener('click', function () { openModal(btn); });
+            });
+            overlay.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+            confirmBtn.addEventListener('click', function () {
+                if (deleteForm) deleteForm.submit();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            });
+        })();
     </script>
 @endsection

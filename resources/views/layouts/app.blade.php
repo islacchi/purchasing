@@ -377,11 +377,11 @@
                 </div>
                 <div class="flex shrink-0 items-center gap-1.5">
                     @if ($headerCartCount > 0 && $canManagePurchaseOrder)
-                        <form method="POST" action="{{ route('po-cart.clear') }}"
-                              onsubmit="return confirm('Clear your cart? Nothing will be ordered.');">
+                        <form method="POST" action="{{ route('po-cart.clear') }}" id="headerCartClearForm">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600">
+                            <button type="button" id="headerCartClearBtn"
+                                    class="rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600">
                                 Clear all
                             </button>
                         </form>
@@ -447,6 +447,38 @@
                     </a>
                 </div>
             @endif
+        </div>
+    </div>
+
+    {{-- Clear cart confirmation modal (header quick view) --}}
+    <div id="headerCartClearModal" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="headerCartClearTitle">
+        <div id="headerCartClearOverlay" class="absolute inset-0 bg-gray-900/50"></div>
+
+        <div class="relative w-full max-w-sm rounded-lg bg-white shadow-xl">
+            <div class="flex items-start gap-3 px-5 py-4">
+                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
+                    <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <h3 id="headerCartClearTitle" class="text-base font-bold text-gray-900">Clear your cart?</h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        Nothing will be ordered. All cart lines will be removed.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 border-t border-gray-100 px-5 py-3">
+                <button type="button" id="headerCartClearCancel"
+                        class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                    Cancel
+                </button>
+                <button type="button" id="headerCartClearConfirm"
+                        class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer">
+                    Clear cart
+                </button>
+            </div>
         </div>
     </div>
 
@@ -622,6 +654,39 @@
     signoutOpen.addEventListener('click', openSignoutModal);
     signoutCancel.addEventListener('click', closeSignoutModal);
     signoutModalOverlay.addEventListener('click', closeSignoutModal);
+
+    // Clear cart confirmation modal (header quick view)
+    const headerCartClearModal = document.getElementById('headerCartClearModal');
+    const headerCartClearBtn = document.getElementById('headerCartClearBtn');
+    const headerCartClearOverlay = document.getElementById('headerCartClearOverlay');
+    const headerCartClearCancel = document.getElementById('headerCartClearCancel');
+    const headerCartClearConfirm = document.getElementById('headerCartClearConfirm');
+    const headerCartClearForm = document.getElementById('headerCartClearForm');
+
+    if (headerCartClearModal) {
+        function openHeaderCartClearModal() {
+            headerCartClearModal.classList.remove('hidden');
+            headerCartClearModal.classList.add('flex');
+            headerCartClearConfirm?.focus();
+        }
+        function closeHeaderCartClearModal() {
+            headerCartClearModal.classList.add('hidden');
+            headerCartClearModal.classList.remove('flex');
+            headerCartClearBtn?.focus();
+        }
+
+        headerCartClearBtn?.addEventListener('click', openHeaderCartClearModal);
+        headerCartClearCancel?.addEventListener('click', closeHeaderCartClearModal);
+        headerCartClearOverlay?.addEventListener('click', closeHeaderCartClearModal);
+        headerCartClearConfirm?.addEventListener('click', function () {
+            if (headerCartClearForm) headerCartClearForm.submit();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !headerCartClearModal.classList.contains('hidden')) {
+                closeHeaderCartClearModal();
+            }
+        });
+    }
 </script>
 @stack('scripts')
 </body>
