@@ -191,11 +191,32 @@
                     </form>
                 </div>
             </div>
-        </div>        {{-- Logs table card --}}
+        </div>
+
+        {{-- Delete form — requires a reason; goes to the printable confirmation page --}}
+        <div class="mb-4 rounded-lg border border-gray-200 bg-white px-4 py-3">
+            <h3 class="text-sm font-semibold text-gray-800">Delete selected logs</h3>
+            <p class="mt-1 text-xs text-gray-500">Deletion is two-step: after you submit, you get a confirmation page to print before anything is deleted.</p>
+            <form method="POST" action="{{ route('settings.logs.delete.prepare') }}" class="mt-2 flex flex-wrap items-end gap-3">
+                @csrf
+                <div>
+                    <label for="logDeleteReason" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Reason for deletion</label>
+                    <input type="text" id="logDeleteReason" name="reason" required maxlength="500" placeholder="e.g. Duplicate entries of yesterday's activities"
+                           class="h-9 w-64 rounded-md border border-gray-200 bg-white px-3 text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:border-transparent">
+                </div>
+                <button type="submit"
+                        class="h-9 rounded-lg bg-[#2a7a94] px-3 text-sm font-medium text-white transition-colors hover:bg-[#1e6a84]">
+                    Delete selected logs
+                </button>
+            </form>
+        </div>
+
+        {{-- Logs table card --}}
         <div class="mt-4 flex min-h-[240px] flex-1 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm lg:min-h-0">
             <div class="lg:min-h-0 lg:flex-1 lg:overflow-auto">
                 <table class="w-full table-fixed text-sm">
                     <colgroup>
+                        <col class="w-[3%]">
                         <col class="w-[21%]">
                         <col class="w-[15%]">
                         <col class="w-[15%]">
@@ -205,6 +226,10 @@
                     </colgroup>
                     <thead class="sticky top-0 z-10 bg-[#0e5266]">
                         <tr>
+                            <th scope="col" class="px-4 py-2.5">
+                                <input type="checkbox" id="logsSelectAll" aria-label="Select all logs"
+                                       class="h-3.5 w-3.5 rounded border-gray-300 text-[#2a7a94]">
+                            </th>
                             <th scope="col" class="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Time</th>
                             <th scope="col" class="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">User</th>
                             <th scope="col" class="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Role</th>
@@ -216,7 +241,7 @@
                     <tbody class="divide-y divide-gray-100">
                         @if ($activityLogs->isEmpty())
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center">
+                                <td colspan="7" class="px-6 py-12 text-center">
                                     <p class="text-sm font-semibold text-gray-900">No activity records found</p>
                                     <p class="mt-1 text-xs text-gray-500">Try widening the date range or clearing the filters.</p>
                                 </td>
@@ -224,6 +249,10 @@
                         @else
                             @foreach ($activityLogs as $log)
                                 <tr class="odd:bg-white even:bg-[#f2f7f8] transition-colors hover:bg-[#e4edf0]">
+                                    <td class="px-4 py-2.5">
+                                        <input type="checkbox" name="logs[]" value="{{ $log['id'] }}" aria-label="Delete log {{ $log['id'] }}"
+                                               class="h-3.5 w-3.5 rounded border-gray-300 text-[#2a7a94]">
+                                    </td>
                                     <td class="px-4 py-2.5 align-top text-xs text-gray-700">{{ $log['time'] }}</td>
                                     <td class="px-4 py-2.5 align-top text-xs font-semibold text-gray-900">{{ $log['user'] }}</td>
                                     <td class="px-4 py-2.5 align-top">
@@ -307,6 +336,24 @@
                 setOpen(false);
                 filterBtn.focus();
             }
+        });
+    })();
+
+    // Select-all for the log delete checkboxes.
+    (function () {
+        var selectAll = document.getElementById('logsSelectAll');
+        if (!selectAll) {
+            return;
+        }
+
+        function setChecked(checked) {
+            document.querySelectorAll('input[name="logs[]"]').forEach(function (row) {
+                row.checked = checked;
+            });
+        }
+
+        selectAll.addEventListener('change', function () {
+            setChecked(selectAll.checked);
         });
     })();
 </script>

@@ -97,6 +97,7 @@ class SettingsController extends Controller
             ->withQueryString();
 
         $activityLogs = $logs->getCollection()->map(fn (ActivityLog $log) => [
+            'id' => $log->id,
             'time' => $log->created_at?->format('Y-m-d H:i:s'),
             'user' => $log->user_name,
             'role' => $log->role_name,
@@ -122,6 +123,79 @@ class SettingsController extends Controller
             'modules',
             'users'
         ));
+    }
+
+    /**
+     * Prepare a deletion of selected activity log rows.
+     *
+     * Requires a reason and sends the operator to a confirmation page where
+     * the selection — and the reason — can be printed before anything is
+     * deleted.
+     */
+    public function logsDeletePrepare(Request $request)
+    {
+        $validated = $request->validate([
+            'logs' => ['required', 'array', 'min:1'],
+            'logs.*' => ['required', 'integer'],
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $ids = array_values(array_unique(array_filter($validated['logs'], fn ($id) => is_numeric($id))));
+        $existing = ActivityLog::query()->whereIn('id', $ids)->orderByDesc('created_at')->get();
+
+        if ($existing->isEmpty()) {
+            return redirect()->route('settings.logs')->with('status', 'Nothing was selected to delete.');
+        }
+
+        // Stored with put, not flash: the confirm page is a separate
+        // request, and the operator may take their time to print it.
+        session()->put('logs_delete_batch', [
+            'ids' => $existing->pluck('id')->all(),
+            'reason' => trim((string) $validated['reason']),
+        ]);
+
+        return redirect()->route('settings.logs.delete.confirm');
+    }
+
+    /**
+     * Show the delete confirmation page — a printable record of what is
+     * about to be deleted and why.
+     */
+    public function logsDeleteConfirm()
+    {
+        $batch = session('logs_delete_batch');
+
+        if ($batch === null) {
+            return redirect()->route('settings.logs');
+        }
+
+        $logs = ActivityLog::query()->whereIn('id', $batch['ids'])->orderByDesc('created_at')->get();
+
+        return view('settings.log-delete-confirm', [
+            'logs' => $logs,
+            'reason' => $batch['reason'] ?? '',
+        ]);
+    }
+
+    /**
+     * Delete the logs the operator confirmed on the confirmation page.
+     */
+    public function logsDeleteConfirmed()
+    {
+        $batch = session('logs_delete_batch');
+
+        if ($batch === null || empty($batch['ids'])) {
+            return redirect()->route('settings.logs');
+        }
+
+        $deleted = ActivityLog::query()->whereIn('id', $batch['ids'])->delete();
+        session()->forget('logs_delete_batch');
+
+        ActivityLogger::log('Deleted', 'Settings', "Deleted {$deleted} activity log".($deleted === 1 ? '' : 's'));
+
+        return redirect()
+            ->route('settings.logs')
+            ->with('status', "Deleted {$deleted} activity log".($deleted === 1 ? '' : 's'));
     }
 
     /**
