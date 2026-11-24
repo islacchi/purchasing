@@ -385,14 +385,15 @@ class PreplistController extends Controller
 
         $purchaseOrder->load(['items.item', 'items.allocations']);
 
-        // Generate the Excel workbook now, so it exists right after the PO
-        // is created; the user downloads it from the purchase order page.
-        Storage::disk('local')->put(
-            'po-workbooks/'.$purchaseOrder->po_number.'.xlsx',
-            PurchaseOrderWorkbook::build($purchaseOrder, $purchaseOrder->items)
-        );
-
-        return redirect()->route('preplist')->with('status', 'Local purchase order '.$purchaseOrder->po_number.' created.');
+        // Generate the Excel workbook now and return it as an attachment —
+        // clicking "Create draft purchase order" hands the user the file
+        // right after the draft PO is created.
+        return response(PurchaseOrderWorkbook::build($purchaseOrder, $purchaseOrder->items), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$purchaseOrder->po_number.'.xlsx"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**

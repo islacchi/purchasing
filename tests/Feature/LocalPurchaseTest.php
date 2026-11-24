@@ -15,7 +15,6 @@ use App\Models\Supplier;
 use App\Models\User;
 use Database\Seeders\AdminUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class LocalPurchaseTest extends TestCase
@@ -1010,7 +1009,7 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame('fulfilled', $first->fresh()->fulfillment_status);
     }
 
-    public function test_local_purchase_generation_redirects_back_to_the_preplist_with_a_success_message(): void
+    public function test_local_purchase_generation_returns_the_workbook(): void
     {
         $user = $this->admin();
         $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
@@ -1024,14 +1023,13 @@ class LocalPurchaseTest extends TestCase
                 'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
             ]);
 
-        // Generating a local purchase now redirects back to the preplist
-        // index with a success message, and the Excel workbook is generated
-        // for later download from the purchase order page.
+        // Clicking "Create draft purchase order" returns the Excel file
+        // directly as an attachment.
         $po = PurchaseOrder::query()->latest('id')->firstOrFail();
 
-        $response->assertRedirect(route('preplist'));
-        $response->assertSessionHas('status', 'Local purchase order '.$po->po_number.' created.');
-        Storage::assertExists('po-workbooks/'.$po->po_number.'.xlsx');
+        $response->assertOk();
+        $this->assertStringContainsString('spreadsheetml.sheet', (string) $response->headers->get('Content-Type'));
+        $this->assertStringContainsString($po->po_number, (string) $response->headers->get('Content-Disposition'));
     }
 
     public function test_local_purchase_order_workbook_is_downloadable(): void
