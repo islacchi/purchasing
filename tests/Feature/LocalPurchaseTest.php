@@ -1009,7 +1009,7 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame('fulfilled', $first->fresh()->fulfillment_status);
     }
 
-    public function test_local_purchase_excel_leaves_amounts_blank(): void
+    public function test_local_purchase_generation_redirects_back_to_the_preplist_with_a_success_message(): void
     {
         $user = $this->admin();
         $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
@@ -1023,31 +1023,12 @@ class LocalPurchaseTest extends TestCase
                 'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
             ]);
 
-        // Creating the draft local purchase order also returns the Excel document.
-        $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        // Generating a local purchase now redirects back to the preplist
+        // index with a success message instead of returning the workbook.
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
 
-        $temporaryPath = tempnam(sys_get_temp_dir(), 'po_workbook_local_');
-        file_put_contents($temporaryPath, $response->getContent());
-
-        $zip = new \ZipArchive;
-        $zip->open($temporaryPath);
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        $zip->close();
-        unlink($temporaryPath);
-
-        $this->assertIsString($sheetXml);
-        $this->assertStringContainsString('Mefenamic Capsule - 500mg', $sheetXml);
-        $this->assertStringContainsString('PURCHASE ORDER', $sheetXml);
-
-        // Local purchases keep the unit price and amount columns blank — the
-        // price is only recorded once the purchase is marked as bought. The
-        // quoted price (from the project award) is still surfaced as a column.
-        $this->assertStringContainsString('<c r="F17" s="4"/>', $sheetXml);
-        $this->assertStringContainsString('<c r="G17" s="4"/>', $sheetXml);
-        $this->assertStringContainsString('<c r="I17" s="4" t="inlineStr"><is><t xml:space="preserve">₱ 305.00</t></is></c>', $sheetXml);
-        $this->assertStringContainsString('<c r="G18" s="10"/>', $sheetXml);
-        $this->assertStringContainsString('<c r="G20" s="12"/>', $sheetXml);
+        $response->assertRedirect(route('preplist'));
+        $response->assertSessionHas('status', 'Local purchase order '.$po->po_number.' created.');
     }
 
     public function test_viewer_cannot_create_a_local_purchase_order(): void

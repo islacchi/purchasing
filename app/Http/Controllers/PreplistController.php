@@ -15,7 +15,6 @@ use App\Models\User;
 use App\Support\ActivityLogger;
 use App\Support\Pagination;
 use App\Support\PurchaseOrderCreator;
-use App\Support\PurchaseOrderWorkbook;
 use App\Support\RfqQuotationWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -385,16 +384,7 @@ class PreplistController extends Controller
 
         $purchaseOrder->load(['items.item', 'items.allocations']);
 
-        // Mirror the quotation path: the draft local purchase order is exported
-        // to the supplier-facing Excel workbook right after it is generated.
-        $content = PurchaseOrderWorkbook::build($purchaseOrder, $purchaseOrder->items);
-
-        return response($content, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="'.$purchaseOrder->po_number.'.xlsx"',
-            'Cache-Control' => 'no-store, no-cache, must-revalidate',
-            'Pragma' => 'no-cache',
-        ]);
+        return redirect()->route('preplist')->with('status', 'Local purchase order '.$purchaseOrder->po_number.' created.');
     }
 
     /**
