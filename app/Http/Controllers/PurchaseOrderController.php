@@ -15,6 +15,7 @@ use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class PurchaseOrderController extends Controller
@@ -311,6 +312,30 @@ class PurchaseOrderController extends Controller
         ]);
 
         return view('Purchaseorder.show', ['purchaseOrder' => $purchaseOrder]);
+    }
+
+    /**
+     * Generate and download the purchase order Excel workbook.
+     */
+    public function downloadWorkbook(PurchaseOrder $purchaseOrder)
+    {
+        $purchaseOrder->load(['items.item', 'items.allocations']);
+
+        $path = $this->workbookPath($purchaseOrder);
+
+        if (! Storage::disk('local')->exists($path)) {
+            Storage::disk('local')->put(
+                $path,
+                PurchaseOrderWorkbook::build($purchaseOrder, $purchaseOrder->items)
+            );
+        }
+
+        return Storage::disk('local')->download($path, $purchaseOrder->po_number.'.xlsx');
+    }
+
+    private function workbookPath(PurchaseOrder $purchaseOrder): string
+    {
+        return 'po-workbooks/'.$purchaseOrder->po_number.'.xlsx';
     }
 
     /**

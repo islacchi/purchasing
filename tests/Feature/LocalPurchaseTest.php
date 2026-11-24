@@ -15,6 +15,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use Database\Seeders\AdminUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class LocalPurchaseTest extends TestCase
@@ -1024,11 +1025,37 @@ class LocalPurchaseTest extends TestCase
             ]);
 
         // Generating a local purchase now redirects back to the preplist
-        // index with a success message instead of returning the workbook.
+        // index with a success message, and the Excel workbook is generated
+        // for later download from the purchase order page.
         $po = PurchaseOrder::query()->latest('id')->firstOrFail();
 
         $response->assertRedirect(route('preplist'));
         $response->assertSessionHas('status', 'Local purchase order '.$po->po_number.' created.');
+        Storage::assertExists('po-workbooks/'.$po->po_number.'.xlsx');
+    }
+
+    public function test_local_purchase_order_workbook_is_downloadable(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+
+        $response = $this->actingAs($user)
+            ->get(route('purchase-order.workbook', ['purchaseOrder' => $po->id]));
+
+        $response->assertOk();
+        $this->assertStringContainsString('spreadsheetml.sheet', (string) $response->headers->get('Content-Type'));
+        $this->assertStringContainsString($po->po_number, (string) $response->headers->get('Content-Disposition'));
     }
 
     public function test_viewer_cannot_create_a_local_purchase_order(): void

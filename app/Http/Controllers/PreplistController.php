@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Support\ActivityLogger;
 use App\Support\Pagination;
 use App\Support\PurchaseOrderCreator;
+use App\Support\PurchaseOrderWorkbook;
 use App\Support\RfqQuotationWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -383,6 +384,13 @@ class PreplistController extends Controller
         );
 
         $purchaseOrder->load(['items.item', 'items.allocations']);
+
+        // Generate the Excel workbook now, so it exists right after the PO
+        // is created; the user downloads it from the purchase order page.
+        Storage::disk('local')->put(
+            'po-workbooks/'.$purchaseOrder->po_number.'.xlsx',
+            PurchaseOrderWorkbook::build($purchaseOrder, $purchaseOrder->items)
+        );
 
         return redirect()->route('preplist')->with('status', 'Local purchase order '.$purchaseOrder->po_number.' created.');
     }
