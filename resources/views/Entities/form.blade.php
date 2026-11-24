@@ -18,7 +18,14 @@
                 'singular' => 'Entity',
                 'fields' => [
                     ['name' => 'name', 'label' => 'Name', 'type' => 'text', 'placeholder' => 'e.g. DOH REGION VII'],
-                    ['name' => 'type', 'label' => 'Type', 'type' => 'select', 'placeholder' => 'Select type', 'options' => ['Regional Office', 'Government Hospital', 'Provincial Hospital']],
+                    ['name' => 'type', 'label' => 'Type', 'type' => 'select', 'placeholder' => 'Select type', 'options' => [
+                        'Regional Office',
+                        'Government Hospital',
+                        'Provincial Hospital',
+                        'Rural Health Unit',
+                        'Non Government Organization',
+                        'Government Agency',
+                    ]],
                     ['name' => 'contact_person', 'label' => 'Contact person', 'type' => 'text', 'placeholder' => 'e.g. DR. R. VILLANUEVA'],
                     ['name' => 'contact_no', 'label' => 'Contact no.', 'type' => 'text', 'placeholder' => 'e.g. 032-123-4567'],
                     ['name' => 'email', 'label' => 'Email', 'type' => 'email', 'placeholder' => 'e.g. DOH.REGION7@GOV.PH'],

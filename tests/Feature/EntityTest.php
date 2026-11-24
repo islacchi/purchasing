@@ -107,6 +107,34 @@ class EntityTest extends TestCase
         ]);
     }
 
+    public function test_procuring_entity_form_offers_and_accepts_new_types(): void
+    {
+        $admin = $this->admin();
+        $types = ['Rural Health Unit', 'Non Government Organization', 'Government Agency'];
+
+        $this->actingAs($admin)
+            ->get(route('entities.create', ['type' => 'procuring_entity']))
+            ->assertOk();
+
+        foreach ($types as $type) {
+            $this->actingAs($admin)
+                ->get(route('entities.create', ['type' => 'procuring_entity']))
+                ->assertSee($type);
+
+            $this->actingAs($admin)
+                ->post(route('entities.store', ['type' => 'procuring_entity']), [
+                    'name' => 'Sample '.$type,
+                    'type' => $type,
+                ])
+                ->assertSessionHasNoErrors();
+
+            $this->assertDatabaseHas('procuring_entities', [
+                'name' => 'Sample '.$type,
+                'type' => $type,
+            ]);
+        }
+    }
+
     public function test_supplier_can_be_created_from_real_form(): void
     {
         $response = $this->actingAs($this->admin())
