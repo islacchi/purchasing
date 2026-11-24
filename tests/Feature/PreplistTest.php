@@ -684,7 +684,7 @@ class PreplistTest extends TestCase
         $this->assertDatabaseCount('preplists', 0);
     }
 
-    public function test_already_sourced_line_is_hidden_from_create_picker(): void
+    public function test_zero_stock_sourced_line_is_visible_on_create_picker(): void
     {
         $user = $this->admin();
         $entity = $this->entity();
@@ -698,18 +698,20 @@ class PreplistTest extends TestCase
             'shelf_life' => [$projectItem->id => 4],
         ]);
 
+        // With no on-hand stock the line is not fulfilled, so it stays on the
+        // compile page for another prep list to source.
         $this->actingAs($user)
             ->get(route('preplist.create'))
             ->assertOk()
-            ->assertDontSee('HiddenSharedSourceLine');
+            ->assertSee('HiddenSharedSourceLine');
     }
 
-    public function test_already_sourced_line_is_rejected_on_compile(): void
+    public function test_zero_stock_sourced_line_can_compile_again(): void
     {
         $user = $this->admin();
         $entity = $this->entity();
-        $project = $this->project($user, $entity, ['reference_no' => 'RF-2026-1002']);
-        $item = $this->item(['name' => 'RejectedSharedSourceLine']);
+        $project = $this->project($user, $entity, ['reference_no' => 'RF-2026-1005']);
+        $item = $this->item(['name' => 'ZeroStockRecompileLine']);
         $projectItem = $this->projectItem($project, $item, ['quantity' => 20, 'in_stock' => 0]);
 
         $this->compile($user, [
@@ -718,15 +720,16 @@ class PreplistTest extends TestCase
             'shelf_life' => [$projectItem->id => 4],
         ]);
 
+        // With no on-hand stock the line is not fulfilled, so a second
+        // compile can source it again.
         $this->actingAs($user)
             ->post(route('preplist.store'), [
                 'name' => 'Second preplist',
                 'sources' => [$projectItem->id],
             ])
-            ->assertSessionHasErrors('sources');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('preplists', 1);
-        $this->assertDatabaseCount('preplist_item_sources', 1);
+        $this->assertDatabaseCount('preplists', 2);
     }
 
     public function test_editing_the_owning_preplist_keeps_its_lines_visible_and_saved(): void
