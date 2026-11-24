@@ -177,7 +177,7 @@ class RfqQuotationWorkbook
         $rows[] = self::blankRow($rowNumber++, 10.5);
 
         $rows[] = self::row($rowNumber++, [
-            self::cell('A10', 10, 'Prep List'),
+            self::cell('A10', 10, null),
             self::cell('B10', 9, null),
             self::cell('C10', 7, null),
             self::cell('D10', 7, null),
@@ -245,7 +245,7 @@ class RfqQuotationWorkbook
             self::cell('A'.$headerRow, 2, 'No.'),
             self::cell('B'.$headerRow, 2, 'Item Description'),
             self::cell('C'.$headerRow, 2, 'Unit'),
-            self::cell('D'.$headerRow, 2, 'Box of'),
+            self::cell('D'.$headerRow, 2, 'Box Size'),
             self::cell('E'.$headerRow, 2, 'Min. Shelf Life at Delivery'),
             self::cell('F'.$headerRow, 2, 'Brand'),
             self::cell('G'.$headerRow, 2, 'Unit Price (PHP)'),

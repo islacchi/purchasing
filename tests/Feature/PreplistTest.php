@@ -923,6 +923,8 @@ class PreplistTest extends TestCase
         $this->assertStringContainsString($supplier->name, $xml);
         $this->assertStringContainsString('AlphaItemAlpha', $xml);
         $this->assertStringContainsString('≥ 9 months', $xml);
+        $this->assertStringContainsString('Box Size', $xml);
+        $this->assertStringNotContainsString('Prep List', $xml);
         $this->assertStringNotContainsString('321', $xml);
     }
 
