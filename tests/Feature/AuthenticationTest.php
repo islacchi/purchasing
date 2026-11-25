@@ -145,25 +145,24 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticated();
     }
 
-    public function test_session_expires_after_inactivity_timeout(): void
+    public function test_session_without_idle_logout_stays_accessible(): void
     {
         $this->seed(AdminUserSeeder::class);
 
         $user = User::where('name', 'admin')->firstOrFail();
         $idleSince = now()->subMinutes(21)->timestamp;
 
-        $response = $this->actingAs($user)
+        // Inactivity alone no longer logs a user out: past the old idle
+        // threshold, the session still works.
+        $this->actingAs($user)
             ->withSession([
                 'authenticated_at' => $idleSince,
                 'last_activity_at' => $idleSince,
             ])
-            ->get('/projects');
+            ->get('/projects')
+            ->assertOk();
 
-        $response->assertRedirect('/login');
-        $response->assertSessionHasErrors([
-            'login' => 'Your session expired due to inactivity. Please sign in again.',
-        ]);
-        $this->assertGuest();
+        $this->assertAuthenticated();
     }
 
     public function test_session_expires_after_absolute_lifetime(): void

@@ -586,7 +586,7 @@ Seeded module grants: **Procurement Officer → Manage** on all six modules, **V
 | How is the matrix reflected in the UI? | View-only roles see inert greyed buttons (cursor-not-allowed); modules they cannot view are hidden from the sidebar; blocked actions open a shared amber access-restricted modal. |
 | What does Settings gate? | `access-settings` gate (administrator only). |
 | Settings → Logs | Real activity rows: module writes and matrix/user changes; browsable with module/user filters. |
-| Session lifetime | Inactivity + absolute lifetime enforced by custom middleware. |
+| Session lifetime | Absolute lifetime enforced by custom middleware; inactivity no longer forces a logout. |
 | Login throttling | `throttle:6,1` on the login POST route. |
 | PO deletion | Restricted to Administrator; only `draft` and `cancelled` orders may be deleted. |
 | Prep list deletion | Blocked while any quotation references it. |
