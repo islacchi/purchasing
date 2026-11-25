@@ -279,13 +279,14 @@
                 <table class="w-full table-fixed text-xs">
                     <colgroup>
                         <col class="w-[4%]">
-                        <col class="w-[30%]">
+                        <col class="w-[19%]">
                         <col class="w-[8%]">
-                        <col class="w-[12%]">
+                        <col class="w-[10%]">
                         <col class="w-[11%]">
-                        <col class="w-[11%]">
-                        <col class="w-[12%]">
-                        <col class="w-[12%]">
+                        <col class="w-[15%]">
+                        <col class="w-[13%]">
+                        <col class="w-[13%]">
+                        <col class="w-[7%]">
                     </colgroup>
                     <thead class="sticky top-0 z-10 bg-[#0e5266]">
                         <tr class="text-left text-[10px] font-semibold uppercase tracking-wider text-white">
@@ -294,6 +295,7 @@
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Qty</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">Shelf life req.</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">{{ $purchaseOrder->isLocalPurchase() ? 'Local price' : 'Unit price' }}</th>
+                            <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Quoted price per box</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-right">Total unit price</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">{{ $purchaseOrder->isLocalPurchase() ? 'Bought qty' : 'Received qty' }}</th>
                             <th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center">{{ $purchaseOrder->isLocalPurchase() ? 'Bought' : 'Received' }}</th>
@@ -304,6 +306,14 @@
                             @php
                                 $minShelf = $item->min_remaining_months ?? 0;
                                 $isReceived = $item->isReceived();
+                                // Boxless line whose supplier quoted a box:
+                                // the unit price shows the quoted price per piece.
+                                $quotBox = $item->box_size === null
+                                    && $item->quotationItem?->supplier_box_size !== null
+                                    ? (int) $item->quotationItem->supplier_box_size : 0;
+                                $unitPrice = $quotBox > 0 && $item->unit_price !== null
+                                    ? (float) $item->unit_price / $quotBox
+                                    : $item->unit_price;
                             @endphp
                             <tr class="odd:bg-white even:bg-[#f2f7f8] transition-colors hover:bg-[#e4edf0]">
                                 <td class="px-3 py-2 text-center text-xs text-gray-400">{{ $loop->iteration }}</td>
@@ -324,7 +334,8 @@
                                         <span class="text-xs text-gray-400" title="Non-perishable">&mdash;</span>
                                     @endif
                                 </td>
-                                <td class="break-words px-3 py-2 text-right text-gray-700">{{ $item->unit_price === null ? '—' : $peso($item->unit_price) }}</td>
+                                <td class="break-words px-3 py-2 text-right text-gray-700">{{ $item->unit_price === null ? '—' : $peso($unitPrice) }}</td>
+                                <td class="break-words px-3 py-2 text-right text-gray-700">{{ $item->quotationItem?->unit_price === null ? '—' : $peso((float) $item->quotationItem->unit_price) }}</td>
                                 <td class="break-words px-3 py-2 text-right font-semibold text-gray-900">{{ $item->unit_price === null ? '—' : $peso($item->extendedTotal()) }}</td>
                                                                 <td class="whitespace-nowrap px-3 py-2.5 text-center text-gray-700">
                                     @php($receivedQty = $item->receivedQty())

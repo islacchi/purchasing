@@ -102,6 +102,8 @@
                                                     @endif
                                                     @if ($line['itemBox'] && $line['supplierBox'])
                                                         · supplier: Box of {{ $line['supplierBox'] }}
+                                                    @elseif (! $line['itemBox'] && $line['supplierBox'])
+                                                        · supplier: Box of {{ $line['supplierBox'] }} (price shown is per unit)
                                                     @endif
                                                 </p>
 
@@ -129,8 +131,22 @@
                                                        data-cart-item-id="{{ $line['cartItem']->id }}"
                                                        data-unit-price="{{ $line['unit_price'] }}"
                                                        data-supplier-id="{{ $group['supplier']->id ?? '' }}"
+                                                        data-supplier-box="{{ $line['supplierBox'] ?? '' }}"
                                                        value="{{ $line['qty'] }}"
                                                        form="checkoutForm">
+                                                @if (! $line['itemBox'] && $line['supplierBox'])
+                                                    @php
+                                                        $boxSize = (int) $line['supplierBox'];
+                                                        $typedQty = (int) ($line['qty'] ?? 0);
+                                                        $boxes = (int) ceil($typedQty / $boxSize);
+                                                        $covered = $boxes * $boxSize;
+                                                        $packMsg = 'Supplier quotes in boxes of '.$boxSize.' — you will be buying '.$boxes.' box'.($boxes === 1 ? '' : 'es').' ('.$covered.' tablets)';
+                                                        if ($typedQty > 0 && $covered > $typedQty) {
+                                                            $packMsg .= ' — you can buy '.number_format((intdiv($typedQty, $boxSize) * $boxSize)).' or '.number_format($covered);
+                                                        }
+                                                    @endphp
+                                                    <p id="packMsg-{{ $line['cartItem']->id }}" class="mt-1 text-[10px] leading-snug text-amber-800">{{ $packMsg }}</p>
+                                                @endif
                                             </td>
                                             <td class="px-3 py-2.5 text-right">
                                                 <p class="text-sm text-gray-700">{{ $peso($line['unit_price']) }}</p>
@@ -373,6 +389,52 @@
             return Number.isFinite(n) ? n : 0;
         }
 
+        // For boxless items whose supplier quoted a box, arrow-down/up snaps
+        // the qty to the two nearest buyable values: the floor and the
+        // ceiling multiple of the supplier box.
+        function snapToPack(input, direction) {
+            var boxSize = parseInt(input.getAttribute('data-supplier-box'), 10);
+            if (isNaN(boxSize) || boxSize < 1) {
+                return;
+            }
+
+            var qty = Math.max(0, Math.floor(toNumber(input.value)));
+            var snapped = snapOffGrid(input, qty, direction);
+            if (snapped !== qty) {
+                input.value = String(snapped);
+            }
+            recompute();
+        }
+
+        // Snap the qty onto the two buyable values (the floor and the ceiling
+        // multiple of the supplier box). A decrease goes to the lower option,
+        // an increase to the upper one.
+        function snapOffGrid(input, qty, direction) {
+            var boxSize = parseInt(input.getAttribute('data-supplier-box'), 10);
+            if (isNaN(boxSize) || boxSize < 1) {
+                return qty;
+            }
+
+            var upper = Math.ceil(qty / boxSize) * boxSize;
+            var lower = Math.max(0, upper - boxSize);
+            var maxAttr = parseInt(input.getAttribute('max'), 10);
+            if (!isNaN(maxAttr) && upper > maxAttr) {
+                upper = Math.max(lower, maxAttr);
+                lower = Math.max(0, upper - boxSize);
+            }
+
+            var snapped;
+            if (direction === 'down' || (direction === 'any' && qty < parseInt(input.getAttribute('data-last-qty') || '0', 10) && upper > lower)) {
+                snapped = lower;
+            } else {
+                snapped = upper;
+            }
+
+            input.setAttribute('data-last-qty', String(snapped));
+
+            return snapped;
+        }
+
         function recompute() {
             var grand = 0;
             var lines = 0;
@@ -380,10 +442,34 @@
 
             qtyInputs.forEach(function (input) {
                 var qty = Math.max(0, Math.floor(toNumber(input.value)));
+                // Snap onto the buyable options on any change so toggling
+                // down or clicking the spinner never leaves an off-grid
+                // value like 99 or 199.
+                if (input.getAttribute('data-supplier-box')) {
+                    qty = snapOffGrid(input, qty, 'any');
+                    input.value = String(qty);
+                }
                 var price = toNumber(input.getAttribute('data-unit-price'));
                 var lineEl = document.getElementById('lineTotal-' + input.getAttribute('data-cart-item-id'));
                 if (lineEl) {
                     lineEl.textContent = '₱' + (qty * price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+
+                // Dynamic pack message for boxless items whose supplier quoted
+                // a box: what qty actually buys, and the nearest buyable values.
+                var packMsg = document.getElementById('packMsg-' + input.getAttribute('data-cart-item-id'));
+                if (packMsg) {
+                    var boxSize = parseInt(input.getAttribute('data-supplier-box'), 10);
+                    if (isNaN(boxSize) || boxSize < 1) {
+                        packMsg.textContent = '';
+                    } else {
+                        var boxes = Math.ceil(qty / boxSize);
+                        var covered = boxes * boxSize;
+                        packMsg.textContent = 'Supplier quotes in boxes of ' + boxSize + ' — you will be buying ' + boxes + (boxes === 1 ? ' box' : ' boxes') + ' (' + covered + ' tablets)';
+                        if (qty > 0 && covered > qty) {
+                            packMsg.textContent += ' — you can buy ' + (Math.floor(qty / boxSize) * boxSize) + ' or ' + covered;
+                        }
+                    }
                 }
                 grand += qty * price;
                 if (qty > 0) {
@@ -435,6 +521,12 @@
         qtyInputs.forEach(function (input) {
             input.addEventListener('input', recompute);
             input.addEventListener('change', recompute);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    snapToPack(input, e.key === 'ArrowDown' ? 'down' : 'up');
+                }
+            });
         });
 
         // Apply button on a packaging-suggestion callout

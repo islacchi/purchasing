@@ -206,6 +206,61 @@ class QuotationTest extends TestCase
         });
     }
 
+    /**
+     * Rewrite a generated (boxless) workbook's header and item cells back to
+     * the legacy layout the quotation parser still expects, so the
+     * upload-path tests can exercise the parse pipeline unchanged.
+     *
+     * @param  int[]  $itemRows
+     */
+    private function patchToLegacyRfqLayout(string $binary, array $itemRows = []): string
+    {
+        return $this->patchWorksheet($binary, function (string $sheet) use ($itemRows) {
+            $swap = function (string $from, string $to) use (&$sheet) {
+                $sheet = str_replace($from, $to, $sheet);
+            };
+
+            // Header row 17 — new-layout cells moved to legacy letters.
+            $swap(
+                '<c r="I17" s="2" t="inlineStr"><is><t xml:space="preserve">Suppliers Remarks</t></is></c>',
+                '<c r="K17" s="2" t="inlineStr"><is><t xml:space="preserve">Suppliers Remarks</t></is></c>',
+            );
+            $swap(
+                '<c r="H17" s="2" t="inlineStr"><is><t xml:space="preserve">Supplier&apos;s Unit</t></is></c>',
+                '<c r="J17" s="2" t="inlineStr"><is><t xml:space="preserve">Suppliers Remarks</t></is></c>',
+            );
+            $swap(
+                '<c r="G17" s="2" t="inlineStr"><is><t xml:space="preserve">Supplier&apos;s Box Size or Packaging</t></is></c>',
+                '<c r="I17" s="2" t="inlineStr"><is><t xml:space="preserve">Supplier Box of</t></is></c>',
+            );
+            $swap(
+                '<c r="F17" s="2" t="inlineStr"><is><t xml:space="preserve">Expiry</t></is></c>',
+                '<c r="H17" s="2" t="inlineStr"><is><t xml:space="preserve">Expiry</t></is></c>',
+            );
+            $swap(
+                '<c r="D17" s="2" t="inlineStr"><is><t xml:space="preserve">Brand</t></is></c>',
+                '<c r="F17" s="2" t="inlineStr"><is><t xml:space="preserve">Brand</t></is></c>',
+            );
+            $swap(
+                '<c r="E17" s="2" t="inlineStr"><is><t xml:space="preserve">Unit Price (PHP)</t></is></c>',
+                '<c r="G17" s="2" t="inlineStr"><is><t xml:space="preserve">Unit Price (PHP)</t></is></c>',
+            );
+            $swap(
+                '<c r="C17" s="2" t="inlineStr"><is><t xml:space="preserve">Min. Shelf Life at Delivery</t></is></c>',
+                '<c r="E17" s="2" t="inlineStr"><is><t xml:space="preserve">Min. Shelf Life at Delivery</t></is></c>',
+            );
+
+            // Item rows — move new-layout data to legacy letters.
+            foreach ($itemRows as $row) {
+                $swap('<c r="F'.$row.'" s="4"/>', '<c r="H'.$row.'" s="4"/>');
+                $swap('<c r="D'.$row.'" s="4"/>', '<c r="F'.$row.'" s="4"/>');
+                $swap('<c r="E'.$row.'" s="4"/>', '<c r="G'.$row.'" s="4"/>');
+            }
+
+            return $sheet;
+        });
+    }
+
     private function replaceInSheet(string $binary, string $search, string $replace): string
     {
         return $this->patchWorksheet(
@@ -620,6 +675,43 @@ class QuotationTest extends TestCase
             ->assertSee(route('po-cart.add'), false);
     }
 
+    public function test_quotation_show_displays_the_quoted_price_per_piece_when_the_supplier_quotes_a_box(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'Amoxicillin 500mg']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 100]);
+        $supplier = Supplier::create(['name' => 'Tablet Box Supplier']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Boxless batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'unit_price' => 231.00,
+            'supplier_box_size' => 50,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('quotation.show', ['quotation' => $quotation->id]))
+            ->assertOk()
+            // The quoted column shows the per-piece price (231 / 50 = 4.62).
+            ->assertSee('4.62')
+            // The subtotal for the 100 pcs ordered at that price is ₱462.00.
+            ->assertSee('462');
+    }
+
     public function test_quotation_show_flags_an_expiry_that_does_not_cover_the_delivery(): void
     {
         Storage::fake('local');
@@ -1032,7 +1124,7 @@ class QuotationTest extends TestCase
 
         $preplistItem = PreplistItem::firstOrFail();
 
-        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $binary = $this->fillUnitPrices($binary, [18 => '305.50']);
         $binary = $this->fillItemDetails($binary, 18, 'MediCore', 'December 2027');
 
@@ -1087,7 +1179,7 @@ class QuotationTest extends TestCase
 
         $preplistItem = PreplistItem::firstOrFail();
 
-        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $binary = $this->fillUnitPrices($binary, [18 => '305.50']);
 
         $quotation = Quotation::query()->firstOrFail();
@@ -1138,7 +1230,7 @@ class QuotationTest extends TestCase
 
         $preplistItem = PreplistItem::firstOrFail();
 
-        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $binary = $this->fillUnitPrices($binary, [18 => '305.50']);
         $binary = $this->fillItemDetails($binary, 18, 'MediCore', 'December 2027');
 
@@ -1195,7 +1287,7 @@ class QuotationTest extends TestCase
 
         $preplistItem = PreplistItem::firstOrFail();
 
-        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $quotation = Quotation::query()->firstOrFail();
 
         foreach (['0', '-12.50'] as $price) {
@@ -1236,11 +1328,14 @@ class QuotationTest extends TestCase
         $firstPreplistItem = $preplistItems[$firstItem->id];
         $secondPreplistItem = $preplistItems[$secondItem->id];
 
-        $binary = $this->generatedWorkbook(
-            $user,
-            $preplist,
-            $supplier,
-            [$firstPreplistItem->id, $secondPreplistItem->id],
+        $binary = $this->patchToLegacyRfqLayout(
+            $this->generatedWorkbook(
+                $user,
+                $preplist,
+                $supplier,
+                [$firstPreplistItem->id, $secondPreplistItem->id],
+            ),
+            [18, 19],
         );
         $binary = $this->fillUnitPrices($binary, [18 => 250, 19 => 305]);
         $binary = $this->fillItemDetails($binary, 18, 'MediCore', 'December 2027');
@@ -1285,7 +1380,7 @@ class QuotationTest extends TestCase
 
         $preplistItem = PreplistItem::firstOrFail();
 
-        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $binary = $this->fillUnitPrices($binary, [18 => '305.50']);
         $binary = $this->fillItemDetails($binary, 18, 'MediCore', '03/04/2027');
 
@@ -1329,11 +1424,14 @@ class QuotationTest extends TestCase
         $firstPreplistItem = $preplistItems[$firstItem->id];
         $secondPreplistItem = $preplistItems[$secondItem->id];
 
-        $binary = $this->generatedWorkbook(
-            $user,
-            $preplist,
-            $supplier,
-            [$firstPreplistItem->id, $secondPreplistItem->id],
+        $binary = $this->patchToLegacyRfqLayout(
+            $this->generatedWorkbook(
+                $user,
+                $preplist,
+                $supplier,
+                [$firstPreplistItem->id, $secondPreplistItem->id],
+            ),
+            [18, 19],
         );
         $binary = $this->fillUnitPrices($binary, [18 => 250]);
 
@@ -1385,7 +1483,7 @@ class QuotationTest extends TestCase
             'generated_at' => now(),
         ]);
 
-        $first = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $first = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $first = $this->fillUnitPrices($first, [18 => 305]);
         $first = $this->fillItemDetails($first, 18, 'OldBrand', '2027-12-31');
 
@@ -1393,7 +1491,7 @@ class QuotationTest extends TestCase
 
         $this->upload($user, $quotation, $first)->assertSessionHas('status');
 
-        $second = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $second = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $second = $this->fillUnitPrices($second, [18 => 250]);
         $second = $this->fillItemDetails($second, 18, 'NewBrand', '2028-06-30');
 
@@ -1427,7 +1525,7 @@ class QuotationTest extends TestCase
 
         $preplistItem = PreplistItem::firstOrFail();
 
-        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $binary = $this->replaceInSheet($binary, 'Item Description', 'Not The Template');
         $quotation = Quotation::query()->firstOrFail();
 
@@ -1455,7 +1553,7 @@ class QuotationTest extends TestCase
 
         $preplistItem = PreplistItem::firstOrFail();
 
-        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
         $binary = $this->replaceInSheet($binary, 'CorrectItemName', 'CompletelyDifferentItem');
         $binary = $this->fillUnitPrices($binary, [18 => 305]);
         $quotation = Quotation::query()->firstOrFail();
@@ -1595,7 +1693,7 @@ class QuotationTest extends TestCase
         ]);
 
         $preplistItem = PreplistItem::firstOrFail();
-        $binary = $this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]);
+        $binary = $this->patchToLegacyRfqLayout($this->generatedWorkbook($user, $preplist, $supplier, [$preplistItem->id]), [18]);
 
         $quotation = Quotation::query()->firstOrFail();
 

@@ -20,7 +20,7 @@ class QuotationWorkbookParser
     /**
      * Read the worksheet and return the parsed item rows.
      *
-     * @return array<int, array{description: string, brand: string|null, expiry: string|null, unit_price: float|null, supplier_box_size: int|null}>
+     * @return array<int, array{description: string, brand: string|null, expiry: string|null, unit_price: float|null, supplier_box_size: int|null, supplier_unit: string|null}>
      */
     public static function parse(string $path): array
     {
@@ -58,11 +58,13 @@ class QuotationWorkbookParser
 
         $rows = $sheet->xpath('//m:sheetData/m:row') ?: [];
 
-        $headerNumber = self::findHeaderRow($rows, $sharedStrings);
+        $header = self::findHeaderRow($rows, $sharedStrings);
 
-        if ($headerNumber === null) {
+        if ($header === null) {
             throw new RuntimeException('The uploaded file does not look like the RFQ template issued for this quotation.');
         }
+
+        [$headerNumber, $columns] = $header;
 
         $parsed = [];
 
@@ -90,16 +92,19 @@ class QuotationWorkbookParser
 
             $parsed[] = [
                 'description' => $description,
-                'brand' => self::brandValue(self::findCell($row, 'F'), $sharedStrings),
+                'brand' => self::brandValue(self::findCell($row, $columns['brand']), $sharedStrings),
                 'expiry' => self::expiryFromCell(
-                    self::findCell($row, 'H'),
+                    self::findCell($row, $columns['expiry']),
                     $sharedStrings,
                     $dateStyles,
                     $rowNumber,
                     $description,
                 ),
-                'unit_price' => self::unitPrice($cells['G'] ?? null),
-                'supplier_box_size' => self::supplierBoxSize($cells['I'] ?? null, $rowNumber, $description),
+                'unit_price' => self::unitPrice($cells[$columns['unit_price']] ?? null),
+                'supplier_box_size' => self::supplierBoxSize($cells[$columns['supplier_box']] ?? null, $rowNumber, $description),
+                'supplier_unit' => isset($columns['supplier_unit'])
+                    ? self::supplierUnitValue($cells[$columns['supplier_unit']] ?? null)
+                    : null,
             ];
         }
 
@@ -111,24 +116,73 @@ class QuotationWorkbookParser
     }
 
     /**
+     * Locate the header row and map the recognized layout's columns.
+     *
      * @param  array<int, \SimpleXMLElement>  $rows
      * @param  array<int, string>  $sharedStrings
+     * @return array{0: int, 1: array<string, string>}|null
      */
-    private static function findHeaderRow(array $rows, array $sharedStrings): ?int
+    private static function findHeaderRow(array $rows, array $sharedStrings): ?array
     {
         foreach ($rows as $row) {
             $cells = self::rowCells($row, $sharedStrings);
 
-            if (
-                isset($cells['A'], $cells['B'], $cells['G'], $cells['I'], $cells['J'])
-                && trim((string) $cells['A']) === 'No.'
-                && trim((string) $cells['B']) === 'Item Description'
-                && trim((string) $cells['G']) === 'Unit Price (PHP)'
-                && trim((string) $cells['I']) === 'Supplier Box of'
-                && trim((string) $cells['J']) === 'Suppliers Remarks'
-            ) {
-                return (int) $row['r'];
+            $columns = self::headerColumns($cells);
+
+            if ($columns !== null) {
+                return [(int) $row['r'], $columns];
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * Map the header cells of a recognized RFQ layout to the columns the
+     * parser reads. The generator emits "Unit" and "Box Size" columns for
+     * boxed preplists and drops them for boxless ones, so the letters of the
+     * supplier fields differ between the layouts. Files issued before that
+     * change (with the legacy "Supplier Box of" header at I) are still
+     * accepted.
+     *
+     * @param  array<string, string>  $cells
+     * @return array<string, string>|null
+     */
+    private static function headerColumns(array $cells): ?array
+    {
+        if (trim((string) ($cells['A'] ?? '')) !== 'No.' || trim((string) ($cells['B'] ?? '')) !== 'Item Description') {
+            return null;
+        }
+
+        // New boxless layout: A No., B Item Description, C Shelf Life,
+        // D Brand, E Unit Price (PHP), F Expiry,
+        // G "Supplier's Box Size or Packaging", H "Supplier's Unit", I Remarks.
+        $newBoxless = isset($cells['G']) && trim((string) $cells['G']) === "Supplier's Box Size or Packaging";
+
+        // New boxed layout: A No., B Item Description, C Unit, D Box Size,
+        // E Shelf Life, F Brand, G Unit Price (PHP), H Expiry,
+        // I "Supplier's Box Size or Packaging", J "Supplier's Unit", K Remarks.
+        $newBoxed = isset($cells['I']) && trim((string) $cells['I']) === "Supplier's Box Size or Packaging";
+
+        // Legacy layout (files issued before the column rework):
+        // G = Unit Price (PHP), I = "Supplier Box of".
+        $legacy = isset($cells['G']) && trim((string) $cells['G']) === 'Unit Price (PHP)'
+            && isset($cells['I']) && trim((string) $cells['I']) === 'Supplier Box of';
+
+        if ($newBoxless) {
+            return isset($cells['E']) && trim((string) $cells['E']) === 'Unit Price (PHP)'
+                ? ['unit_price' => 'E', 'brand' => 'D', 'expiry' => 'F', 'supplier_box' => 'G', 'supplier_unit' => 'H']
+                : null;
+        }
+
+        if ($newBoxed) {
+            return isset($cells['G']) && trim((string) $cells['G']) === 'Unit Price (PHP)'
+                ? ['unit_price' => 'G', 'brand' => 'F', 'expiry' => 'H', 'supplier_box' => 'I', 'supplier_unit' => 'J']
+                : null;
+        }
+
+        if ($legacy) {
+            return ['unit_price' => 'G', 'brand' => 'F', 'expiry' => 'H', 'supplier_box' => 'I'];
         }
 
         return null;
@@ -368,8 +422,9 @@ class QuotationWorkbookParser
 
     /**
      * The supplier's box size for an item (units per box), when the supplier
-     * wrote one in the Supplier Box of column. A positive whole number wins;
-     * anything else aborts the upload with the row number.
+     * wrote one in the Supplier's Box Size or Packaging column (or the legacy
+     * "Supplier Box of" column). A positive whole number wins; anything else
+     * aborts the upload with the row number.
      */
     private static function supplierBoxSize(?string $raw, int $rowNumber, string $description): ?int
     {
@@ -394,6 +449,22 @@ class QuotationWorkbookParser
         }
 
         return $value;
+    }
+
+    /**
+     * The unit the supplier filled in the quotation's "Supplier's Unit"
+     * column, when they wrote one. Free text (e.g. "Box of 50"); blank or
+     * missing means none was given.
+     */
+    private static function supplierUnitValue(?string $raw): ?string
+    {
+        if ($raw === null) {
+            return null;
+        }
+
+        $cleaned = trim($raw);
+
+        return $cleaned === '' ? null : $cleaned;
     }
 
     private static function unitPrice(?string $raw): ?float

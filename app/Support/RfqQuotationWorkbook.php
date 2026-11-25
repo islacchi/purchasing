@@ -63,12 +63,50 @@ class RfqQuotationWorkbook
     }
 
     /**
+     * The RFQ sheet's column layout: `[letter, header, style]` triples.
+     *
+     * For a preplist without any boxed items the "Unit" and "Box Size"
+     * columns are dropped — the requirement is stated in the item's basic
+     * unit, and the supplier reports packaging through the supplier-side
+     * columns ("Supplier's Box Size or Packaging" then "Supplier's Unit").
+     *
+     * @param  bool  $hasBoxSize
+     * @return list<array{0: string, 1: string, 2: int}>
+     */
+    private static function layout(bool $hasBoxSize): array
+    {
+        $layout = [
+            ['A', 'No.', 2],
+            ['B', 'Item Description', 2],
+        ];
+
+        if ($hasBoxSize) {
+            $layout[] = ['C', 'Unit', 2];
+            $layout[] = ['D', 'Box Size', 2];
+        }
+
+        $layout[] = [$hasBoxSize ? 'E' : 'C', 'Min. Shelf Life at Delivery', 2];
+        $layout[] = [$hasBoxSize ? 'F' : 'D', 'Brand', 2];
+        $layout[] = [$hasBoxSize ? 'G' : 'E', 'Unit Price (PHP)', 2];
+        $layout[] = [$hasBoxSize ? 'H' : 'F', 'Expiry', 2];
+        $layout[] = [$hasBoxSize ? 'I' : 'G', "Supplier's Box Size or Packaging", 2];
+        $layout[] = [$hasBoxSize ? 'J' : 'H', "Supplier's Unit", 2];
+        $layout[] = [$hasBoxSize ? 'K' : 'I', 'Suppliers Remarks', 2];
+
+        return $layout;
+    }
+
+    /**
      * @param  Collection<int, PreplistItem>  $items
      */
     private static function sheetXml(Preplist $preplist, Supplier $supplier, Collection $items): string
     {
         $rows = [];
         $rowNumber = 1;
+
+        $hasBoxSize = $items->contains(fn (PreplistItem $item) => (int) ($item->item?->box_size ?? 0) > 0);
+        $layout = self::layout($hasBoxSize);
+        $lastColumn = $layout[count($layout) - 1][0];
 
         $rows[] = self::row($rowNumber++, [
             self::cell('A1', 14, null),
@@ -226,7 +264,7 @@ class RfqQuotationWorkbook
         ], 11.25);
 
         $rows[] = self::row($rowNumber++, [
-            self::cell('A15', 12, 'Please quote your best firm unit price per unit for the items below. The "Box of" column states our required packaging (e.g., Box of 100). If your packaging is different, write your units-per-box in the "Supplier Box of" column (e.g., 50); leave it blank to accept ours.'),
+            self::cell('A15', 12, 'Please quote your best firm unit price per unit for the items below. The "Supplier\'s Box Size or Packaging" column states our required packaging (e.g., Box of 100) when the item is boxed. If your packaging is different, write your units-per-box in that column; leave it blank to accept ours.'),
             self::cell('B15', 13, null),
             self::cell('C15', 13, null),
             self::cell('D15', 13, null),
@@ -241,18 +279,12 @@ class RfqQuotationWorkbook
         $rows[] = self::blankRow($rowNumber++, 3.95);
 
         $headerRow = $rowNumber++;
-        $rows[] = self::row($headerRow, [
-            self::cell('A'.$headerRow, 2, 'No.'),
-            self::cell('B'.$headerRow, 2, 'Item Description'),
-            self::cell('C'.$headerRow, 2, 'Unit'),
-            self::cell('D'.$headerRow, 2, 'Box Size'),
-            self::cell('E'.$headerRow, 2, 'Min. Shelf Life at Delivery'),
-            self::cell('F'.$headerRow, 2, 'Brand'),
-            self::cell('G'.$headerRow, 2, 'Unit Price (PHP)'),
-            self::cell('H'.$headerRow, 2, 'Expiry'),
-            self::cell('I'.$headerRow, 2, 'Supplier Box of'),
-            self::cell('J'.$headerRow, 2, 'Suppliers Remarks'),
-        ], 32);
+
+        $headerCells = [];
+        foreach ($layout as [$letter, $header, $style]) {
+            $headerCells[] = self::cell($letter.$headerRow, $style, $header);
+        }
+        $rows[] = self::row($headerRow, $headerCells, 32);
 
         foreach ($items->values() as $index => $preplistItem) {
             $itemRow = $headerRow + $index + 1;
@@ -263,47 +295,50 @@ class RfqQuotationWorkbook
             $shelfLife = (int) $preplistItem->min_shelf_life_months;
             $requirement = $shelfLife > 0 ? '≥ '.$shelfLife.' months' : 'Non-perishable';
 
-            $rows[] = self::row($itemRow, [
-                self::cell('A'.$itemRow, 4, (string) ($index + 1)),
-                self::cell('B'.$itemRow, 3, $itemName),
-                self::cell('C'.$itemRow, 4, $unit !== '' ? $unit : null),
-                self::cell('D'.$itemRow, 4, $packageRequirement !== '' ? $packageRequirement : null),
-                self::cell('E'.$itemRow, 4, $requirement),
-                self::cell('F'.$itemRow, 4, null),
-                self::cell('G'.$itemRow, 4, null),
-                self::cell('H'.$itemRow, 4, null),
-                self::cell('I'.$itemRow, 4, null),
-                self::cell('J'.$itemRow, 4, null),
-            ], 18);
+            $itemCells = [];
+            foreach ($layout as [$letter, $header, $style]) {
+                $value = match ($header) {
+                    'No.' => (string) ($index + 1),
+                    'Item Description' => $itemName,
+                    'Unit' => $unit !== '' ? $unit : null,
+                    'Box Size' => $packageRequirement !== '' ? $packageRequirement : null,
+                    'Min. Shelf Life at Delivery' => $requirement,
+                    default => null,
+                };
+
+                // Item rows carry style 3 on the description cell and 4 on
+                // the rest, matching the historical layout.
+                $itemCells[] = self::cell(
+                    $letter.$itemRow,
+                    $header === 'Item Description' ? 3 : 4,
+                    $value
+                );
+            }
+
+            $rows[] = self::row($itemRow, $itemCells, 18);
         }
 
         $blankRow = $headerRow + $items->count() + 1;
         $rows[] = self::blankRow($blankRow, 17.25);
 
         $noteRow = $blankRow + 1;
-        $rows[] = self::row($noteRow, [
-            self::cell('A'.$noteRow, 11, 'IMPORTANT: Please use and send this exact Excel file. Do not copy this data into a new workbook or modify the file structure, as doing so will break the system upload formatting.'),
-            self::cell('B'.$noteRow, 11, null),
-            self::cell('C'.$noteRow, 11, null),
-            self::cell('D'.$noteRow, 11, null),
-            self::cell('E'.$noteRow, 11, null),
-            self::cell('F'.$noteRow, 11, null),
-            self::cell('G'.$noteRow, 11, null),
-            self::cell('H'.$noteRow, 11, null),
-            self::cell('I'.$noteRow, 11, null),
-            self::cell('J'.$noteRow, 11, null),
-        ], 27.95);
+        $noteRowCells = [];
+        foreach ($layout as [$letter, $header, $style]) {
+            $noteRowCells[] = self::cell($letter.$noteRow, $style, null);
+        }
+        $noteRowCells[0] = self::cell('A'.$noteRow, 11, 'IMPORTANT: Please use and send this exact Excel file. Do not copy this data into a new workbook or modify the file structure, as doing so will break the system upload formatting.');
+        $rows[] = self::row($noteRow, $noteRowCells, 27.95);
 
         $merges = [
-            'A1:J1',
-            'A2:J2',
-            'A3:J3',
-            'A4:J4',
-            'A5:J5',
-            'A6:J6',
-            'A7:J7',
-            'A15:I15',
-            'A'.$noteRow.':J'.$noteRow,
+            'A1:'.$lastColumn.'1',
+            'A2:'.$lastColumn.'2',
+            'A3:'.$lastColumn.'3',
+            'A4:'.$lastColumn.'4',
+            'A5:'.$lastColumn.'5',
+            'A6:'.$lastColumn.'6',
+            'A7:'.$lastColumn.'7',
+            'A15:'.$lastColumn.'15',
+            'A'.$noteRow.':'.$lastColumn.$noteRow,
         ];
 
         $mergeCells = '<mergeCells count="'.count($merges).'">';
@@ -315,7 +350,7 @@ class RfqQuotationWorkbook
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac">'
             .'<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'
-            .'<dimension ref="A1:J'.$noteRow.'"/>'
+            .'<dimension ref="A1:'.$lastColumn.$noteRow.'"/>'
             .'<sheetViews><sheetView tabSelected="1" view="pageLayout" zoomScaleNormal="100" workbookViewId="0"><selection activeCell="A6" sqref="A6:H6"/></sheetView></sheetViews>'
             .'<sheetFormatPr defaultRowHeight="15" x14ac:dyDescent="0.25"/>'
             .'<cols>'

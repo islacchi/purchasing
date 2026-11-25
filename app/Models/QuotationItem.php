@@ -25,6 +25,7 @@ class QuotationItem extends Model
         'min_remaining_months',
         'unit_price',
         'supplier_box_size',
+        'supplier_unit',
         'brand',
         'expiry',
         'available_qty',

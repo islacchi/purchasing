@@ -240,7 +240,10 @@ class PurchaseOrderWorkbook
         foreach ($items->values() as $index => $purchaseOrderItem) {
             $itemRow = $headerRow + $index + 1;
             $itemName = $purchaseOrderItem->item?->name ?? 'Item';
-            $unit = $purchaseOrderItem->item?->unit ?? '';
+            // The supplier's unit (e.g. "Box of 50") wins over the item's
+            // generic unit: the PO is being bought from them in their units.
+            $supplierUnit = trim((string) ($purchaseOrderItem->quotationItem?->supplier_unit ?? ''));
+            $unit = $supplierUnit !== '' ? $supplierUnit : ($purchaseOrderItem->item?->unit ?? '');
             $minShelf = (int) ($purchaseOrderItem->min_remaining_months ?? 0);
             $requirement = $minShelf > 0 ? '≥ '.$minShelf.' months' : 'Non-perishable';
             $isLocal = $purchaseOrder->source === PurchaseOrder::SOURCE_LOCAL;

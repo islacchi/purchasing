@@ -7,6 +7,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Quotation;
 use App\Models\QuotationItem;
 use App\Support\PurchaseOrderCreator;
+use App\Support\PurchaseOrderWorkbook;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -57,6 +58,14 @@ class PoCartController extends Controller
             $item = $preplistItem?->item;
             $remaining = $preplistItem?->remainingQuantity() ?? 0;
             $price = (float) ($qi->unit_price ?? 0);
+
+            // The item has no box requirement but the supplier quoted a box:
+            // the quote is per box, so show the effective unit price (price
+            // per unit) and compute the line total from it.
+            if (($item?->box_size ?? null) === null && $qi->supplier_box_size !== null && (int) $qi->supplier_box_size > 0) {
+                $price = $price / (float) $qi->supplier_box_size;
+            }
+
             $lineTotal = $price * $cartItem->qty;
             $grandTotal += $lineTotal;
 
@@ -453,10 +462,18 @@ class PoCartController extends Controller
                     $supplierBox = (int) ($cartItem->quotationItem?->supplier_box_size ?? 0);
                     $pack = $itemBox > 0 && $supplierBox > 0 ? $supplierBox : null;
 
+                    // The item has no box requirement but the supplier quoted a
+                    // box: the PO stays in the supplier's units — buy their
+                    // boxes (rounded up to cover the need) at their price.
+                    $qty = $cartItem->qty;
+                    if ($itemBox <= 0 && $supplierBox > 0) {
+                        $qty = (int) ceil($cartItem->qty / $supplierBox);
+                    }
+
                     $lines[] = [
                         'quotation_item' => $cartItem->quotationItem,
                         'preplist_item' => $cartItem->quotationItem->preplistItem,
-                        'qty' => $cartItem->qty,
+                        'qty' => $qty,
                         'unit_price' => $cartItem->quotationItem->unit_price,
                         'min_remaining_months' => $cartItem->quotationItem->min_remaining_months,
                         'box_size' => $pack,
@@ -476,14 +493,17 @@ class PoCartController extends Controller
 
         $request->user()->poCartItems()->delete();
 
-        $numbers = collect($created)->pluck('po_number')->implode(', ');
-        $message = 'Created '.count($created).' purchase order'.(count($created) === 1 ? '' : 's').': '.$numbers.'. The draft POs are ready to review and send.';
+        // Hand the user the generated workbook: clicking "Create draft POs"
+        // downloads the Excel file right after the draft POs are created.
+        $first = $created[0];
+        $first->load(['items.item', 'items.allocations']);
 
-        session()->flash('status', $message);
-
-        // Return to the cart blade after creating the draft POs — the checkout
-        // modal is left behind with the now-empty cart instead of staying open.
-        return $this->redirectBack($request, $message);
+        return response(PurchaseOrderWorkbook::build($first, $first->items), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$first->po_number.'.xlsx"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**

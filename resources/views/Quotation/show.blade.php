@@ -17,10 +17,6 @@
             ->filter(fn ($item) => $quotationItems->get((int) $item['key'])?->unit_price !== null)
             ->count();
 
-        $quotedTotal = $items
-            ->filter(fn ($item) => $quotationItems->get((int) $item['key'])?->unit_price !== null)
-            ->sum(fn ($item) => (float) $quotationItems->get((int) $item['key'])->unit_price * $item['requested']);
-
         $status = $itemsQuoted > 0 ? 'Quoted' : 'Awaiting quote';
 
         $fractionColor = $itemsQuoted === 0
@@ -272,7 +268,6 @@
                         <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Item breakdown</p>
                         <p class="mt-0.5 text-[11px] text-gray-500">{{ $totalItems }} {{ $totalItems === 1 ? 'line' : 'lines' }} · across {{ $sourceProjectCount }} {{ $sourceProjectCount === 1 ? 'project' : 'projects' }} · Total requested: {{ number_format($totalRequested) }} units</p>
                     </div>
-                    <p class="text-[11px] text-gray-500">Grand total: <span class="text-xs font-bold text-gray-900">{{ $peso($quotedTotal) }}</span></p>
                 </div>
 
                 <div class="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
@@ -303,6 +298,13 @@
                                     $expiryDate = $quotedItem?->expiry;
                                     $expiry = $expiryDate?->format('M j, Y');
                                     $isZebra = ($loop->iteration % 2) === 0;
+                                    // Boxless line whose supplier quoted a box:
+                                    // the quoted column shows the price per piece.
+                                    $quotedSupplierBox = $item['box_size'] === null && $quotedItem?->supplier_box_size !== null
+                                        ? (int) $quotedItem->supplier_box_size : 0;
+                                    $quotedPrice = $quotedSupplierBox > 0 && $quotedItem?->unit_price !== null
+                                        ? (float) $quotedItem->unit_price / $quotedSupplierBox
+                                        : ($quotedItem?->unit_price !== null ? (float) $quotedItem->unit_price : null);
                                 @endphp
                                 <tr class="{{ $isZebra ? 'bg-[#f2f7f8]' : 'bg-white' }} transition-colors hover:bg-[#e4edf0]">
                                     <td class="px-4 py-2.5 align-top">
@@ -332,8 +334,8 @@
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-2.5 text-center align-top">
                                         @if ($isQuoted)
-                                            <span class="text-xs font-bold text-gray-900">{{ $peso($quotedItem->unit_price) }} / {{ $item['unit'] }}</span>
-                                            <span class="block text-[9px] font-medium text-gray-500">{{ $peso($quotedItem->unit_price * $item['requested']) }} subtotal</span>
+                                            <span class="text-xs font-bold text-gray-900">{{ $peso($quotedPrice) }} / {{ $item['unit'] }}</span>
+                                            <span class="block text-[9px] font-medium text-gray-500">{{ $peso($quotedPrice * $item['requested']) }} subtotal</span>
                                         @else
                                             <span class="text-xs text-gray-400">—</span>
                                         @endif

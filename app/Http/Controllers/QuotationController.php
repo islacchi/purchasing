@@ -531,6 +531,7 @@ class QuotationController extends Controller
                 'expiry' => $row['expiry'],
                 'unit_price' => $row['unit_price'],
                 'supplier_box_size' => $row['supplier_box_size'] ?? null,
+                'supplier_unit' => $row['supplier_unit'] ?? null,
             ];
         }
 
@@ -559,6 +560,7 @@ class QuotationController extends Controller
                             'expiry' => $data['expiry'],
                             'unit_price' => $data['unit_price'],
                             'supplier_box_size' => $data['supplier_box_size'],
+                            'supplier_unit' => $data['supplier_unit'],
                             'quoted_at' => now(),
                         ],
                     );

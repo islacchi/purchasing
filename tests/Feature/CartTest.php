@@ -282,14 +282,17 @@ class CartTest extends TestCase
                 'deliver_to' => 'Central Warehouse',
             ]);
 
-        // Checkout now returns to the cart blade instead of streaming a file.
-        $response->assertRedirect(route('po-cart'));
-
         $this->assertDatabaseCount('po_cart_items', 0);
 
         $quotationItemId = $item->id;
         /** @var PurchaseOrder $po */
         $po = PurchaseOrder::query()->firstOrFail();
+
+        // Clicking "Create draft POs" generates the Excel workbook of the
+        // created draft PO as an attachment.
+        $response->assertOk();
+        $this->assertStringContainsString('spreadsheetml.sheet', (string) $response->headers->get('Content-Type'));
+        $this->assertStringContainsString($po->po_number, (string) $response->headers->get('Content-Disposition'));
 
         $this->assertSame('draft', $po->status);
         $this->assertSame($supplier->id, $po->supplier_id);
@@ -301,7 +304,7 @@ class CartTest extends TestCase
         $this->assertSame('305.00', (string) $line->unit_price);
     }
 
-    public function test_bulk_checkout_creates_multiple_purchase_orders_and_redirects_back_to_the_cart(): void
+    public function test_bulk_checkout_creates_multiple_purchase_orders_and_returns_the_workbook(): void
     {
         $user = $this->admin();
         $entity = $this->entity();
@@ -352,7 +355,8 @@ class CartTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('po-cart.checkout'));
 
-        $response->assertRedirect(route('po-cart'));
+        $response->assertOk();
+        $this->assertStringContainsString('spreadsheetml.sheet', (string) $response->headers->get('Content-Type'));
 
         $this->assertDatabaseCount('purchase_orders', 2);
         $this->assertDatabaseCount('po_cart_items', 0);
@@ -628,6 +632,148 @@ class CartTest extends TestCase
 
         $this->assertDatabaseCount('purchase_orders', 0);
         $this->assertDatabaseCount('po_cart_items', 1);
+    }
+
+    public function test_cart_shows_the_effective_price_when_the_supplier_quotes_a_box_for_a_boxless_item(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $supplier = Supplier::create(['name' => 'Tablet Box Supplier']);
+
+        $project = $this->project($user, $entity);
+        // The item has no box requirement; the supplier sells boxes of 50
+        // tablets at ₱ 231 each, so the quote is per box.
+        $item = $this->item(['name' => 'TabletItemX']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 100]);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Boxless batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::query()->firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'unit_price' => 231.00,
+            'supplier_box_size' => 50,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('po-cart.add'), ['quotation_item_id' => QuotationItem::firstOrFail()->id])
+            ->assertSessionHasNoErrors();
+
+        // 231 / 50 = 4.62 per unit — the cart displays and totals from it.
+        $response = $this->actingAs($user)->get(route('po-cart'));
+        $line = collect($response->viewData('grouped'))
+            ->flatMap(fn ($group) => $group['items'])
+            ->first();
+
+        $this->assertEqualsWithDelta(4.62, $line['unit_price'], 0.01);
+        $this->assertEqualsWithDelta(462.00, $line['line_total'], 0.01);
+
+        // The pack message explains the boxes needed for the current qty.
+        $this->assertStringContainsString('Supplier quotes in boxes of 50', $response->getContent());
+        $this->assertStringContainsString('you will be buying 2 boxes (100 tablets)', $response->getContent());
+    }
+
+    public function test_checkout_creates_the_po_in_the_supplier_units_when_the_quote_is_per_box(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $supplier = Supplier::create(['name' => 'Per-Box Supplier']);
+
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'BoxlessSlab']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 200]);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Boxless batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::query()->firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'unit_price' => 100.00,
+            'supplier_box_size' => 100,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('po-cart.add'), ['quotation_item_id' => QuotationItem::firstOrFail()->id]);
+
+        // The cart buys the requirement (200 pcs) at the effective price
+        // (₱1.00/unit against the ₱100-per-box quotation).
+        $cartItem = PoCartItem::firstOrFail();
+        $this->assertSame(200, (int) $cartItem->qty);
+
+        $response = $this->actingAs($user)->post(route('po-cart.checkout'));
+        $response->assertOk();
+
+        $line = PurchaseOrderItem::where('quotation_item_id', $quotation->items()->first()->id)->firstOrFail();
+
+        // The generated PO is in the supplier's units: 2 boxes at ₱100
+        // each — matching the cart total of ₱200.
+        $this->assertSame(2, (int) $line->qty);
+        $this->assertSame('100.00', (string) $line->unit_price);
+        $this->assertNull($line->box_size);
+        $this->assertEqualsWithDelta(200.00, $line->extendedTotal(), 0.01);
+    }
+
+    public function test_po_show_displays_the_quoted_price_per_piece_for_boxless_lines(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $supplier = Supplier::create(['name' => 'Per-Box Supplier']);
+
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'BoxlessSlab']);
+        $projectItem = $this->projectItem($project, $item, ['quantity' => 200]);
+
+        $preplist = $this->compile($user, [
+            'name' => 'Boxless batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 0],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+        $preplistItem = PreplistItem::query()->firstOrFail();
+
+        QuotationItem::create([
+            'quotation_id' => $quotation->id,
+            'preplist_item_id' => $preplistItem->id,
+            'unit_price' => 100.00,
+            'supplier_box_size' => 100,
+            'quoted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('po-cart.add'), ['quotation_item_id' => QuotationItem::firstOrFail()->id]);
+
+        $this->actingAs($user)->post(route('po-cart.checkout'));
+
+        $po = PurchaseOrder::query()->firstOrFail();
+        $po->load(['items.item', 'items.quotationItem']);
+
+        $this->actingAs($user)
+            ->get(route('purchase-order.show', ['purchaseOrder' => $po->id]))
+            ->assertOk()
+            ->assertSee('BoxlessSlab')
+            // Unit price column: the quoted price per piece (100 / 100 = 1.00).
+            ->assertSee('1.00')
+            // Quoted price per box column: the quotation's unit price (₱100.00).
+            ->assertSee('100.00')
+            // Total unit price column: 2 boxes at ₱100.00 = ₱200.00.
+            ->assertSee('200.00');
     }
 
     public function test_supplier_pack_mismatch_stays_piece_accurate_through_partial_delivery(): void
