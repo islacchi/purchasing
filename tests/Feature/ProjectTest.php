@@ -238,6 +238,55 @@ class ProjectTest extends TestCase
         ]);
     }
 
+    public function test_project_can_be_created_with_items_via_the_json_payload(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+
+        $response = $this->actingAs($user)
+            ->post(route('projects.store'), [
+                'procuring_entity_id' => $entity->id,
+                'title' => 'Purchase of pharma supplies',
+                'reference_no' => 'RF-2026-0077',
+                'mode_of_procurement' => 'small_value',
+                'items_json' => json_encode([
+                    [
+                        'description' => 'Mefenamic Capsule - 500mg',
+                        'category' => 'drugs and medicines',
+                        'unit' => 'Box',
+                        'box_size' => null,
+                        'quantity' => 50,
+                        'unit_cost' => 320.00,
+                        'quoted_price' => 305.00,
+                        'in_stock' => '',
+                    ],
+                    [
+                        'description' => 'Cetirizine 10mg tablet',
+                        'category' => 'supplies and equipments',
+                        'unit' => 'pcs',
+                        'quantity' => 20,
+                        'unit_cost' => 8.50,
+                    ],
+                ]),
+            ]);
+
+        $project = Project::firstOrFail();
+
+        $response->assertRedirect(route('projects.show', ['project' => $project->id]));
+
+        $this->assertDatabaseHas('project_items', [
+            'project_id' => $project->id,
+            'quantity' => 50,
+            'unit_cost' => 320.00,
+            'awarded_unit_price' => 305.00,
+        ]);
+        $this->assertDatabaseHas('project_items', [
+            'project_id' => $project->id,
+            'quantity' => 20,
+            'unit_cost' => 8.50,
+        ]);
+    }
+
     public function test_project_accepts_custom_delivery_days_over_the_dropdown(): void
     {
         $user = $this->admin();
