@@ -10,26 +10,16 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureSessionIsActive
 {
     /**
-     * Terminate inactive or overly old authenticated sessions.
+     * Terminate authenticated sessions that exceed their maximum lifetime.
      */
     public function handle(Request $request, Closure $next): Response
     {
         $now = now()->timestamp;
-        $idleLifetime = max(1, (int) config('session.idle_lifetime', 20)) * 60;
         $absoluteLifetime = max(1, (int) config('session.absolute_lifetime', 480)) * 60;
 
-        $lastActivity = (int) $request->session()->get('last_activity_at', $now);
         $authenticatedAt = (int) $request->session()->get('authenticated_at', $now);
 
-        $message = null;
-
-        if (($now - $lastActivity) > $idleLifetime) {
-            $message = 'Your session expired due to inactivity. Please sign in again.';
-        } elseif (($now - $authenticatedAt) > $absoluteLifetime) {
-            $message = 'Your session reached its maximum lifetime. Please sign in again.';
-        }
-
-        if ($message !== null) {
+        if (($now - $authenticatedAt) > $absoluteLifetime) {
             Auth::logout();
 
             $request->session()->invalidate();
@@ -37,11 +27,8 @@ class EnsureSessionIsActive
 
             return redirect()
                 ->route('login')
-                ->withErrors(['login' => $message]);
+                ->withErrors(['login' => 'Your session reached its maximum lifetime. Please sign in again.']);
         }
-
-        $request->session()->put('last_activity_at', $now);
-        $request->session()->put('authenticated_at', $authenticatedAt);
 
         return $next($request);
     }
