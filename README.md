@@ -108,6 +108,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
   - The file is validated against the RFQ template **before** parsing (header layout + column mapping), so garbage files are rejected with a clear message.
   - The parser reads prices, brand, and expiry per item via `App\Support\QuotationWorkbookParser`; expiry values in any format (`MM/YYYY`, month names, ISO) are normalized by `App\Support\ExpiryParser`.
   - Zero or negative unit prices are rejected at upload time.
+  - For preplists without boxed items, the RFQ drops the "Unit" and "Box Size" columns; the supplier reports packaging through **Supplier's Box Size or Packaging** plus the free-text **Supplier's Unit** column, which is parsed and stored on `quotations_items.supplier_unit`.
 - Per-quotation status is computed from priced lines:
   - `Quoted` when at least one priced line exists; `Awaiting quote` otherwise.
   - Short-dated lines (expired or expiring within 30 days) are highlighted in the item breakdown; per-project colour coding compares supplier expiry vs the project's delivery date + minimum shelf life.
@@ -123,7 +124,9 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - PO numbers come from the shared `number_sequences` table as `PO-YYYY-NNNN`.
 - Status flow: `draft → sent → partially_received → completed` (cancel any time before completion; admin-only delete of draft/cancelled POs).
 - Receiving: each line has a **Mark as received** checkbox with a confirmation modal — confirming records the full line qty as received and moves the PO to `partially_received` / `completed`. Once a line is received it is locked in the UI and un-marking is refused server-side; `expected_received` guards against stale pages and races.
-- Single-file Excel download at creation; no re-download in this build.
+- **Single-file Excel download** — clicking **Create draft POs** on the PO cart generates the PO Excel as an attachment right after the draft POs are created; the `purchase-order.workbook` route re-downloads it for a saved PO.
+- **Units and prices on the PO follow the supplier's quote.** When the item has no box size but the supplier quoted a box (`supplier_box_size`), checkout converts the cart qty to the supplier's boxes (`ceil(cart qty / supplierBox)`), and the PO line keeps the supplier's `unit_price`; when the supplier packs differently than our packaging, the PO line snapshots the supplier's pack in `purchase_order_items.box_size` (piece-tracked lines: `orderedPieces()` = qty × box_size).
+- **PO show** — for lines whose supplier quoted a box, the *Unit price* column shows the quoted price per piece (`unit_price ÷ box`), a **Quoted price per box** column shows the supplier's quoted price, and *Total unit price* is the line total (qty × unit_price).
 - People with view-only roles get the receive checkboxes disabled (greyed, access-restricted modal on click). Unauthorized modification attempts are still blocked server-side by the `module:purchase-order` middleware.
 
 ### Entities (`/entities`)
@@ -184,7 +187,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 
 ## Database schema
 
-The schema is 34 migrations deep and is described in full by the ER diagram below. Tables are grouped into **auth/roles**, **catalog**, **procurement/project & prep lists**, **quotation tracker**, **purchase orders**, and **audit**.
+The schema is 40 migrations deep and is described in full by the ER diagram below. Tables are grouped into **auth/roles**, **catalog**, **procurement/project & prep lists**, **quotation tracker**, **purchase orders**, and **audit**.
 
 ### ER diagram
 
@@ -358,6 +361,7 @@ erDiagram
         smallint min_remaining_months
         decimal unit_price
         int supplier_box_size "nullable"
+        string supplier_unit "nullable, filled by the supplier"
         string brand
         date expiry
         int available_qty
@@ -386,6 +390,7 @@ erDiagram
         bigint item_id FK
         int qty
         decimal unit_price
+        int box_size "nullable, snapshot of the supplier's pack"
         smallint min_remaining_months
     }
     po_cart_items {
@@ -448,7 +453,7 @@ erDiagram
 | Table | Purpose |
 |-------|---------|
 | `quotations` | One row per `(prep list, supplier)` pair — `rfq_number` unique. |
-| `quotation_items` | The supplier's prices for each `preplist_item`; unique `(quotation_id, preplist_item_id)`. Nullable `supplier_box_size` / `available_qty` capture the supplier's packaging and offered quantities. |
+| `quotation_items` | The supplier's prices for each `preplist_item`; unique `(quotation_id, preplist_item_id)`. Nullable `supplier_box_size` / `supplier_unit` / `available_qty` capture the supplier's packaging, filled-in unit and offered quantities. |
 | `po_cart_items` | Per-user cart staged for checkout — `quotation_item_id` unique per user; a pre-checkout line from an awarded quotation. |
 
 **Purchase orders (4)**
@@ -456,7 +461,7 @@ erDiagram
 | Table | Purpose |
 |-------|---------|
 | `purchase_orders` | `status`: `draft`, `sent`, `partially_received`, `completed`, `cancelled`. |
-| `purchase_order_items` | Lines from the RFQ to the PO; unique `(purchase_order_id, quotation_item_id)`. |
+| `purchase_order_items` | Lines from the RFQ to the PO; unique `(purchase_order_id, quotation_item_id)`. When the supplier packs differently, `box_size` snapshots their pack so pieces reconcile (`qty × box_size`). |
 | `purchase_order_receipts` | One row per receipt event; `received_qty` always records the full line quantity (the UI has no partial-qty field yet), and `lot_no` / `expiry_date` exist for a future capture step. Kept even after full receipt. |
 | `purchase_order_item_allocations` | Pro-rated split of each PO line back onto the project lines it fulfils. |
 
@@ -757,7 +762,7 @@ purchasing/
 │   │                           #   ProjectSummaryWorkbook, DatabaseDumper, DatabaseRestorer, BackupStorage, Pagination
 │   └── Providers/              # access-settings gate; view composer feeds the bell icon
 ├── database/
-│   ├── migrations/             # 34 migrations covering the whole domain (seeded role grants, activity logs,
+│   ├── migrations/             # 40 migrations covering the whole domain (seeded role grants, activity logs,
 │   │                           #   unique junction indexes, expiry → DATE columns)
 │   ├── seeders/                # AdminUserSeeder (admin / user1 / user2 + seeded module grants)
 │   └── purchasing_db.sql       # committed dump for the dev snapshot

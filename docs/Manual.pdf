@@ -1,0 +1,264 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R] /Count 4 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 4219 >>
+stream
+BT /F1 10 Tf 12 TL
+50 780 Td
+(The Purchasing System - A Teaching Guide for Office Mates) Tj T*
+(Who this is for: office staff who are not computer people. No jargon, no tech talk - just what to click and what it means.) Tj T*
+(What the system does, in one sentence: it keeps track of everything from "we need to buy medicines" all the way to "the items arrived and are counted" - in one place, so nothing is forgotten and every peso is accounted for.) Tj T*
+(---) Tj T*
+(Part 1 - The Big Picture \(tell them this first\)) Tj T*
+(Every purchase in the office follows the same road. Think of it like ordering food: you decide what you want, you ask for the price, you compare, you order, and then the food arrives. Our system does the same steps, just with medicines and supplies.) Tj T*
+(The 6 stops on the road:) Tj T*
+(```) Tj T*
+(1. PROJECTS   ->  "What do we need to buy, and for which office?") Tj T*
+(2. PREPLIST   ->  "Put everything we need on one shopping list.") Tj T*
+(3. QUOTATION  ->  "Ask suppliers: how much? Then collect their answers.") Tj T*
+(4. Item Catalog->  "Compare the answers. Who is cheapest? Who has the freshest stock?") Tj T*
+(5. PURCHASE   ->  "Give the winning supplier the official order.") Tj T*
+(ORDER) Tj T*
+(6. RECEIVING  ->  "Items arrive. Check them off. Done.") Tj T*
+(```) Tj T*
+(That's it. Everything else - searching, printing, deleting, settings - is just detail on top of these six stops.) Tj T*
+(---) Tj T*
+(Part 2 - Signing In and Signing Out) Tj T*
+(1. Open the browser and go to the office computer address given by your administrator.) Tj T*
+(2. Type your username and password, then click Log in.) Tj T*
+(3. You will see a page with a dark-green panel on the left side. That panel is your menu.) Tj T*
+(4. To leave: click your profile photo / name at the top of the side panel, then Sign out.) Tj T*
+(Good habits to teach:) Tj T*
+(o Never share your password with anyone, even the administrator.) Tj T*
+(o If you are away from your desk, sign out. The system signs you out automatically if you sit idle too long - that's a safety feature, not a bug.) Tj T*
+(o If you forgot your password, ask the administrator to make a new one for you. Do not ask your officemates to let you use theirs.) Tj T*
+(---) Tj T*
+(Part 3 - Your Role in the System) Tj T*
+(Not everyone can do everything. This is on purpose - think of it as keys to a filing cabinet.) Tj T*
+(| What you can do | What it means |) Tj T*
+(|---|---|) Tj T*
+(| View | You can look at everything, but change nothing. Buttons look grey and "can't be clicked." |) Tj T*
+(| Manage | You can add, edit, upload, send, receive - the full work. |) Tj T*
+(| Administrator | Everything, plus the Settings page \(accounts, passwords, privileges\). |) Tj T*
+(Teaching tip: if a colleague says "the button is grey and won't click," the answer is always: *"You have View access. Ask the administrator if you need to change things."* No other explanation is needed.) Tj T*
+(---) Tj T*
+(Part 4 - A Walkthrough of Each Module \(left panel, top to bottom\)) Tj T*
+(4.1 PROJECTS - "The job we are going to do") Tj T*
+(What this is in real life: when the office awards a contract \(shopping, small value, competitive bidding, direct contracting\), the details go here. Example: *"Purchase of Medicines for Dao"* - DOH Region 6, December 2026.) Tj T*
+(What's on the screen:) Tj T*
+(o The project title, its reference number, how much was awarded, the date, how many days the supplier has to deliver, and whether delivery is overdue.) Tj T*
+(o A list of items needed \(e.g., Mefenamic 500mg, 256 boxes\) and how many remain to be procured.) Tj T*
+(o Buttons to Add project, Edit, Delete, and Print Project \(which prints a printout in 8.5 × 13 in officio, landscape - the standard government size\).) Tj T*
+(What to say to your colleagues:) Tj T*
+(> "A project is the whole job - who bought, what for, how much, and what's in it. If something is in a project, it means it is real and budgeted.") Tj T*
+(4.2 PREPLIST - "The shopping list we are actually buying from") Tj T*
+(What this is in real life: Projects show *everything* planned. Not all of it gets bought at once. The Preplist is the list of what we will buy this time.) Tj T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 4528 >>
+stream
+BT /F1 10 Tf 12 TL
+50 780 Td
+(What you can do here:) Tj T*
+(o Compile a prep list - pick the items from one or more projects, and the system merges them into one list with a number like PL-2026-0001.) Tj T*
+(o For each item, you can set the minimum shelf life \(in months\) remaining at delivery - important for medicines. `0 = non-perishable`.) Tj T*
+(o The list is collapsible - click a project to expand its items; click again to collapse.) Tj T*
+(o You can type Notes \(e.g., "deliver before Christmas"\) - optional.) Tj T*
+(What to say to your colleagues:) Tj T*
+(> "Think of Projects as your fridge plan for the whole month. The Preplist is what goes into this week's grocery cart.") Tj T*
+(4.3 QUOTATION - "Ask, receive, and compare") Tj T*
+(This is the busiest screen. Three stages happen here:) Tj T*
+(Stage A - Send the Request for Quotation \(RFQ\)) Tj T*
+(1. Open the prep list.) Tj T*
+(2. Click Generate RFQ.) Tj T*
+(3. Tick the suppliers you want to invite.) Tj T*
+(4. The system creates a file for each supplier and downloads it. That file is a form with the item names, units, and required shelf life - but no quantities. \(Suppliers must not know how much we need, that's our rule.\)) Tj T*
+(5. Print or email the file to the suppliers.) Tj T*
+(Stage B - Supplier sends us back their answer) Tj T*
+(o When a supplier returns their form, upload it here. The system reads the quoted prices and stores them - their answer is now part of the system.) Tj T*
+(o You will see for each supplier: their answer, their status \(e.g., "responded"\), and whether it can be compared yet.) Tj T*
+(Stage C - Compare and award) Tj T*
+(o Look at Item Catalog \(next section\) to decide who wins per item.) Tj T*
+(o Once awarded, click Proceed to PO - that starts the Purchase Order.) Tj T*
+(Buttons you will see on the Quotation page:) Tj T*
+(o Submit quotation / Replace - upload or swap the supplier's file.) Tj T*
+(o Download - get the supplier's file back.) Tj T*
+(o Remove - delete the uploaded file only \(not the whole quotation\).) Tj T*
+(o Delete - remove this supplier's quotation entirely. Blocked if linked to a purchase order - ask the administrator.) Tj T*
+(o Proceed to PO - start the purchase order with the awarded suppliers.) Tj T*
+(What to say to your colleagues:) Tj T*
+(> "Stage A is us asking. Stage B is them answering. Stage C is us saying yes. If you are at Stage B without a file uploaded, do not proceed anywhere else.") Tj T*
+(4.4 Item Catalog - "Who is the best deal?") Tj T*
+(What this is in real life: the comparison table.) Tj T*
+(For every item on the prep list, you see:) Tj T*
+(o Best price - the cheapest price that a supplier quoted.) Tj T*
+(o Best expiry - the supplier offering the freshest stock.) Tj T*
+(o Best price board - a ranking of suppliers by how many items they won.) Tj T*
+(o The premium column shows how many percent each supplier is more expensive than the best price. Example: `+5.0% vs best` means they're 5% more expensive than the cheapest.) Tj T*
+(o Lowest price is highlighted in green.) Tj T*
+(Suggestion, not decision. The system suggests the lowest price; it never picks for you. If you want a different supplier for an item - closer relationship, fresher stock, better delivery - open the item on the board and click Add to cart on that supplier's row. Your pick wins. Swapping to another supplier replaces the line in the cart before checkout. "Add best prices to cart" \(and the per-row cart buttons\) are one-click suggestions for the common case of wanting the lowest price.) Tj T*
+(Teaching tip: do not let anyone stare at one supplier and pick by feeling. The board exists so the decision is visible and defendable: *"We picked them because they won 8 out of 10 items at the best price."*) Tj T*
+(What to say to your colleagues:) Tj T*
+(> "Item Catalog is not a ranking of who's friendly. It's the scoreboard. Because we all have to answer to our auditor: which suppliers won, and why.") Tj T*
+(4.5 PURCHASE ORDER - "The official yes") Tj T*
+(What this is in real life: the document the office gives the winning supplier saying: *"We will buy from you. Here is what, how much, when."*) Tj T*
+(What you can do here:) Tj T*
+(o See the PO number, the supplier, the items and the agreed prices.) Tj T*
+(o Send the PO to the supplier.) Tj T*
+(o Cancel the PO if the deal falls through \(only before items are received\).) Tj T*
+(o When items arrive, mark them as received, one by one. Quantity, unit, price - everything is locked once you confirm receipt.) Tj T*
+ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 4637 >>
+stream
+BT /F1 10 Tf 12 TL
+50 780 Td
+(o The PO keeps track of partial deliveries too \(e.g., 128 of 250 boxes delivered today\).) Tj T*
+(What to say to your colleagues:) Tj T*
+(> "The PO is our promise in writing. The minute the supplier sees it, they can buy the stock. After that, changing anything is a lot of paperwork - so double-check before clicking Send.") Tj T*
+(4.6 ENTITIES - "The other offices and the suppliers") Tj T*
+(Two kinds of contacts live here:) Tj T*
+(o Procuring entities - the government offices that buy \(e.g., DOH Region 6, hospital supply divisions\).) Tj T*
+(o Suppliers - the companies that sell to us \(e.g., ABC Pharma, XYZ Medicals\).) Tj T*
+(Each profile shows their name, type, address, contact person, and transaction history. You can Add, Edit, or Delete - but not delete one that has been used in a real PO \(the system protects the record trail\).) Tj T*
+(What to say to your colleagues:) Tj T*
+(> "This is our address book. If an office or supplier changes address or contact number, update it here once - everyone sees the new one.") Tj T*
+(4.7 SETTINGS - "The administrator's cabinet" \(administrators only\)) Tj T*
+(If you are not the administrator, you will never see this. If you are, this is where you:) Tj T*
+(o Users & Privileges - create accounts, reset passwords, turn accounts on/off.) Tj T*
+(o Module access - decide who can View and who can Manage, per module.) Tj T*
+(o Activity logs - every action anyone did in the system, with who and when \("deleted Project RF-2026-0042", "edited Preplist PL-2026-0001"\).) Tj T*
+(o Backup - download a copy of everything, just in case.) Tj T*
+(What to say to your colleagues:) Tj T*
+(> "Settings is the principal's office. If something needs changing there, bring it to me - don't start poking around on your own.") Tj T*
+(---) Tj T*
+(Part 5 - A 45-Minute Teaching Script \(use this in the actual training\)) Tj T*
+(Run this exactly as written the first time. Keep it hands-on - every learner should hold the mouse at least once.) Tj T*
+(0:00-0:05 - Why we have this) Tj T*
+(> "We're going to walk through one real purchase: medicines for Dao. In 40 minutes you'll see every step the system handles, from the order to the delivery receipt.") Tj T*
+(0:05-0:10 - Sign in and look around) Tj T*
+(> "Type your username and password. See the dark panel on the left? That's our menu. Count the buttons: Projects, Preplist, Quotation, Item Catalog, Purchase Order, Entities, Settings. Everything lives in one of those seven.") Tj T*
+(0:10-0:18 - Projects \(the big picture\)) Tj T*
+(1. Click Projects.) Tj T*
+(2. Point out: title, reference number, amount awarded, deliver-by date, list of items and how many remain.) Tj T*
+(3. Click one project to open it. Show the Print Project button and print a copy - hand it to a learner.) Tj T*
+(4. Say: *"This printout is what we attach to our filing. It has the 8.5 × 13 in officio format - same size as our other government forms."*) Tj T*
+(0:18-0:26 - Preplist \(the shopping list\)) Tj T*
+(1. Click Preplist -> Compile prep list.) Tj T*
+(2. Tick one project and tick its items.) Tj T*
+(3. Set a shelf life for one medicine \(e.g., 12 months\). Set 0 for a non-perishable \(equipment\).) Tj T*
+(4. Click Compile. Show the new number \(e.g., `PL-2026-0001`\).) Tj T*
+(5. Say: *"Notice: no quantities will be printed for the suppliers. They see the item and the unit and the shelf life - that's all. We never show how much we're buying."*) Tj T*
+(0:26-0:34 - Quotation \(the ask and the answer\)) Tj T*
+(1. Open the prep list -> Generate RFQ.) Tj T*
+(2. Tick 2 suppliers -> Download. Open the file. Show that there are no quantities - only items, units, and required shelf life.) Tj T*
+(3. Say: *"This file goes to the suppliers. When they answer, we upload it here - that's Stage B."*) Tj T*
+(4. Upload a dummy supplier file \(prepare two before the session: save the RFQ downloads from step 2, then fill each copy in with made-up prices, brands, and expiry dates - that is exactly the file a supplier would return; sample RFQ/PO printouts no longer ship with the repository\).) Tj T*
+(5. Show Submit quotation and Replace.) Tj T*
+(0:34-0:40 - Item Catalog \(the decision\)) Tj T*
+(1. Click Item Catalog.) Tj T*
+(2. Walk through the Best price board and the columns: Best price, Best expiry, premium vs best.) Tj T*
+(3. Say: *"Green cells are the cheapest. These percentages are how much more expensive the other offers are. If the cheapest file has no prices yet - they haven't answered."*) Tj T*
+(0:40-0:44 - Purchase Order \(the official yes\)) Tj T*
+(1. Back to the awarded quotation -> Proceed to PO.) Tj T*
+ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 3812 >>
+stream
+BT /F1 10 Tf 12 TL
+50 780 Td
+(2. Check the items \(only awarded ones come across\) and Send the PO.) Tj T*
+(3. Show the Receive button on the items - demo ticking one received.) Tj T*
+(4. Say: *"Click this only when the boxes are physically in your hands and counted. Once ticked, it cannot be unticked casually."*) Tj T*
+(0:44-0:45 - Questions) Tj T*
+(Take the questions. If a question needs 5+ minutes to answer, write it down and say you'll answer in the next session - do not improvise.) Tj T*
+(---) Tj T*
+(Part 6 - Rules to Teach From Day One) Tj T*
+(1. Nothing is deleted lightly. Anti-delete warnings exist for a reason - a PO that anything is linked to cannot be deleted. Ask the administrator if you hit that wall.) Tj T*
+(2. Quantities are never given to suppliers. Only item, unit, shelf life.) Tj T*
+(3. Shelf life is in months, always, and `0 = non-perishable`.) Tj T*
+(4. If something looks wrong, stop. Do not "fix" it by deleting and redoing. Ask the administrator or the system officer.) Tj T*
+(5. Gray buttons are intentional. You don't have permission to do that - ask, don't force.) Tj T*
+(6. Printouts go in the official folder. The printout is the official copy, not a screen grab.) Tj T*
+(---) Tj T*
+(Part 7 - Quick Answers to Questions You Will Hear) Tj T*
+("Why can't I see the quantity on the supplier's form?") Tj T*
+(Because suppliers should never know how many we need. That protects our bidding.) Tj T*
+("This supplier answered by hand - can I type it in?") Tj T*
+(No. The system reads the file itself, so nobody can accidentally key in the wrong number. Ask the supplier to fill the computer file. If absolutely impossible, the administrator can help.) Tj T*
+("Can I undo a receipt?") Tj T*
+(No. Receipt is final. If you made a mistake, tell the administrator - that's what their override exists for.) Tj T*
+("Where's the data if the computer dies?") Tj T*
+(The administrator makes regular backups from Settings -> Backup. Your work is not kept only on your PC.) Tj T*
+("Can two of us work at the same time?") Tj T*
+(Yes. That's the point of the system - one office, one set of records.) Tj T*
+("Who do I call when the screen looks weird?") Tj T*
+(Your system administrator. Take a screenshot with your phone if possible - it helps.) Tj T*
+(---) Tj T*
+(Part 8 - Glossary in Plain Words) Tj T*
+(| Word | What it means here |) Tj T*
+(|---|---|) Tj T*
+(| Project | One whole purchase job - contract, budget, items. |) Tj T*
+(| Preplist | The shopping list we buy *this* time. |) Tj T*
+(| RFQ | The request we send suppliers: "how much per item?" |) Tj T*
+(| Quotation | The supplier's answer to that request. |) Tj T*
+(| Item Catalog | The comparison table of all the answers. |) Tj T*
+(| Best price | The cheapest unit price a supplier offered. |) Tj T*
+(| Best expiry | The supplier offering the freshest stock. |) Tj T*
+(| Purchase Order \(PO\) | The official order given to the winning supplier. |) Tj T*
+(| Receive | Ticking that the boxes physically arrived. |) Tj T*
+(| Fulfillment | How much of a project is done, in percent. |) Tj T*
+(| View | You can look, not touch. |) Tj T*
+(| Manage | You can work on it. |) Tj T*
+(| Reference no. | The number the system gave it \(e.g., `PL-2026-0001`, `RFQ-2026-0042`\). Write it on every printout. |) Tj T*
+(---) Tj T*
+(Part 9 - One-Minute Summary \(for the closing of the session\)) Tj T*
+(> "Look at the purchase like a single story. A project in Projects is a job we were given. The Preplist is the list we chose to buy. The Quotation is how we asked the suppliers and what they answered. The Item Catalog is how we decided. The Purchase Order is the yes we gave. Receiving is when the goods arrived. Every screen in this system is just one chapter of that one story - if you remember the story, you can find everything.") Tj T*
+ET
+endstream
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000134 00000 n 
+0000000204 00000 n 
+0000000330 00000 n 
+0000004601 00000 n 
+0000004727 00000 n 
+0000009307 00000 n 
+0000009433 00000 n 
+0000014122 00000 n 
+0000014250 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R >>
+startxref
+18115
+%%EOF

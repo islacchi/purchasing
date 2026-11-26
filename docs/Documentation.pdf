@@ -1,0 +1,143 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 4197 >>
+stream
+BT /F1 10 Tf 12 TL
+50 780 Td
+(RUNBOOK - running and rescuing the Purchasing system) Tj T*
+(Audience: whoever ends up responsible for this app after the person who built it stops touching it.) Tj T*
+(You do not need to understand Laravel. You need to follow the checklists and respect one rule: never change the server before making a fresh back-up.) Tj T*
+(Everything else is details, and the details are all here.) Tj T*
+(Works with: `README.md` \(install & architecture\), `docs/Teaching-Guide-Purchasing-System.md` \(staff training\).) Tj T*
+(---) Tj T*
+(0. The five things to know up front) Tj T*
+(1. This app runs entirely on one machine on the office LAN. There is no cloud component. If that machine dies, the app is down until it is restored - this is acceptable by design, provided you keep back-ups \(see §2\).) Tj T*
+(2. Nothing in the app requires the internet \(as of 2026-11 the Tailwind CDN was removed; see §7\). You can unplug the network cable from the server and the app still works.) Tj T*
+(3. Upgrades are optional, not routine. Do not update PHP, MySQL/MariaDB, XAMPP, or `composer` packages "to stay current" - an unmanaged box is safer frozen. Upgrade only when the hardware itself is replaced \(see §4\).) Tj T*
+(4. Every incident follows one shape: restore from back-up, then verify, then fix. Never improvise on the only copy of the data.) Tj T*
+(5. The database back-up contains only the database. The uploaded supplier quotation files live in a separate folder and must be backed up separately \(see §2\).) Tj T*
+(---) Tj T*
+(1. Where everything lives) Tj T*
+(| Thing | Path \(default layout\) |) Tj T*
+(|---|---|) Tj T*
+(| Application code | `C:\\...\\purchasing\\` \(the repo\) |) Tj T*
+(| Environment \(DB password, APP_KEY\) | `purchasing\\.env` - not in git; keep a sealed copy with the back-ups |) Tj T*
+(| Database | MySQL/MariaDB, database `purchasing_db`, user `root` \(localhost-only\) |) Tj T*
+(| DB back-ups \(in-app\) | `purchasing\\storage\\app\\private\\backups\\*.sql` \(keeps the 15 newest\) |) Tj T*
+(| Uploaded quotation files | `purchasing\\storage\\app\\private\\quotations\\` |) Tj T*
+(| Logs | `purchasing\\storage\\logs\\laravel.log` |) Tj T*
+(| Schedule runner | Windows Task Scheduler or cron: `php artisan schedule:run` every minute \(runs `activity:prune` weekly\) |) Tj T*
+(If your layout differs, adjust the paths - but keep the discipline: code, env, DB, uploads, logs.) Tj T*
+(---) Tj T*
+(2. The weekly 10-minute back-up \(all of it, every time\)) Tj T*
+(Do this every week, on the same day:) Tj T*
+(1. Sign in to the app as an Administrator -> Settings -> Backup -> Create backup.) Tj T*
+(2. Wait for the new row in the back-up list. Note the filename.) Tj T*
+(3. Copy to a USB stick / second PC / network share:) Tj T*
+(o the newest `.sql` from `storage\\app\\private\\backups\\` and) Tj T*
+(o the whole folder `storage\\app\\private\\quotations\\` and) Tj T*
+(o `purchasing\\.env` \(fresh copy - the APP_KEY never changes, but keep it current\)) Tj T*
+(4. Put the USB in a known drawer. Label it with the date.) Tj T*
+(> The in-app back-up alone can resurrect the database but not the supplier files the procurement cycle ran on. USB with only the database = half a restore.) Tj T*
+(The in-app list keeps the 15 newest back-ups; the USB keeps everything.) Tj T*
+(---) Tj T*
+(3. Monthly 2-minute health check) Tj T*
+(1. Can you open `http://<server-ip>/login` from a different PC? \(Checks Apache/MySQL are alive.\)) Tj T*
+(2. On the server: is there at least 10% free disk space? \(`C:\\` drive -> Properties.\)) Tj T*
+(3. Settings -> Logs - does the newest entry look recent? \(Confirms the app is running and the schedule is alive.\)) Tj T*
+(4. Is the newest USB back-up younger than 14 days? If not, make one now.) Tj T*
+(If any of these fails, see §5.) Tj T*
+(---) Tj T*
+(4. Replacing the server \(the 3-5 year reality\)) Tj T*
+(The one failure you cannot script around is the PC itself dying. When that happens, or when you replace it:) Tj T*
+(1. Get a replacement machine \(any modern Windows PC is fine\).) Tj T*
+(2. Install the same or newer XAMPP \(PHP >= 8.2, MySQL/MariaDB, Apache\). Do not chase exact versions.) Tj T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 6175 >>
+stream
+BT /F1 10 Tf 12 TL
+50 780 Td
+(3. Clone the repo again \(or copy the project folder from a working copy\).) Tj T*
+(4. Run `composer install` in the project root. npm is not needed at runtime and neither is `npm run build`.) Tj T*
+(5. Copy back the sealed `.env`.) Tj T*
+(6. Import the latest `.sql` from §2 into a fresh `purchasing_db` database:) Tj T*
+(open phpMyAdmin \(comes with XAMPP\) -> select `purchasing_db` -> Import -> choose the file -> Go.) Tj T*
+(\(Alternative: `mysql -u root -p purchasing_db < backup.sql`.\)) Tj T*
+(7. Copy the `quotations\\` folder from the USB into `storage\\app\\private\\`.) Tj T*
+(8. Set the XAMPP Apache document root to `purchasing\\public\\`, and `APP_URL` in `.env` to the new machine's address \(e.g. `http://192.168.0.10:8000`\).) Tj T*
+(9. Start Apache and MySQL. Open the app from another PC, sign in, open one Project and one Purchase Order to confirm the data is intact. Print one RFQ. If those work, you are done.) Tj T*
+(Test this drill once a year on a spare machine. A back-up that has never been restored from is a hope, not a back-up.) Tj T*
+(---) Tj T*
+(5. Common incidents) Tj T*
+("The app won't open / shows an error page") Tj T*
+(1. Is Apache and MySQL running? \(XAMPP Control Panel - both green.\)) Tj T*
+(2. Is the disk full? \(Free space -> if 0, delete old USB-bound `.sql` copies first? No - never delete the newest one; delete other old files, or add disk.\)) Tj T*
+(3. Error page in the browser lists a file and line - if it mentions a missing class or extension \(e.g. `ZipArchive`\), the PHP extension is disabled in `php.ini`; re-enable `extension=zip` and `extension=dom`, restart Apache.) Tj T*
+(4. Still stuck? Restore the last known-good state per §4. Do not edit code to "try fixing it".) Tj T*
+("Someone restored \(or tried to restore\) a back-up") Tj T*
+(The Restore button requires typing `RESTORE` and takes a fresh safety snapshot first; administrators stay logged in. If a restore went wrong, restore *that* safety snapshot \(it's at the top of the back-up list\). Nothing is lost that was ever valid.) Tj T*
+("A quotation is locked and nobody can fix it") Tj T*
+(Known case: the quotation's prep list was soft-deleted. Fix: Manage -> the amber banner -> Restore prep list \(it brings the row back\). If the role can't, an Administrator can; worst case the DB path `Preplist::withTrashed\(\)->find\($id\)->restore\(\)` exists via Tinker \(`php artisan tinker`\). Then editing works again.) Tj T*
+("The login page loads but looks broken \(no styling\)") Tj T*
+(The self-hosted stylesheet failed to load. First check: APP_URL in `.env` points at the address the other PCs use \(e.g. `http://192.168.0.10:8000`, not `localhost`\) - if it doesn't, every `asset\(\)` URL resolves to the viewer's own machine and icons/logo/stylesheet all break. Second: confirm `public\\js\\tailwind-play-cdn.js` exists \(§7\). If the file is missing, copy it from any git clone of the repo - it is committed.) Tj T*
+("Windows Update rebooted the server during office hours") Tj T*
+(MySQL restart-during-write is the only risk; the app is transaction-safe, so no data is corrupted. Move future reboots off-hours \(Settings -> Windows Update -> Active hours\) and exclude the project folder and the MySQL `data` directory from anti-virus scanning to prevent file lock-ups.) Tj T*
+(---) Tj T*
+(6. Security posture, as decided) Tj T*
+(o The app is served on the office LAN only, over plain HTTP - accepted because the office network is physically controlled. If that changes \(guest Wi-Fi, shared devices from outside, anything on the 2.4 GHz password on the wall\), this decision is void: put the app behind HTTPS with an internal certificate from day one.) Tj T*
+(o Login is rate-limited \(throttle on the login POST\) and CSRF-protected; role-based permissions are enforced server-side; a user with a missing module grant cannot perform the action even by guessing the URL.) Tj T*
+(o Sessions die after 20 minutes idle and 8 hours absolute - on a shared front-desk PC this is the primary defense against someone walking up to an unlocked session. People should still click Sign out.) Tj T*
+(o MySQL should listen on `127.0.0.1` only \(default in XAMPP\). If you ever change the DB to listen on the LAN, set a real password in `.env` and in the MySQL user - otherwise anyone on the network owns the data.) Tj T*
+(o `APP_DEBUG` must stay `false` in `.env` on the real server. If it is `true`, any visitor sees internal paths and SQL on error pages - set it false today.) Tj T*
+(o `.env` contains the database password and `APP_KEY`. Treat the USB with the back-ups like a spare key: drawer, not desk.) Tj T*
+(---) Tj T*
+(7. Internet-independence guarantee) Tj T*
+(As of 2026-11, the app loads no external resources: the Tailwind Play CDN was replaced by a self-hosted copy, committed at `public/js/tailwind-play-cdn.js` \(Tailwind browser build v3.0.0, SHA-256 `176e894661aa9cdc9a5cba6c720044cbbf7b8bd80d1c9a142a7c24b1b6c50d15`\).) Tj T*
+(o Never update this file casually. The UI was written against Tailwind v3 semantics; do not swap in Tailwind v4 or a newer browser build without redesign time.) Tj T*
+(o The repo is the source of truth \(public/js is committed\); if the file is lost, `git checkout` restores it.) Tj T*
+(o Verification: stop the internet connection on the server and browse to the app - everything must look and behave identically. Do this check once after every server change.) Tj T*
+(---) Tj T*
+(8. What to never do) Tj T*
+(o Never run `composer update` / `npm update` on the live server "to be safe". Freeze is a feature.) Tj T*
+(o Never run XAMPP's "upgrade" prompts on a working server without a §2 back-up and a spare machine to test on.) Tj T*
+(o Never delete `storage\\app\\private\\backups\\*.sql` other than via the in-app 15-newest pruning.) Tj T*
+(o Never edit vendor files or core migrations to "just fix it".) Tj T*
+(o Never give the USB back-up away; it contains everything the office has ever ordered.) Tj T*
+(---) Tj T*
+(*Last reviewed: 2026-11 \(after the CDN removal and the lessons from shipping this to the office network\). Update the date when you edit this file.*) Tj T*
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000317 00000 n 
+0000004566 00000 n 
+0000004692 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+10919
+%%EOF

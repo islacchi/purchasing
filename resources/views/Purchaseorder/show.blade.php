@@ -3,15 +3,6 @@
 @section('page-title', 'PURCHASE ORDER')
 @section('title', 'Purchase Order - Purchasing')
 
-@section('header-actions')
-    @if ($purchaseOrder->isLocalPurchase())
-        <a href="{{ route('purchase-order.workbook', ['purchaseOrder' => $purchaseOrder->id]) }}"
-           class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
-            Download workbook
-        </a>
-    @endif
-@endsection
-
 @section('content')
     <style>
         /* Keep the wide items table scrolling inside its card instead of
