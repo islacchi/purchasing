@@ -98,8 +98,11 @@
         </div>
     @endif
 
-    <form action="{{ $isEdit ? route('preplist.update', ['preplist' => $prepList->id]) : route('preplist.store') }}" method="POST" class="flex flex-1 min-h-0 flex-col gap-4">
+    <form id="prepListForm" action="{{ $isEdit ? route('preplist.update', ['preplist' => $prepList->id]) : route('preplist.store') }}" method="POST" class="flex flex-1 min-h-0 flex-col gap-4">
         @csrf
+        {{-- The selection travels as one JSON payload (filled on submit; see the script below) so PHP's max_input_vars never applies. --}}
+        <input type="hidden" name="sources_json" id="sourcesJson">
+        <input type="hidden" name="shelf_life_json" id="shelfLifeJson">
         @if ($isEdit)
             @method('PUT')
         @endif
@@ -346,6 +349,39 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
+
+        // Serialize the checkbox selection and shelf-life inputs into the
+        // JSON payloads the controller reads on submit.
+        (function () {
+            const form = document.getElementById('prepListForm');
+            const sourcesJson = document.getElementById('sourcesJson');
+            const shelfLifeJson = document.getElementById('shelfLifeJson');
+
+            if (! form || ! sourcesJson) {
+                return;
+            }
+
+            form.addEventListener('submit', function () {
+                const selected = [];
+                document.querySelectorAll('input[name="sources[]"]:checked').forEach(function (el) {
+                    selected.push(Number(el.value));
+                });
+                sourcesJson.value = JSON.stringify(selected);
+
+                const shelfLife = {};
+                document.querySelectorAll('input[name^="shelf_life["]').forEach(function (el) {
+                    const match = el.name.match(/^shelf_life\[(\d+)\]$/);
+                    if (! match) {
+                        return;
+                    }
+                    const value = parseInt(el.value, 10);
+                    if (! Number.isNaN(value)) {
+                        shelfLife[match[1]] = value;
+                    }
+                });
+                shelfLifeJson.value = JSON.stringify(shelfLife);
+            });
+        })();
 
         // Selection handling for project headers, item checkboxes, and the summary.
         (function () {

@@ -334,6 +334,31 @@ class PreplistTest extends TestCase
         ]);
     }
 
+    public function test_compile_saves_items_via_the_json_payload(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item(['name' => 'JsonCompileSourceItem']);
+        $firstSource = $this->projectItem($project, $item, ['quantity' => 15]);
+
+        $this->actingAs($user)
+            ->post(route('preplist.store'), [
+                'name' => 'Json compile list',
+                'sources_json' => json_encode([$firstSource->id]),
+                'shelf_life_json' => json_encode([$firstSource->id => 4]),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('preplist_item_sources', [
+            'project_item_id' => $firstSource->id,
+            'qty' => 15,
+        ]);
+
+        $preplistItem = PreplistItem::query()->firstOrFail();
+        $this->assertSame(4, (int) $preplistItem->min_shelf_life_months);
+    }
+
     public function test_preplist_reference_numbers_increment_for_the_year(): void
     {
         $user = $this->admin();

@@ -44,6 +44,9 @@
         <form id="localPurchaseForm" method="POST" action="{{ route('preplist.local-purchase.store', ['preplist' => $prepList->id]) }}"
               class="flex min-h-0 flex-1 flex-col">
             @csrf
+            {{-- The selection and line quantities travel as JSON so PHP's max_input_vars never applies (see the script below). --}}
+            <input type="hidden" name="selected_json" id="selectedJson">
+            <input type="hidden" name="lines_json" id="linesJson">
 
             <div class="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_340px]">
 
@@ -220,6 +223,41 @@
         (function () {
             var table = document.getElementById('localPurchaseForm');
             if (!table) return;
+
+            // The selection and line quantities travel as JSON (see the controller).
+            (function () {
+                var selectedJson = document.getElementById('selectedJson');
+                var linesJson = document.getElementById('linesJson');
+                if (!selectedJson) {
+                    return;
+                }
+
+                table.addEventListener('submit', function () {
+                    var selected = [];
+                    var lines = {};
+
+                    document.querySelectorAll('[data-lp-select]').forEach(function (check) {
+                        if (!check.checked) {
+                            return;
+                        }
+
+                        var id = String(check.value);
+                        selected.push(Number(id));
+
+                        var row = check.closest('[data-lp-row]');
+                        var qty = row ? (row.querySelector('input[name$="[qty]"]').value || '') : '';
+                        var price = row ? (row.querySelector('input[name$="[unit_price]"]').value || '') : '';
+
+                        lines[id] = { qty: qty };
+                        if (price !== '') {
+                            lines[id].unit_price = price;
+                        }
+                    });
+
+                    selectedJson.value = JSON.stringify(selected);
+                    linesJson.value = JSON.stringify(lines);
+                });
+            })();
 
             var rowEls = table.querySelectorAll('[data-lp-row]');
             var selectAllBtn = document.getElementById('lpToggleAll');

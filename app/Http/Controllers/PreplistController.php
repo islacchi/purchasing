@@ -300,6 +300,28 @@ class PreplistController extends Controller
      */
     public function storeLocalPurchase(Request $request, Preplist $preplist)
     {
+        // The form posts the selection and line quantities as one JSON
+        // payload (`selected_json` + `lines_json`) so PHP's
+        // max_input_vars can never truncate a long prep list; classic
+        // `selected[]` / `lines[id][...]` POSTs still work.
+        $selectedJson = $request->input('selected_json');
+        if (is_string($selectedJson) && trim($selectedJson) !== '') {
+            $decoded = json_decode($selectedJson, true);
+            $selected = is_array($decoded) ? $decoded : [];
+        } else {
+            $selected = $request->input('selected', []);
+        }
+
+        $linesJson = $request->input('lines_json');
+        if (is_string($linesJson) && trim($linesJson) !== '') {
+            $decoded = json_decode($linesJson, true);
+            $lines = is_array($decoded) ? $decoded : [];
+        } else {
+            $lines = $request->input('lines', []);
+        }
+
+        $request->merge(['selected' => $selected, 'lines' => $lines]);
+
         $validated = $request->validate([
             'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
             'expected_delivery' => ['nullable', 'date'],
@@ -855,6 +877,28 @@ class PreplistController extends Controller
      */
     private function validatePreplist(Request $request): array
     {
+        // The form posts its selection as one JSON payload (`sources_json` +
+        // `shelf_life_json`) so PHP's max_input_vars can never truncate a
+        // large compile; classic `sources[]` / `shelf_life[id]` POSTs are
+        // still accepted.
+        $sourcesJson = $request->input('sources_json');
+        if (is_string($sourcesJson) && trim($sourcesJson) !== '') {
+            $decoded = json_decode($sourcesJson, true);
+            $sources = is_array($decoded) ? $decoded : [];
+        } else {
+            $sources = $request->input('sources', []);
+        }
+
+        $shelfLifeJson = $request->input('shelf_life_json');
+        if (is_string($shelfLifeJson) && trim($shelfLifeJson) !== '') {
+            $decoded = json_decode($shelfLifeJson, true);
+            $shelfLife = is_array($decoded) ? $decoded : [];
+        } else {
+            $shelfLife = $request->input('shelf_life', []);
+        }
+
+        $request->merge(['sources' => $sources, 'shelf_life' => $shelfLife]);
+
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],

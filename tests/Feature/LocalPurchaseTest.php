@@ -549,6 +549,27 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame('draft', $po->refresh()->status);
     }
 
+    public function test_local_purchase_store_via_json_payload(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected_json' => json_encode([$preplistItem->id]),
+                'lines_json' => json_encode([$preplistItem->id => ['qty' => 10, 'unit_price' => '305.00']]),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        $this->assertSame(10, (int) $poItem->qty);
+    }
+
     public function test_bought_box_count_drives_the_quantity_and_allows_packaging_overage(): void
     {
         $user = $this->admin();
