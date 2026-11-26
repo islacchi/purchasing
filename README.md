@@ -512,6 +512,7 @@ Send to supplier → lines received per line item → PO auto-moves Sent → Par
 ### Requirements
 
 - PHP **8.2+** with OpenSSL, Mbstring, Zip, and MySQL (or MariaDB) support.
+- PHP limits worth confirming: `post_max_size` and `upload_max_filesize` ≥ 10M (this build runs 40M), `max_input_vars` ≥ 1000, `memory_limit` ≥ 512M. The high-volume forms submit one JSON payload, so `max_input_vars` no longer caps their row counts.
 - Composer.
 - Node.js for `npm run build` (Tailwind v4 + Vite).
 - MySQL 8 or MariaDB 10.4+ running locally.
@@ -687,7 +688,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **308 passed / 1780 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **310 passed / 1786 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -708,7 +709,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 308 passing (1780 assertions)
+- [x] **Tests** — 310 passing (1786 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days — or ≤ 14 with nothing fulfilled yet); clears when the risk resolves; empty projects never alert
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
@@ -746,7 +747,7 @@ Accepted trade-offs in the current build — worth knowing before relying on the
 
 - **Notifications are live by design.** The bell badge shows current delivery risks only, and it clears when the risk is resolved (all lines fulfilled or covered by stock) — there is deliberately no persisted notification log or read state; projects with no items never raise an alert.
 
-- **Large forms rely on JavaScript for their uncapped path.** Projects, Prep list compile, Local purchase, PO create, PO record purchase, and Cart checkout submit their row data as one JSON payload, so `max_input_vars` never truncates them. With JavaScript disabled, those forms fall back to classic field posts; `RejectTruncatedFormPost` now rejects a post that reaches `max_input_vars` instead of silently saving only part of it. The only remaining ceilings on the JSON path are `post_max_size` and `memory_limit`.
+- **Large forms rely on JavaScript for their uncapped path.** Projects, Prep list compile, Local purchase, PO create, PO record purchase, and Cart checkout submit their row data as one JSON payload, so `max_input_vars` never truncates them. With JavaScript disabled, those forms fall back to classic field posts; `RejectTruncatedFormPost` now rejects a post that reaches `max_input_vars` instead of silently saving only part of it. The JSON path's only remaining ceilings are `post_max_size` and `memory_limit`: a request above `post_max_size` renders a styled 413 page (nothing is saved), and a quotation file above `upload_max_filesize` gets a validation message naming the server limit. `memory_limit` exhaustion is a PHP fatal error and cannot be caught gracefully.
 
 ---
 

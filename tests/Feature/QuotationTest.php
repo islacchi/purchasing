@@ -515,6 +515,50 @@ class QuotationTest extends TestCase
         @unlink($temporaryPath);
     }
 
+    public function test_quotation_upload_explains_the_server_file_size_limit(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->admin();
+        $entity = $this->entity();
+        $project = $this->project($user, $entity);
+        $item = $this->item();
+        $projectItem = $this->projectItem($project, $item);
+        $supplier = Supplier::create(['name' => 'Oversized Supplies']);
+
+        $preplist = $this->compile($user, [
+            'name' => 'July Region VII batch',
+            'sources' => [$projectItem->id],
+            'shelf_life' => [$projectItem->id => 9],
+        ]);
+
+        $quotation = $this->createQuotation($user, $preplist, $supplier);
+
+        $temporaryPath = tempnam(sys_get_temp_dir(), 'oversized_').'.xlsx';
+        file_put_contents($temporaryPath, 'anything at all');
+
+        // PHP marks a file above upload_max_filesize with this error code.
+        $file = new UploadedFile(
+            $temporaryPath,
+            'oversized.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            UPLOAD_ERR_INI_SIZE,
+            true,
+        );
+
+        $this->actingAs($user)
+            ->post(route('quotation.store-document', ['quotation' => $quotation->id]), [
+                'document' => $file,
+            ])
+            ->assertSessionHasErrors([
+                'document' => 'The quotation file is larger than this server accepts (upload_max_filesize is '
+                    .ini_get('upload_max_filesize')
+                    .'). Nothing was uploaded; ask the administrator to raise that limit or send a smaller .xlsx file.',
+            ]);
+
+        @unlink($temporaryPath);
+    }
+
     public function test_quotation_show_displays_pending_items_and_document(): void
     {
         Storage::fake('local');

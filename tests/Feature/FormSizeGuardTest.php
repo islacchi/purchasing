@@ -72,4 +72,38 @@ class FormSizeGuardTest extends TestCase
 
         $this->assertGuest();
     }
+
+    public function test_oversized_posts_render_the_friendly_413_page(): void
+    {
+        $limit = $this->postMaxSizeBytes();
+
+        if ($limit < 1) {
+            $this->markTestSkipped('post_max_size is unlimited in this environment.');
+        }
+
+        $this->call('POST', '/login', [], [], [], [
+            'CONTENT_LENGTH' => $limit + 1,
+        ])->assertStatus(413)
+            ->assertSee('Submission too large')
+            ->assertSee('nothing was saved');
+    }
+
+    private function postMaxSizeBytes(): int
+    {
+        $value = trim((string) ini_get('post_max_size'));
+
+        if ($value === '' || $value === '0' || $value === '-1') {
+            return 0;
+        }
+
+        $unit = strtoupper(substr($value, -1));
+        $number = (int) $value;
+
+        return match ($unit) {
+            'K' => $number * 1024,
+            'M' => $number * 1024 * 1024,
+            'G' => $number * 1024 * 1024 * 1024,
+            default => $number,
+        };
+    }
 }

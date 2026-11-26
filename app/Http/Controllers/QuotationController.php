@@ -478,11 +478,26 @@ class QuotationController extends Controller
             ]);
         }
 
+        // PHP reports an upload larger than upload_max_filesize as an error
+        // code instead of a normal file; without this check the file rule
+        // only says "failed to upload". Give the real server limit instead.
+        $uploadedDocument = $request->file('document');
+
+        if ($uploadedDocument !== null
+            && in_array($uploadedDocument->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) {
+            throw ValidationException::withMessages([
+                'document' => 'The quotation file is larger than this server accepts (upload_max_filesize is '
+                    .ini_get('upload_max_filesize')
+                    .'). Nothing was uploaded; ask the administrator to raise that limit or send a smaller .xlsx file.',
+            ]);
+        }
+
         $request->validate([
             'document' => ['required', 'file', 'extensions:xlsx', 'max:10240'],
         ], [
             'document.required' => 'Choose the supplier’s completed quotation file to upload.',
             'document.extensions' => 'Upload the completed quotation as an .xlsx file.',
+            'document.max' => 'The quotation file must not be larger than 10 MB.',
         ]);
 
         $file = $request->file('document');
