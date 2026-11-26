@@ -210,6 +210,9 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::get('/purchase-order/{purchaseOrder}/workbook', [PurchaseOrderController::class, 'downloadWorkbook'])
             ->whereNumber('purchaseOrder')
             ->name('purchase-order.workbook');
+        Route::get('/purchase-order/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'downloadPdf'])
+            ->whereNumber('purchaseOrder')
+            ->name('purchase-order.pdf');
         Route::post('/purchase-order/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])
             ->whereNumber('purchaseOrder')
             ->name('purchase-order.send');

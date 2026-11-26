@@ -346,6 +346,19 @@ class PurchaseOrderController extends Controller
         return Storage::disk('local')->download($path, $purchaseOrder->po_number.'.xlsx');
     }
 
+    /**
+     * Generate and download the purchase order as a PDF document.
+     */
+    public function downloadPdf(PurchaseOrder $purchaseOrder)
+    {
+        $purchaseOrder->load(['supplier', 'quotation.preplist', 'items.item', 'items.quotationItem']);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('Purchaseorder.pdf', ['purchaseOrder' => $purchaseOrder])
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download($purchaseOrder->po_number.'.pdf');
+    }
+
     private function workbookPath(PurchaseOrder $purchaseOrder): string
     {
         return 'po-workbooks/'.$purchaseOrder->po_number.'.xlsx';
