@@ -57,7 +57,7 @@ A Laravel 12 application that runs the procurement cycle end to end: **Projects 
 - Username/email + password.
 - Accounts must be **active** (`is_active = 1`) and have a role assigned.
 - Login is throttled (`throttle:6,1` — 6 attempts per minute per IP).
-- Expired/inactive sessions are dropped by `EnsureSessionIsActive` middleware.
+- Sessions past their absolute lifetime are dropped by `EnsureSessionIsActive` middleware; there is no idle logout (see `config/session.php`).
 - Logout via a sidebar button; a confirmation modal prevents accidental logouts.
 - Login page reports precisely which field was wrong on failure (no vague “invalid credentials” for known-good accounts).
 
@@ -586,7 +586,7 @@ Seeded module grants: **Procurement Officer → Manage** on all six modules, **V
 | How is the matrix reflected in the UI? | View-only roles see inert greyed buttons (cursor-not-allowed); modules they cannot view are hidden from the sidebar; blocked actions open a shared amber access-restricted modal. |
 | What does Settings gate? | `access-settings` gate (administrator only). |
 | Settings → Logs | Real activity rows: module writes and matrix/user changes; browsable with module/user filters. |
-| Session lifetime | Inactivity + absolute lifetime enforced by custom middleware. |
+| Session lifetime | Absolute lifetime enforced by custom middleware (`session.absolute_lifetime`, default 8 hours); no idle timeout. |
 | Login throttling | `throttle:6,1` on the login POST route. |
 | PO deletion | Restricted to Administrator; only `draft` and `cancelled` orders may be deleted. |
 | Prep list deletion | Blocked while any quotation references it. |
@@ -687,7 +687,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **248 passed / 1430 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **303 passed / 1760 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -698,7 +698,7 @@ Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side midd
 Legend: ✅ done · 🚧 in progress / not started.
 
 ### Done
-- [x] **Authentication** — username/email + password, account activation, session inactivity & absolute lifetime enforcement, throttled login, clear login-error messages
+- [x] **Authentication** — username/email + password, account activation, absolute session lifetime enforcement, throttled login, clear login-error messages
 - [x] **Entities** — procuring entities and suppliers: list/search/create/edit/delete, soft-delete, stored contact details
 - [x] **Projects** — list/search/create/edit/delete, delivery due-date tracking, per-item fulfillment status, progress bar, soft-delete, Excel export & print-ready folio sheet
 - [x] **Prep Lists** — list/search/create/edit/delete, item compilation with source quantities, per-project expiry/shelf-life rules, grouped by source project
@@ -708,7 +708,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 250 passing (1436 assertions)
+- [x] **Tests** — 303 passing (1760 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days — or ≤ 14 with nothing fulfilled yet); clears when the risk resolves; empty projects never alert
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
@@ -745,6 +745,8 @@ Accepted trade-offs in the current build — worth knowing before relying on the
 - **Ties count as a win for every tied supplier** in the competitiveness scorecard.
 
 - **Notifications are live by design.** The bell badge shows current delivery risks only, and it clears when the risk is resolved (all lines fulfilled or covered by stock) — there is deliberately no persisted notification log or read state; projects with no items never raise an alert.
+
+- **Large forms rely on JavaScript for their uncapped path.** Projects, Prep list compile, Local purchase, PO create, and Cart checkout submit their row data as one JSON payload, so `max_input_vars` never truncates them. With JavaScript disabled, those forms fall back to classic field posts and can still be cut off at the PHP cap. The only remaining ceilings on the JSON path are `post_max_size` and `memory_limit`.
 
 ---
 
