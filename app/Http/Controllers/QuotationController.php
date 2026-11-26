@@ -550,6 +550,28 @@ class QuotationController extends Controller
             ];
         }
 
+        // Refusing to drop a quotation line that is already referenced by a
+        // purchase order would otherwise trip the non-cascading foreign key on
+        // purchase_order_items.quotation_item_id.
+        $removedPreplistItemIds = collect($updates)
+            ->where('unit_price', null)
+            ->pluck('preplist_item_id')
+            ->all();
+
+        if ($removedPreplistItemIds !== []) {
+            $removedQuotationItemIds = QuotationItem::query()
+                ->where('quotation_id', $quotation->id)
+                ->whereIn('preplist_item_id', $removedPreplistItemIds)
+                ->pluck('id');
+
+            if ($removedQuotationItemIds->isNotEmpty()
+                && PurchaseOrderItem::query()->whereIn('quotation_item_id', $removedQuotationItemIds)->exists()) {
+                return redirect()
+                    ->route('quotation.upload', ['quotation' => $quotation->id])
+                    ->withErrors(['quotation' => 'One or more lines being removed are already used by a purchase order and cannot be dropped.']);
+            }
+        }
+
         try {
             DB::transaction(function () use ($quotation, $updates) {
                 foreach ($updates as $data) {

@@ -420,6 +420,20 @@ class SettingsController extends Controller
                 ->with('error', 'At least one active administrator account must remain.');
         }
 
+        $references = collect([
+            'projects' => \App\Models\Project::query()->where('created_by', $user->id)->exists(),
+            'prep lists' => \App\Models\Preplist::query()->where('created_by', $user->id)->exists(),
+            'quotations' => \App\Models\Quotation::query()->where('created_by', $user->id)->exists(),
+            'purchase orders' => \App\Models\PurchaseOrder::query()->where('created_by', $user->id)->exists(),
+            'activity logs' => \App\Models\ActivityLog::query()->where('user_id', $user->id)->exists(),
+        ])->filter()->keys()->all();
+
+        if ($references !== []) {
+            return redirect()
+                ->route('settings.privileges')
+                ->with('error', 'This user cannot be deleted because it is referenced by: '.implode(', ', $references).'.');
+        }
+
         DB::transaction(function () use ($user) {
             $user->delete();
 

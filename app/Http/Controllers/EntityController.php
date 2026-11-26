@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProcuringEntity;
 use App\Models\Project;
 use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseOrder;
 use App\Models\Quotation;
 use App\Models\Supplier;
 use App\Support\ActivityLogger;
@@ -247,6 +248,29 @@ class EntityController extends Controller
 
         $model = $this->modelForType($type);
         $entity = $model::query()->findOrFail($id);
+
+        if ($type === 'supplier') {
+            $quotationCount = Quotation::query()->where('supplier_id', $entity->id)->count();
+            $poCount = PurchaseOrder::query()->where('supplier_id', $entity->id)->count();
+
+            if ($quotationCount > 0 || $poCount > 0) {
+                return redirect()
+                    ->route('entities', ['tab' => $this->indexTab($type)])
+                    ->withErrors(['entity' => 'This supplier is already referenced by '
+                        .($quotationCount > 0 ? $quotationCount.' quotation(s)' : '')
+                        .($quotationCount > 0 && $poCount > 0 ? ' and ' : '')
+                        .($poCount > 0 ? $poCount.' purchase order(s)' : '')
+                        .', and cannot be deleted.']);
+            }
+        } else {
+            $projectCount = Project::withTrashed()->where('procuring_entity_id', $entity->id)->count();
+
+            if ($projectCount > 0) {
+                return redirect()
+                    ->route('entities', ['tab' => $this->indexTab($type)])
+                    ->withErrors(['entity' => 'This procuring entity is already referenced by '.$projectCount.' project(s), and cannot be deleted.']);
+            }
+        }
 
         DB::transaction(function () use ($entity) {
             $entity->delete();

@@ -445,6 +445,12 @@ class PreplistController extends Controller
      */
     public function update(Request $request, Preplist $preplist)
     {
+        if (Quotation::query()->where('preplist_id', $preplist->id)->exists()) {
+            return redirect()
+                ->route('preplist.show', ['preplist' => $preplist->id])
+                ->withErrors(['preplist' => 'This prep list already has a quotation and can no longer be edited.']);
+        }
+
         $validated = $this->validatePreplist($request);
         $this->assertNoFulfilledSources($validated, $preplist);
         $this->assertNoAlreadySourcedElsewhere($validated, $preplist);

@@ -675,15 +675,30 @@ class ProjectController extends Controller
                     continue;
                 }
 
+                if (\App\Models\PurchaseOrderItemAllocation::query()
+                    ->where('project_item_id', $projectItem->id)
+                    ->exists()) {
+                    $blocked[] = $projectItem->item?->name ?? 'Item';
+
+                    continue;
+                }
+
+                // Drop any sourcing rows that no longer represent a live
+                // procurement promise (e.g. trashed prep lists) so the FK
+                // constraint on project_item_id does not block deletion.
+                PreplistItemSource::query()
+                    ->where('project_item_id', $projectItem->id)
+                    ->delete();
+
                 $projectItem->delete();
             }
         }
 
         if ($blocked !== []) {
             throw ValidationException::withMessages([
-                'items' => 'These items are already used in a prep list and cannot be removed from the project: '
+                'items' => 'These items are already used in a prep list or purchase order and cannot be removed from the project: '
                     .implode(', ', array_unique($blocked))
-                    .'. Remove them in the prep list first, then save the project.',
+                    .'. Remove them in the prep list or purchase order first, then save the project.',
             ]);
         }
     }
