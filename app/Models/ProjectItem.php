@@ -25,6 +25,7 @@ class ProjectItem extends Model
     protected $fillable = [
         'project_id',
         'item_id',
+        'item_no',
         'quantity',
         'in_stock',
         'unit_cost',

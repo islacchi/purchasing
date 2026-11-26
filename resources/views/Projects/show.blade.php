@@ -172,6 +172,7 @@
                     <table class="w-full">
                         <thead class="sticky top-0 z-10 bg-[#0e5266]">
                             <tr>
+                                <th class="whitespace-nowrap px-4 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-white">Item no.</th>
                                 <th class="whitespace-nowrap max-w-[22rem] px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Item description</th>
                                 <th class="whitespace-nowrap px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-white">To procure</th>
                                 <th class="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-white">Unit</th>
@@ -182,7 +183,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @forelse ($project->items as $projectItem)
+                            @forelse ($project->items->sortBy(fn ($i) => (int) ($i->item_no ?? $i->id)) as $projectItem)
                                 @php
                                     $unitPrice = $projectItem->awarded_unit_price ?? $projectItem->unit_cost;
                                     $remaining = $projectItem->remainingQuantity();
@@ -197,6 +198,7 @@
                                     };
                                 @endphp
                                 <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-center text-sm text-gray-500">{{ $projectItem->item_no ?? $loop->iteration }}</td>
                                     <td class="max-w-[22rem] px-4 py-3 text-sm text-gray-900 break-words">
                                         <p class="break-words">{{ $projectItem->item?->name ?? '-' }}</p>
                                         @php($overagePieces = $projectItem->purchaseOveragePieces())

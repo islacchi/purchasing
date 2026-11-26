@@ -226,7 +226,9 @@ class ProjectController extends Controller
         if ($items === null || count($items) === 0) {
             if ($project && $project->items->isNotEmpty()) {
                 $items = $project->items
+                    ->sortBy(fn (ProjectItem $projectItem) => (int) ($projectItem->item_no ?? $projectItem->id))
                     ->map(fn (ProjectItem $projectItem) => [
+                        'item_no' => $projectItem->item_no,
                         'description' => $projectItem->item?->name ?? '',
                         'category' => $projectItem->item?->category?->name ?? '',
                         'unit' => $projectItem->item?->unit ?? '',
@@ -628,17 +630,19 @@ class ProjectController extends Controller
 
         $sourced = $this->sourcedPrepLists($existing->pluck('id')->all());
 
-        foreach ($items as $row) {
+        foreach (array_values($items) as $index => $row) {
             $resolved = $this->resolveRowItem($row, createMissing: true);
 
             if ($resolved !== null && ! empty($pool[$resolved->id])) {
                 $match = array_shift($pool[$resolved->id]);
 
                 if (isset($sourced[$match->id])) {
+                    $match->update(['item_no' => $index + 1]);
                     continue; // Locked line — keep the stored values untouched.
                 }
 
                 $match->update([
+                    'item_no' => $index + 1,
                     'quantity' => (int) $row['quantity'],
                     'in_stock' => $this->inStockFromInput($row, $resolved),
                     'unit_cost' => $row['unit_cost'],
@@ -656,6 +660,7 @@ class ProjectController extends Controller
             ProjectItem::query()->create([
                 'project_id' => $project->id,
                 'item_id' => $resolved->id,
+                'item_no' => $index + 1,
                 'quantity' => (int) $row['quantity'],
                 'in_stock' => $this->inStockFromInput($row, $resolved),
                 'unit_cost' => $row['unit_cost'],
