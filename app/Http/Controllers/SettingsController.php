@@ -109,11 +109,6 @@ class SettingsController extends Controller
         $modules = ActivityLog::query()->distinct()->orderBy('module')->pluck('module');
         $users = ActivityLog::query()->distinct()->orderBy('user_name')->pluck('user_name');
 
-        $logDeleteBatch = session('logs_delete_batch');
-        $logDeleteLogs = $logDeleteBatch !== null
-            ? ActivityLog::query()->whereIn('id', $logDeleteBatch['ids'])->orderByDesc('created_at')->get()
-            : collect();
-
         return view('settings.logs', compact(
             'activityLogs',
             'logs',
@@ -126,63 +121,8 @@ class SettingsController extends Controller
             'filterTo',
             'dateNotice',
             'modules',
-            'users',
-            'logDeleteBatch',
-            'logDeleteLogs'
+            'users'
         ));
-    }
-
-    /**
-     * Prepare a deletion of selected activity log rows.
-     *
-     * Requires a reason and stores the selection; the deletion happens from
-     * the delete modal on the logs page, where the print button unlocks the
-     * deletion button.
-     */
-    public function logsDeletePrepare(Request $request)
-    {
-        $validated = $request->validate([
-            'logs' => ['required', 'array', 'min:1'],
-            'logs.*' => ['required', 'integer'],
-            'reason' => ['required', 'string', 'max:500'],
-        ]);
-
-        $ids = array_values(array_unique(array_filter($validated['logs'], fn ($id) => is_numeric($id))));
-        $existing = ActivityLog::query()->whereIn('id', $ids)->orderByDesc('created_at')->get();
-
-        if ($existing->isEmpty()) {
-            return redirect()->route('settings.logs')->with('status', 'Nothing was selected to delete.');
-        }
-
-        // Stored with put, not flash: the modal is a separate step that the
-        // operator can take their time on before printing and confirming.
-        session()->put('logs_delete_batch', [
-            'ids' => $existing->pluck('id')->all(),
-            'reason' => trim((string) $validated['reason']),
-        ]);
-
-        return redirect()->route('settings.logs');
-    }
-
-    /**
-     * Delete the logs the operator confirmed in the modal.
-     */
-    public function logsDeleteConfirmed()
-    {
-        $batch = session('logs_delete_batch');
-
-        if ($batch === null || empty($batch['ids'])) {
-            return redirect()->route('settings.logs');
-        }
-
-        $deleted = ActivityLog::query()->whereIn('id', $batch['ids'])->delete();
-        session()->forget('logs_delete_batch');
-
-        ActivityLogger::log('Deleted', 'Settings', "Deleted {$deleted} activity log".($deleted === 1 ? '' : 's'));
-
-        return redirect()
-            ->route('settings.logs')
-            ->with('status', "Deleted {$deleted} activity log".($deleted === 1 ? '' : 's'));
     }
 
     /**
