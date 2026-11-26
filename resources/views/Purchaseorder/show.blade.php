@@ -270,14 +270,14 @@
                 <table class="w-full table-fixed text-xs">
                     <colgroup>
                         <col class="w-[4%]">
-                        <col class="w-[18%]">
+                        <col class="w-[17%]">
                         <col class="w-[7%]">
                         <col class="w-[8%]">
                         <col class="w-[10%]">
                         <col class="w-[11%]">
                         <col class="w-[12%]">
-                        <col class="w-[13%]">
-                        <col class="w-[17%]">
+                        <col class="w-[15%]">
+                        <col class="w-[16%]">
                     </colgroup>
                     <thead class="sticky top-0 z-10 bg-[#0e5266]">
                         <tr class="text-left text-[10px] font-semibold uppercase tracking-wider text-white">
@@ -370,7 +370,7 @@
                                                 data-po-line-id="{{ $item->id }}"
                                                 data-po-qty="{{ $tracked ? $item->remainingPieces() : $item->remainingQty() }}"
                                                 data-po-label="{{ $item->item?->name ?? 'this line' }}"
-                                                class="mt-0.5 inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-amber-400 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                                class="mt-0.5 inline-flex items-center gap-1 rounded-md border border-amber-400 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                                 aria-label="Mark {{ $item->item?->name ?? 'this line' }} as bought">
                                             <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 10a2 2 0 100 4m8-4a2 2 0 100 4M8 13h8"/>
