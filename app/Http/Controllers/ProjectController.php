@@ -211,18 +211,6 @@ class ProjectController extends Controller
     {
         $items = old('items');
 
-        // The form posts its rows as one JSON payload (`items_json`); on a
-        // failed save the rows are rehydrated from it before falling back to
-        // the stored project lines.
-        if ($items === null || count($items) === 0) {
-            $itemsJson = old('items_json');
-
-            if (is_string($itemsJson) && trim($itemsJson) !== '') {
-                $decoded = json_decode($itemsJson, true);
-                $items = is_array($decoded) ? $decoded : [];
-            }
-        }
-
         if ($items === null || count($items) === 0) {
             if ($project && $project->items->isNotEmpty()) {
                 $items = $project->items
@@ -542,26 +530,14 @@ class ProjectController extends Controller
             $request->merge(['delivery_days' => null]);
         }
 
-        // The form posts its rows as a single JSON payload (`items_json`) so
-        // PHP's max_input_vars can never truncate a long item list; classic
-        // `items[i][...]` POSTs are still accepted.
-        $itemsJson = $request->input('items_json');
-
-        if (is_string($itemsJson) && trim($itemsJson) !== '') {
-            $decoded = json_decode($itemsJson, true);
-            $rawItems = is_array($decoded) ? $decoded : [];
-        } else {
-            $rawItems = $request->input('items', []);
-        }
-
-        // Drop untouched item rows before validation so an empty row does not
-        // block saving the project.
-        $items = collect($rawItems)
+        $items = collect($request->input('items', []))
             ->filter(fn ($item) => is_array($item)
                 && collect($item)->contains(fn ($value) => filled($value)))
             ->values()
             ->all();
 
+        // Drop untouched item rows before validation so an empty row does not
+        // block saving the project.
         $request->merge(['items' => $items]);
 
         return $request->validate([

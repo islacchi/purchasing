@@ -217,10 +217,9 @@ erDiagram
     suppliers ||--o{ purchase_orders : supplies
     quotations ||--o{ quotation_items : lists
     preplist_items ||--o{ quotation_items : asked
-    quotations |o--o{ purchase_orders : awards
+    quotations ||--o{ purchase_orders : awards
     purchase_orders ||--o{ purchase_order_items : lines
-    quotation_items |o--o{ purchase_order_items : priced_by
-    preplist_items |o--o{ purchase_order_items : "ordered as"
+    quotation_items ||--o{ purchase_order_items : priced_by
     purchase_order_items ||--o{ purchase_order_receipts : received_as
     purchase_order_items ||--o{ purchase_order_item_allocations : split_to
     project_items ||--o{ purchase_order_item_allocations : fulfils
@@ -326,7 +325,7 @@ erDiagram
         bigint project_id FK
         bigint item_id FK
         int quantity
-        int in_stock "pieces when the item has a box_size"
+        int in_stock
         decimal unit_cost
         decimal awarded_unit_price
         string fulfillment_status
@@ -370,8 +369,7 @@ erDiagram
     }
     purchase_orders {
         bigint id PK
-        bigint quotation_id FK "nullable, null for local POs"
-        string source "quotation or local"
+        bigint quotation_id FK
         bigint supplier_id FK
         bigint created_by FK
         string po_number UK
@@ -388,8 +386,7 @@ erDiagram
     purchase_order_items {
         bigint id PK
         bigint purchase_order_id FK
-        bigint quotation_item_id FK, UK "nullable, globally unique"
-        bigint preplist_item_id FK "nullable, set on local lines"
+        bigint quotation_item_id FK, UK "globally unique"
         bigint item_id FK
         int qty
         decimal unit_price
@@ -446,7 +443,7 @@ erDiagram
 | Table | Purpose |
 |-------|---------|
 | `projects` | The procurement job. `reference_no` is indexed. |
-| `project_items` | Lines inside a project: item, awarded requirement (boxes when the item has a `box_size`), on-hand stock in pieces, unit cost, awarded unit price, and `fulfillment_status` (`pending` / `partial` / `fulfilled`). |
+| `project_items` | Lines inside a project: item, quantity, on-hand stock, awarded unit price. |
 | `preplists` | Compiled prep lists (`PL-YYYY-NNNN`). |
 | `preplist_items` | Unique `(preplist_id, item_id)` — an item appears at most once per prep list. |
 | `preplist_item_sources` | Which project lines each prep-list line is sourced from; preserves provenance. |
@@ -463,8 +460,8 @@ erDiagram
 
 | Table | Purpose |
 |-------|---------|
-| `purchase_orders` | `status`: `draft`, `sent`, `partially_received`, `completed`, `cancelled`. Orders without a quotation (`source = 'local'`, `quotation_id` null) are created directly against a supplier from the Prep Lists → Local purchase flow. |
-| `purchase_order_items` | Lines from the RFQ to the PO; unique `(purchase_order_id, quotation_item_id)`. When the supplier packs differently, `box_size` snapshots their pack so pieces reconcile (`qty × box_size`); local lines carry `preplist_item_id` instead of a quotation line. |
+| `purchase_orders` | `status`: `draft`, `sent`, `partially_received`, `completed`, `cancelled`. |
+| `purchase_order_items` | Lines from the RFQ to the PO; unique `(purchase_order_id, quotation_item_id)`. When the supplier packs differently, `box_size` snapshots their pack so pieces reconcile (`qty × box_size`). |
 | `purchase_order_receipts` | One row per receipt event; `received_qty` always records the full line quantity (the UI has no partial-qty field yet), and `lot_no` / `expiry_date` exist for a future capture step. Kept even after full receipt. |
 | `purchase_order_item_allocations` | Pro-rated split of each PO line back onto the project lines it fulfils. |
 
@@ -589,7 +586,7 @@ Seeded module grants: **Procurement Officer → Manage** on all six modules, **V
 | How is the matrix reflected in the UI? | View-only roles see inert greyed buttons (cursor-not-allowed); modules they cannot view are hidden from the sidebar; blocked actions open a shared amber access-restricted modal. |
 | What does Settings gate? | `access-settings` gate (administrator only). |
 | Settings → Logs | Real activity rows: module writes and matrix/user changes; browsable with module/user filters. |
-| Session lifetime | Absolute lifetime enforced by custom middleware; inactivity no longer forces a logout. |
+| Session lifetime | Inactivity + absolute lifetime enforced by custom middleware. |
 | Login throttling | `throttle:6,1` on the login POST route. |
 | PO deletion | Restricted to Administrator; only `draft` and `cancelled` orders may be deleted. |
 | Prep list deletion | Blocked while any quotation references it. |
@@ -690,7 +687,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **298 passed / 1739 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **248 passed / 1430 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -799,4 +796,3 @@ The Teaching Guide covers staff onboarding; the RUNBOOK covers operations and di
 ## License
 
 The Laravel framework is open-sourced under the [MIT license](https://opensource.org/licenses/MIT).
-

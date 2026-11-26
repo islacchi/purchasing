@@ -101,8 +101,6 @@
             {{-- Optimistic concurrency checkpoint: rejected if the project changed since this page rendered. --}}
             <input type="hidden" name="expected_project_fingerprint" value="{{ $projectFingerprint ?? '' }}">
         @endif
-        {{-- Item rows travel as a single JSON payload (filled on submit; see the script below) so PHP's max_input_vars never applies. --}}
-        <input type="hidden" name="items_json" id="itemsJson">
         {{-- Two-column revamp: left rail of labeled cards + items card. Same fields and names. --}}
         <div class="flex flex-1 flex-col lg:min-h-0">
             <div class="grid items-stretch gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
@@ -473,37 +471,6 @@
     // the controller filters untouched rows before validating the items array.
     (function () {
         const rowsContainer = document.getElementById('itemRows');
-        const itemsJsonField = document.getElementById('itemsJson');
-
-        // Serialize the visible rows into the JSON payload the controller
-        // reads on submit — items travel as one string so PHP's
-        // max_input_vars never truncates the POST.
-        function collectRows() {
-            const rows = [];
-
-            rowsContainer.querySelectorAll('.item-row').forEach(function (row) {
-                const rowData = {};
-
-                row.querySelectorAll('input, select').forEach(function (field) {
-                    const match = field.name && field.name.match(/^items\[\d+\]\[([a-z_]+)\]$/);
-                    if (match) {
-                        rowData[match[1]] = field.value;
-                    }
-                });
-
-                if (Object.keys(rowData).length > 0) {
-                    rows.push(rowData);
-                }
-            });
-
-            return rows;
-        }
-
-        if (itemsJsonField && itemsJsonField.form) {
-            itemsJsonField.form.addEventListener('submit', function () {
-                itemsJsonField.value = JSON.stringify(collectRows());
-            });
-        }
         // A row cloned from an existing project item may be locked (used in a
         // prep list) — freshly created rows must never inherit the lock.
         window.__unlinkRow = function unlinkRow(template) {
