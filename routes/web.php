@@ -154,11 +154,6 @@ Route::middleware(['auth', 'session.active'])->group(function () {
         Route::get('/settings', [PageController::class, 'show'])->defaults('page', 'Settings.index')->name('settings');
         Route::get('/settings/logs', [SettingsController::class, 'logs'])->name('settings.logs');
 
-        // Activity log deletion — prepare stores the batch; the modal on the
-        // logs page (print-gated) confirms the final deletion.
-        Route::post('/settings/logs/delete', [SettingsController::class, 'logsDeletePrepare'])->name('settings.logs.delete.prepare');
-        Route::post('/settings/logs/delete/confirm', [SettingsController::class, 'logsDeleteConfirmed'])->name('settings.logs.delete.execute');
-
         // User accounts + privileges (moved here from the Entities module).
         // NOTE: /settings/privileges/create must stay before the {id}/edit route.
         Route::get('/settings/privileges', [SettingsController::class, 'privileges'])->name('settings.privileges');
