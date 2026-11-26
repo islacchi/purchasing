@@ -188,6 +188,28 @@ class CartTest extends TestCase
         $this->assertSame(30, (int) $po->items()->firstOrFail()->qty);
     }
 
+    public function test_checkout_accepts_the_json_qty_payload(): void
+    {
+        $user = $this->admin();
+        $entity = $this->entity();
+        $supplier = Supplier::create(['name' => 'Triple Tact']);
+
+        $item = $this->seedPricedLine($user, $entity, $supplier, 'Amoxicillin 500mg', 305.00);
+
+        $this->actingAs($user)->post(route('po-cart.add'), ['quotation_id' => $item->quotation_id]);
+
+        $cartItem = PoCartItem::firstOrFail();
+
+        $this->actingAs($user)
+            ->post(route('po-cart.checkout'), [
+                'qty_json' => json_encode([(string) $cartItem->id => 40]),
+            ]);
+
+        $this->assertDatabaseCount('purchase_orders', 1);
+        $po = \App\Models\PurchaseOrder::firstOrFail();
+        $this->assertSame(40, (int) $po->items()->firstOrFail()->qty);
+    }
+
     public function test_adding_same_line_is_idempotent(): void
     {
         $user = $this->admin();

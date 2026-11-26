@@ -74,6 +74,8 @@
 
         <form id="poForm" method="POST" action="{{ route('purchase-order.store') }}" class="flex min-h-0 flex-1 flex-col">
             @csrf
+            {{-- The items travel as one JSON payload so PHP's max_input_vars never applies (see the script below). --}}
+            <input type="hidden" name="poItems_json" id="poItemsJson">
             <input type="hidden" name="quotation_id" value="{{ $quotation->id }}">
             <div class="grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-3">
 
@@ -609,7 +611,30 @@
 
             // The form posts to the PurchaseOrder controller; sync the hidden
             // "included" flags from the checkboxes right before submitting.
+            // Items also travel as one JSON payload (see the controller).
+            const poItemsJson = document.getElementById('poItemsJson');
             form.addEventListener('submit', function () {
+                const items = {};
+
+                rows.forEach(function (row) {
+                    const nameMatch = row.querySelector('input[name^="items["]').name.match(/^items\[([^\]]+)\]/);
+                    if (! nameMatch) return;
+
+                    const key = nameMatch[1];
+                    const qid = row.querySelector('input[name$="[quotation_item_id]"]');
+
+                    items[key] = {
+                        included: row.querySelector('.po-included').value,
+                        quotation_item_id: qid ? qid.value : '',
+                        qty: qtyInput(row) ? qtyInput(row).value : '',
+                        min_remaining_months: shelfLifeInput(row) ? shelfLifeInput(row).value : '',
+                    };
+                });
+
+                if (poItemsJson) {
+                    poItemsJson.value = JSON.stringify(items);
+                }
+
                 rows.forEach(function (row) {
                     const include = row.querySelector('.po-include');
                     const hidden = row.querySelector('.po-included');

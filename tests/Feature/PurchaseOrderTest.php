@@ -320,6 +320,37 @@ class PurchaseOrderTest extends TestCase
             ->assertSee('July Region VII batch');
     }
 
+    public function test_posting_the_create_form_via_the_json_payload_persists_the_draft(): void
+    {
+        $user = $this->admin();
+        $quoted = $this->quotedQuotation($user);
+        $quotation = $quoted['quotation'];
+
+        // Same shape as storePayload() but posted as the JSON payload.
+        $items = [];
+        foreach ($quotation->items as $quotationItem) {
+            $items[$quotationItem->id] = [
+                'quotation_item_id' => (string) $quotationItem->id,
+                'included' => '1',
+                'qty' => '10',
+                'min_remaining_months' => '9',
+            ];
+        }
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.store'), [
+                'quotation_id' => $quotation->id,
+                'poItems_json' => json_encode($items),
+            ])
+            ->assertOk();
+
+        $purchaseOrder = PurchaseOrder::query()->firstOrFail();
+
+        $this->assertSame(PurchaseOrder::STATUS_DRAFT, $purchaseOrder->status);
+        $this->assertSame($quotation->id, $purchaseOrder->quotation_id);
+        $this->assertDatabaseCount('purchase_order_items', 2);
+    }
+
     public function test_posting_the_form_allocates_quantities_across_the_project_sources(): void
     {
         $user = $this->admin();

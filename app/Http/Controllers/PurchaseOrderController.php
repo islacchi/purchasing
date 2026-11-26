@@ -180,6 +180,19 @@ class PurchaseOrderController extends Controller
      */
     public function store(Request $request)
     {
+        // The form posts its items as one JSON payload (`poItems_json`) so
+        // PHP's max_input_vars can never truncate a long quotation; classic
+        // `items[...]` POSTs still work.
+        $itemsJson = $request->input('poItems_json');
+        if (is_string($itemsJson) && trim($itemsJson) !== '') {
+            $decoded = json_decode($itemsJson, true);
+            $items = is_array($decoded) ? $decoded : [];
+        } else {
+            $items = $request->input('items', []);
+        }
+
+        $request->merge(['items' => $items]);
+
         $validated = $request->validate([
             'quotation_id' => ['required', 'integer', 'exists:quotations,id'],
             'expected_delivery' => ['nullable', 'date'],

@@ -245,6 +245,8 @@
             <form id="checkoutForm" method="POST" action="{{ route('po-cart.checkout') }}"
                   class="relative w-full max-w-lg rounded-lg bg-white shadow-xl">
                 @csrf
+                {{-- Quantities travel as one JSON payload so PHP's max_input_vars never applies (see the script below). --}}
+                <input type="hidden" name="qty_json" id="qtyJson">
                 <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                     <h3 id="checkoutTitle" class="text-base font-bold text-gray-900">Checkout</h3>
                     <button type="button" data-close-checkout aria-label="Close checkout"
@@ -382,6 +384,24 @@
         var qtyInputs = document.querySelectorAll('.cart-qty');
         if (!qtyInputs.length) {
             return;
+        }
+
+        // Quantities travel as JSON (see the controller), so a cart with more
+        // lines than max_input_vars never loses the tail of the form.
+        var checkoutForm = document.getElementById('checkoutForm');
+        var qtyJson = document.getElementById('qtyJson');
+        if (checkoutForm && qtyJson) {
+            checkoutForm.addEventListener('submit', function () {
+                var qty = {};
+                qtyInputs.forEach(function (input) {
+                    qty[input.getAttribute('data-cart-item-id')] = input.value;
+                    // The JSON payload now carries these values; disabling
+                    // the classic fields keeps thousands of extra inputs
+                    // from pushing the CSRF token past max_input_vars.
+                    input.disabled = true;
+                });
+                qtyJson.value = JSON.stringify(qty);
+            });
         }
 
         function toNumber(value) {

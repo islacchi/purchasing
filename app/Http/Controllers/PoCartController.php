@@ -340,6 +340,19 @@ class PoCartController extends Controller
      */
     public function checkout(Request $request)
     {
+        // The checkout form posts its quantities as one JSON payload
+        // (`qty_json`) so PHP's max_input_vars can never truncate a long
+        // cart; classic `qty[id]` POSTs still work.
+        $qtyJson = $request->input('qty_json');
+        if (is_string($qtyJson) && trim($qtyJson) !== '') {
+            $decoded = json_decode($qtyJson, true);
+            $qty = is_array($decoded) ? $decoded : [];
+        } else {
+            $qty = $request->input('qty', []);
+        }
+
+        $request->merge(['qty' => $qty]);
+
         $validated = $request->validate([
             'expected_delivery' => ['nullable', 'date'],
             'payment_terms' => ['nullable', 'string', 'max:255'],
