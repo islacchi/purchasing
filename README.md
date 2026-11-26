@@ -687,7 +687,7 @@ Ask any earlier operator which back-up they need; the history table on the page 
 composer run test          # or: php artisan test
 ```
 
-Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **303 passed / 1760 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
+Every suite feature-tests through `RefreshDatabase` on in-memory SQLite. Current baseline: **307 passed / 1773 assertions**. Quotation upload tests patch worksheet XML inside the generated workbook to simulate supplier submissions.
 
 Role-access tests (`ModuleAccessTest`) cover the seeded grants, server-side middleware enforcement on all module routes, the privileges matrix update flow, sidebar visibility, viewer affordances (inert buttons, restricted dialogs, 403 page), and the admin-bypass rule.
 
@@ -708,7 +708,7 @@ Legend: ✅ done · 🚧 in progress / not started.
 - [x] **Pagination** — every row-based list paginates server-side with adjustable per-page size (Projects, Prep Lists, Quotation, Purchase Orders, Settings → Logs)
 - [x] **Optimistic concurrency** — three hot paths guarded: PO receipt toggle (state snapshot), project edit (fingerprint), quotation document re-upload (fingerprint)
 - [x] **Project edit lock** — `syncItems()` reconciles instead of wiping: existing lines are matched and updated, new lines created, removed lines deleted only when unsourced; lines sourced into a prep list are immutable end-to-end (read-only in the form; refused server-side; the save rolls back with a friendly message if a sourced line is removed)
-- [x] **Tests** — 303 passing (1760 assertions)
+- [x] **Tests** — 307 passing (1773 assertions)
 - [x] **Delivery notifications** — header bell feed from due dates + fulfillment progress (red: due ≤ 2 days or overdue, amber: due ≤ 7 days — or ≤ 14 with nothing fulfilled yet); clears when the risk resolves; empty projects never alert
 - [x] **Excel export** — project summary as `.xlsx` (plus printable folio view)
 - [x] **Data-integrity guards** — a project cannot be deleted while sourced into a prep list; a prep list cannot be deleted while any of its linked quotations is progressed (prices, document, or PO); deleting a prep list cascades its linked quotations; a quoted quotation requires its uploaded file removed first; document delete is separate from quotation delete.
@@ -746,7 +746,7 @@ Accepted trade-offs in the current build — worth knowing before relying on the
 
 - **Notifications are live by design.** The bell badge shows current delivery risks only, and it clears when the risk is resolved (all lines fulfilled or covered by stock) — there is deliberately no persisted notification log or read state; projects with no items never raise an alert.
 
-- **Large forms rely on JavaScript for their uncapped path.** Projects, Prep list compile, Local purchase, PO create, and Cart checkout submit their row data as one JSON payload, so `max_input_vars` never truncates them. With JavaScript disabled, those forms fall back to classic field posts and can still be cut off at the PHP cap. The only remaining ceilings on the JSON path are `post_max_size` and `memory_limit`.
+- **Large forms rely on JavaScript for their uncapped path.** Projects, Prep list compile, Local purchase, PO create, and Cart checkout submit their row data as one JSON payload, so `max_input_vars` never truncates them. With JavaScript disabled, those forms fall back to classic field posts; `RejectTruncatedFormPost` now rejects a post that reaches `max_input_vars` instead of silently saving only part of it. The only remaining ceilings on the JSON path are `post_max_size` and `memory_limit`.
 
 ---
 
@@ -757,7 +757,7 @@ purchasing/
 ├── app/
 │   ├── Console/Commands/       # activity:prune — retention prune (weekly schedule; --days / --dry-run); db:dump — dev snapshot helper
 │   ├── Http/Controllers/       # Auth, Entity, Entities, Projects, Preplist, ItemCatalog, PurchaseOrder, Quotation, Settings
-│   ├── Http/Middleware/        # EnsureSessionIsActive, EnsureModuleAccess (module:{module})
+│   ├── Http/Middleware/        # EnsureSessionIsActive, EnsureModuleAccess (module:{module}), RejectTruncatedFormPost
 │   ├── Models/                 # 21 models + casts, scopes, relationships
 │   ├── Support/                # RfqQuotationWorkbook, PurchaseOrderWorkbook, QuotationWorkbookParser,
 │   │                           #   ExpiryParser, DeliveryNotifications, ActivityLogger, ModuleAccess,

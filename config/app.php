@@ -123,4 +123,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Maximum Form Variables
+    |--------------------------------------------------------------------------
+    |
+    | Mirrors PHP's max_input_vars so the application can reject a truncated
+    | classic form post instead of silently saving only part of it. The
+    | high-volume forms submit a single JSON payload and never hit this.
+    |
+    */
+
+    'max_form_vars' => (int) (ini_get('max_input_vars') ?: 1000),
+
 ];

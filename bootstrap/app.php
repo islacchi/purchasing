@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureModuleAccess;
 use App\Http\Middleware\EnsureSessionIsActive;
+use App\Http\Middleware\RejectTruncatedFormPost;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            RejectTruncatedFormPost::class,
+        ]);
+
         $middleware->alias([
             'session.active' => EnsureSessionIsActive::class,
             'module' => EnsureModuleAccess::class,
