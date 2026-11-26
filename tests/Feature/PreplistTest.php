@@ -811,6 +811,9 @@ class PreplistTest extends TestCase
             ->assertSee('&ge; 12 months remaining at delivery', false)
             ->assertSee($supplier->name)
             ->assertSee(route('preplist.show', ['preplist' => $preplist->id]), false)
+            ->assertSee('id="rfqError"', false)
+            ->assertSee('role="alert"', false)
+            ->assertDontSee('window.alert', false)
             ->assertDontSee('Amoxicillin 500mg')
             ->assertDontSee('MedSource Inc.');
     }

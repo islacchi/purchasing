@@ -170,6 +170,26 @@
         </div>
     </div>
 
+    {{-- Inline alert for Generate File — replaces the native alert() dialogs. --}}
+    <div id="rfqError" class="mt-6 hidden shrink-0 items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm" role="alert" aria-live="assertive" tabindex="-1">
+        <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-100">
+            <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3.75m0 3.75h.008M10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.29 2.25h17.78a1.5 1.5 0 0 0 1.29-2.25L13.71 3.86a1.5 1.5 0 0 0-2.58 0Z"/>
+            </svg>
+        </span>
+        <div class="min-w-0 flex-1">
+            <p id="rfqErrorTitle" class="text-sm font-bold text-amber-800">Cannot generate the RFQ files</p>
+            <p id="rfqErrorMessage" class="mt-0.5 text-xs leading-relaxed text-amber-700"></p>
+        </div>
+        <button type="button" id="rfqErrorClose"
+                class="rounded-md p-1 text-amber-500 transition-colors hover:bg-amber-100 hover:text-amber-700 cursor-pointer"
+                title="Dismiss" aria-label="Dismiss">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </div>
+
     {{-- Footer actions --}}
     <div class="flex shrink-0 items-center justify-end gap-3 mt-6">
         <a href="{{ route('preplist.show', ['preplist' => $prepList->id]) }}"
@@ -205,6 +225,36 @@
             const PREP_LIST_REFERENCE = @json($prepList->reference_no);
             const PREPLIST_INDEX_URL = @json(route('preplist'));
 
+            // Inline error banner for Generate File — replaces the native
+            // alert() dialogs with the app's amber notice style.
+            const rfqError = document.getElementById('rfqError');
+            const rfqErrorMessage = document.getElementById('rfqErrorMessage');
+            const rfqErrorClose = document.getElementById('rfqErrorClose');
+
+            function showRfqError(message) {
+                if (!rfqError || !rfqErrorMessage) {
+                    return;
+                }
+
+                rfqErrorMessage.textContent = message;
+                rfqError.classList.remove('hidden');
+                rfqError.classList.add('flex');
+                rfqError.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+
+            function clearRfqError() {
+                if (!rfqError) {
+                    return;
+                }
+
+                rfqError.classList.add('hidden');
+                rfqError.classList.remove('flex');
+            }
+
+            if (rfqErrorClose) {
+                rfqErrorClose.addEventListener('click', clearRfqError);
+            }
+
             // Item metadata lookup, keyed by each per-item chip's data-item-key.
             const ITEM_DATA_BY_KEY = {};
             @json($items).forEach(function (item) {
@@ -223,6 +273,9 @@
             }
 
             function syncGenerateList() {
+                // Any selection change dismisses a previous Generate File error.
+                clearRfqError();
+
                 document.querySelectorAll('.gen-row').forEach(function (row) {
                     const supplier = row.dataset.supplier;
                     const checkbox = row.querySelector('.gen-check');
@@ -377,9 +430,11 @@
                 });
 
                 if (payload.length === 0) {
-                    window.alert('Tick at least one supplier in "RFQ files to generate" first.');
+                    showRfqError('Tick at least one supplier in "RFQ files to generate" first.');
                     return;
                 }
+
+                clearRfqError();
 
                 generateFileBtn.disabled = true;
                 generateFileBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Generating…';
@@ -436,7 +491,7 @@
                         }, 1200);
                     })
                     .catch(function (error) {
-                        window.alert(error && error.message ? error.message : 'Unable to generate the RFQ files.');
+                        showRfqError(error && error.message ? error.message : 'Unable to generate the RFQ files.');
                     })
                     .finally(function () {
                         generateFileBtn.disabled = false;
