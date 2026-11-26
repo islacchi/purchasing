@@ -582,6 +582,8 @@
             <form id="poBoughtForm" method="POST" action="{{ route('purchase-order.bought', ['purchaseOrder' => $purchaseOrder->id]) }}"
                   class="relative flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
                 @csrf
+                {{-- Line details travel as one JSON payload so PHP's max_input_vars never applies (see the script below). --}}
+                <input type="hidden" name="bought_json" id="boughtJson">
                 <div class="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
                     <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-50">
                         <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -922,6 +924,33 @@
                             const coverBoxes = Math.ceil(outstanding / boxSize);
                             lackText.textContent += ' (' + coverBoxes + ' box' + (coverBoxes === 1 ? '' : 'es') + ' of ' + boxSize + ' ' + (coverBoxes === 1 ? 'covers' : 'cover') + ' the line)';
                         }
+                    }
+                });
+
+                // The modal posts its line details as one JSON payload (see
+                // the controller), so a long local PO never loses the tail
+                // of the form to max_input_vars.
+                boughtForm.addEventListener('submit', function () {
+                    const payload = { prices: {}, quantities: {}, boxes: {}, box_sizes: {} };
+
+                    boughtForm.querySelectorAll('[data-price-line]').forEach(function (el) {
+                        if (el.value !== '') {
+                            payload.prices[el.getAttribute('data-price-line')] = el.value;
+                        }
+                    });
+                    boughtForm.querySelectorAll('[data-qty-line]').forEach(function (el) {
+                        payload.quantities[el.getAttribute('data-qty-line')] = el.value;
+                    });
+                    boughtForm.querySelectorAll('[data-box-line]').forEach(function (el) {
+                        payload.boxes[el.getAttribute('data-box-line')] = el.value;
+                    });
+                    boughtForm.querySelectorAll('[data-box-size-line]').forEach(function (el) {
+                        payload.box_sizes[el.getAttribute('data-box-size-line')] = el.value;
+                    });
+
+                    const boughtJson = document.getElementById('boughtJson');
+                    if (boughtJson) {
+                        boughtJson.value = JSON.stringify(payload);
                     }
                 });
             }

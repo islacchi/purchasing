@@ -537,6 +537,30 @@ class PurchaseOrderController extends Controller
 
         $purchaseOrder->load('items.item', 'items.receipts', 'items.preplistItem');
 
+        // The modal posts its line details as one JSON payload
+        // (`bought_json`) so PHP's max_input_vars can never truncate a large
+        // local purchase; classic `prices[...]` / `quantities[...]` etc.
+        // POSTs still work.
+        $boughtJson = $request->input('bought_json');
+        if (is_string($boughtJson) && trim($boughtJson) !== '') {
+            $decoded = json_decode($boughtJson, true);
+            $bought = is_array($decoded) ? $decoded : [];
+        } else {
+            $bought = [
+                'prices' => $request->input('prices', []),
+                'quantities' => $request->input('quantities', []),
+                'boxes' => $request->input('boxes', []),
+                'box_sizes' => $request->input('box_sizes', []),
+            ];
+        }
+
+        $request->merge([
+            'prices' => $bought['prices'] ?? [],
+            'quantities' => $bought['quantities'] ?? [],
+            'boxes' => $bought['boxes'] ?? [],
+            'box_sizes' => $bought['box_sizes'] ?? [],
+        ]);
+
         $validated = $request->validate([
             'prices' => ['nullable', 'array'],
             'prices.*' => ['nullable', 'numeric', 'min:0'],

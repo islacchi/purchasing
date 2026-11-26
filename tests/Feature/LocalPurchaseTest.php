@@ -254,6 +254,42 @@ class LocalPurchaseTest extends TestCase
         $this->assertSame(10, $poItem->qty); // quantity not touched
     }
 
+    public function test_bought_accepts_the_json_payload(): void
+    {
+        $user = $this->admin();
+        $supplier = Supplier::create(['name' => 'Bohol Cash Store']);
+        $f = $this->fixture($user);
+        $preplistItem = $f['preplistItem'];
+
+        $this->actingAs($user)
+            ->post(route('preplist.local-purchase.store', ['preplist' => $f['preplist']->id]), [
+                'supplier_id' => $supplier->id,
+                'selected' => [$preplistItem->id],
+                'lines' => [$preplistItem->id => ['qty' => 10, 'unit_price' => '']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po = PurchaseOrder::query()->latest('id')->firstOrFail();
+        $poItem = $po->items()->firstOrFail();
+
+        $this->actingAs($user)
+            ->post(route('purchase-order.bought', ['purchaseOrder' => $po->id]), [
+                'bought_json' => json_encode([
+                    'prices' => [(string) $poItem->id => '305.00'],
+                    'quantities' => [(string) $poItem->id => '10'],
+                ]),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $po->refresh();
+        $poItem->refresh();
+
+        $this->assertSame('completed', $po->status);
+        $this->assertTrue($poItem->isReceived());
+        $this->assertEquals(305.00, (float) $poItem->unit_price);
+        $this->assertSame(10, $poItem->receipts()->sum('received_qty'));
+    }
+
     public function test_bought_completes_the_order_once_details_are_recorded(): void
     {
         $user = $this->admin();
